@@ -106,6 +106,9 @@ app/
 | `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
 | `separator` | جداکننده‌ی ظریف بین بخش‌ها — هنوز در UI استفاده نشده |
 | `direction` | `DirectionProvider`/`useDirection` برای پشتیبانی RTL |
+| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان) |
+| `dropdown-menu` | منوی سه‌نقطه‌ی `PageHeader` و منوی سه‌نقطه‌ی هر ردیف عضو در `MembersDialog` |
+| `switch` | تاگل «فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند» در `MembersDialog` |
 
 هر وقت کامپوننت جدیدی از shadcn اضافه شود، همین جدول به‌روزرسانی می‌شود.
 
@@ -113,7 +116,7 @@ app/
 
 ```
 src/app/
-  layout.tsx          → html[lang=fa][dir=rtl] + DirectionProvider + فونت Vazirmatn
+  layout.tsx          → html[lang=fa][dir=rtl] + DirectionProvider (فونت IRANSansX از fonts.css، نه next/font)
   page.tsx             → ریدایرکت به /home
   (tabs)/
     layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
@@ -123,6 +126,7 @@ src/app/
     account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
 src/components/
   navigation/bottom-tab-bar.tsx → ناوبری ۴ تب پایین صفحه (Client Component، بر اساس pathname تب فعال را با رنگ brand مشخص می‌کند)
+  navigation/page-header.tsx    → PageHeader مشترک صفحات جزئیات (بازگشت + عنوان + منوی سه‌نقطه) — رجوع به src/components/navigation/README.md
 ```
 
 صفحات my-tasks و notifications هنوز فقط اسکلت (عنوان + توضیح کوتاه + Badge) هستند و داده‌ای وصل نیست.
@@ -136,28 +140,33 @@ src/lib/api/
   organizations.ts   → getOrganizations(), getOrganization(id)
   projects.ts         → getProject(id)
 src/components/charts/
-  activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — سازمان/پروژه/بعداً تسک‌های من)
+  activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — فقط پروژه فعلاً، بعداً تسک‌های من)
+  activity-bar-row.tsx    → ActivityBarRow (ردیف تک‌خطی با مستطیل‌های عمودی — فعالیت هر عضو در صفحه‌ی سازمان)
   status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی)
 src/features/home/
   workspace-list.tsx → WorkspaceList: آکوردئون سازمان‌ها؛ هر سازمان یک ردیف با نام (لینک) + شورون باز/بسته (سمت چپ)؛
                         وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند و یک آیکون + برای افزودن پروژه‌ی جدید
                         (فقط state محلی، غیرماندگار) کنار شورون ظاهر می‌شود. بدون آیکون نوع (طبق بازخورد کاربر حذف شد).
 src/features/organizations/
-  organization-overview.tsx → OrganizationOverview: اعضا، پروژه‌های فعال، ActivityHeatmap
+  organization-overview.tsx → OrganizationOverview: اعضا (فقط اواتار روی‌هم‌افتاده)، پروژه‌های فعال (باکس بوردردار)،
+                                فعالیت اعضا (باکس بوردردار، هر عضو یک ردیف با ActivityBarRow)
+  members-dialog.tsx         → MembersDialog: مودال مدیریت اعضا (تاگل دسترسی دعوت، افزودن عضو، تغییر نقش/حذف — همه محلی)
 src/features/projects/
   project-task-list.tsx  → ProjectTaskList (Client): سوییچر ۵ نما — فقط Table واقعی است، بقیه Placeholder «به‌زودی»
   project-overview.tsx    → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، Project Health (۴ باکس آماری)،
                              StatusDonutChart، تقویم سررسیدها (Placeholder ساده، بدون تراز واقعی روز هفته)، ActivityHeatmap
 src/app/(tabs)/home/
   page.tsx                     → getOrganizations() + WorkspaceList
-  organizations/[id]/page.tsx  → getOrganization(id) + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
-  projects/[id]/page.tsx       → getProject(id) + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
+  organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
+  projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
 ```
 
 نکات مهم برای ادامه‌ی کار:
 
 - **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم سررسیدها را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
+- **فرمول `mockActivity` در `mock-data.ts` باید ضریب‌های غیرمضرب‌ ۵ روی هر دو پارامتر (index و seed) داشته باشد** — نسخه‌ی اول (`(i*seed+seed)%5`) وقتی seed مضرب ۵ بود (مثلاً ۵) همیشه صفر می‌داد و کل ردیف فعالیت آن عضو طوسی/خالی نشان داده می‌شد. اگر seed جدیدی اضافه می‌کنید حواستان به این تله باشد.
 - رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
-- افزودن پروژه از آکوردئون خانه فقط در state مرورگر است و با رفرش از بین می‌رود — چون API واقعی ساخت پروژه هنوز وجود ندارد.
+- افزودن پروژه از آکوردئون خانه، و افزودن/حذف/تغییر نقش عضو در `MembersDialog`، فقط در state مرورگر است و با رفرش از بین می‌رود — چون API واقعی هنوز وجود ندارد.
+- منوی سه‌نقطه‌ی `PageHeader` (افزودن تسک/مایل‌استون/بخش، تنظیمات، حذف) فعلاً فقط UI است؛ آیتم‌ها `onClick` ندارند چون صفحه/فرم مقصدشان هنوز ساخته نشده.
 
 برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`).

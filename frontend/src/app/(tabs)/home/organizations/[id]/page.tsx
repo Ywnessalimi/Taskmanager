@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/navigation/page-header"
 import { OrganizationOverview } from "@/features/organizations/organization-overview"
 import { getOrganization } from "@/lib/api/organizations"
 
@@ -19,10 +20,14 @@ export default async function OrganizationOverviewPage({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-base font-medium text-foreground">{organization.name}</h1>
-        <span className="text-xs text-text2">{organization.taskCount} تسک</span>
-      </header>
+      <PageHeader
+        title={organization.name}
+        subtitle={`${organization.taskCount} تسک`}
+        menu={[
+          [{ label: "تنظیمات سازمان", icon: "settings-3-line" }],
+          [{ label: "حذف سازمان", icon: "delete-bin-line", destructive: true }],
+        ]}
+      />
       <OrganizationOverview organization={organization} />
     </div>
   )

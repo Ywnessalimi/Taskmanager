@@ -1,8 +1,16 @@
 import type { Organization, Project } from "./types"
 
-/** یک الگوی شبه‌تصادفی ثابت برای پر کردن ActivityHeatmap؛ فقط برای نمایش، بدون معنای واقعی. */
-function mockActivity(seed: number): number[] {
-  return Array.from({ length: 84 }, (_, i) => (i * seed + seed) % 5)
+/**
+ * یک الگوی شبه‌تصادفی ثابت برای پر کردن نمودارهای فعالیت؛ فقط برای نمایش، بدون معنای واقعی.
+ * ضریب ۷ روی i باعث می‌شود حتی وقتی seed مضرب ۵ باشد (مثلاً ۵ یا ۱۰)، خروجی یکنواخت/همه‌صفر نشود.
+ */
+function mockActivity(seed: number, length = 84): number[] {
+  return Array.from({ length }, (_, i) => (i * 7 + seed * 3) % 5)
+}
+
+/** طول کوتاه‌تر (۳۰ روز) برای ردیف فعالیت هر عضو در صفحه‌ی سازمان — رجوع به ActivityBarRow */
+function mockMemberActivity(seed: number): number[] {
+  return mockActivity(seed, 30)
 }
 
 export const MOCK_PROJECTS: Project[] = [
@@ -64,24 +72,22 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
     id: "org-1",
     name: "شرکت نوین‌ساز",
     members: [
-      { id: "u1", name: "سارا احمدی" },
-      { id: "u2", name: "علی رضایی" },
-      { id: "u3", name: "مریم کریمی" },
-      { id: "u4", name: "حسین یوسفی" },
+      { id: "u1", name: "سارا احمدی", role: "admin", activity: mockMemberActivity(2) },
+      { id: "u2", name: "علی رضایی", role: "member", activity: mockMemberActivity(3) },
+      { id: "u3", name: "مریم کریمی", role: "member", activity: mockMemberActivity(5) },
+      { id: "u4", name: "حسین یوسفی‌نژاد اصفهانی", role: "member", activity: mockMemberActivity(7) },
     ],
     projects: projectRefs("org-1"),
     taskCount: 30,
-    activity: mockActivity(2),
   },
   {
     id: "org-2",
     name: "تیم طراحی آبی",
     members: [
-      { id: "u5", name: "نگار ملکی" },
-      { id: "u6", name: "امیر صادقی" },
+      { id: "u5", name: "نگار ملکی", role: "admin", activity: mockMemberActivity(4) },
+      { id: "u6", name: "امیر صادقی", role: "member", activity: mockMemberActivity(6) },
     ],
     projects: projectRefs("org-2"),
     taskCount: 13,
-    activity: mockActivity(4),
   },
 ]

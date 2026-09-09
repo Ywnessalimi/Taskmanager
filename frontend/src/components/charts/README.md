@@ -2,7 +2,10 @@
 
 ویجت‌های نموداری مشترکی که در چند صفحه‌ی Overview تکرار می‌شوند (طبق docs/PRODUCT_OVERVIEW.md، این سه ویجت هم در سازمان، هم در پروژه و هم بعداً در «تسک‌های من» ظاهر می‌شوند).
 
-- `activity-heatmap.tsx` → `ActivityHeatmap`: گرید فعالیت روزانه شبیه GitHub. مصرف‌کننده‌ها: `features/organizations`, `features/projects` (بعداً `features/my-tasks`).
+- `activity-heatmap.tsx` → `ActivityHeatmap`: گرید فعالیت روزانه (۷ ردیف × چند هفته) شبیه GitHub. مصرف‌کننده: `features/projects` (بعداً `features/my-tasks`).
+- `activity-bar-row.tsx` → `ActivityBarRow`: نسخه‌ی تک‌ردیفی فعالیت با مستطیل‌های عمودی باریک (به‌جای گرید) — برای وقتی هر عضو یک ردیف جداست و باید در عرض محدود، روزهای بیشتری نشان داده شود. مصرف‌کننده: `features/organizations` (ردیف فعالیت هر عضو).
 - `status-donut-chart.tsx` → `StatusDonutChart`: چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی. مصرف‌کننده: `features/projects` (بعداً `features/my-tasks`).
+
+هر دو کامپوننت فعالیت (`ActivityHeatmap` و `ActivityBarRow`) از یک قرارداد رنگی مشترک پیروی می‌کنند: سطح ۰ = طوسی خنثی (`bg-bg2`/`bg-bg3`، یعنی هیچ فعالیتی)، سطح‌های ۱ تا ۴ = شدت فزاینده‌ی رنگ `brand`.
 
 هیچ‌کدام به داده‌ی خاص یک صفحه وابسته نیستند — فقط آرایه/عدد ساده می‌گیرند، پس هر فیچر جدیدی که این شکل داده را دارد می‌تواند مستقیماً از همین دو کامپوننت استفاده کند به‌جای ساختن نسخه‌ی جدید.

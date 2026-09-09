@@ -1,50 +1,68 @@
 import Link from "next/link"
-import { ActivityHeatmap } from "@/components/charts/activity-heatmap"
+import { ActivityBarRow } from "@/components/charts/activity-bar-row"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { MembersDialog } from "@/features/organizations/members-dialog"
 import type { Organization } from "@/lib/api/types"
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-medium text-foreground">{children}</h2>
 }
 
+/** باکس با بوردر و پدینگ ۱۲px — الگوی مشترک بخش‌های Overview سازمان (طبق بازخورد کاربر) */
+function SectionBox({ children }: { children: React.ReactNode }) {
+  return <div className="rounded-md border border-border p-3">{children}</div>
+}
+
 export function OrganizationOverview({ organization }: { organization: Organization }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <SectionTitle>اعضا ({organization.members.length})</SectionTitle>
-        <div className="flex flex-col">
-          {organization.members.map((member) => (
-            <div key={member.id} className="flex items-center gap-2.5 border-b border-border py-2 last:border-b-0">
-              <Avatar size="sm">
-                <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-foreground">{member.name}</span>
-            </div>
-          ))}
-        </div>
+        <SectionTitle>اعضا</SectionTitle>
+        <MembersDialog members={organization.members} />
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionTitle>پروژه‌های فعال</SectionTitle>
-        <div className="flex flex-col">
-          {organization.projects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/home/projects/${project.id}`}
-              className="border-b border-border py-2 text-sm text-foreground last:border-b-0 hover:text-brand"
-            >
-              {project.name}
-            </Link>
-          ))}
-          {organization.projects.length === 0 && (
-            <p className="py-2 text-sm text-text2">پروژه‌ای وجود ندارد.</p>
-          )}
-        </div>
+        <SectionBox>
+          <div className="flex flex-col">
+            {organization.projects.map((project, index) => (
+              <Link
+                key={project.id}
+                href={`/home/projects/${project.id}`}
+                className={`py-2 text-sm text-foreground hover:text-brand ${
+                  index > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                {project.name}
+              </Link>
+            ))}
+            {organization.projects.length === 0 && (
+              <p className="text-sm text-text2">پروژه‌ای وجود ندارد.</p>
+            )}
+          </div>
+        </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionTitle>فعالیت اعضا</SectionTitle>
-        <ActivityHeatmap data={organization.activity} />
+        <SectionBox>
+          <div className="flex flex-col">
+            {organization.members.map((member, index) => (
+              <div
+                key={member.id}
+                className={`flex items-center gap-3 py-2.5 ${index > 0 ? "border-t border-border" : ""}`}
+              >
+                <Avatar size="sm" className="shrink-0">
+                  <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+                <span className="w-20 shrink-0 truncate text-sm text-foreground">{member.name}</span>
+                <div className="min-w-0 flex-1 overflow-x-auto">
+                  <ActivityBarRow activity={member.activity} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionBox>
       </div>
     </div>
   )

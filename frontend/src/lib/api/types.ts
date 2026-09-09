@@ -3,9 +3,14 @@
  * رجوع کنید به docs/BACKEND.md بخش «مدل داده» و docs/PRODUCT_OVERVIEW.md بخش «واژه‌نامه».
  */
 
+export type MemberRole = "admin" | "member"
+
 export type Member = {
   id: string
   name: string
+  role: MemberRole
+  /** سطح فعالیت روزانه (هر عدد بین ۰ تا ۴) برای ردیف فعالیت این عضو در صفحه‌ی سازمان */
+  activity: number[]
 }
 
 export type ProjectRef = {
@@ -59,5 +64,4 @@ export type Organization = {
   members: Member[]
   projects: ProjectRef[]
   taskCount: number
-  activity: number[]
 }
