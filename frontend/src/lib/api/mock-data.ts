@@ -1,4 +1,4 @@
-import type { Organization, Project } from "./types"
+import type { Notification, Organization, Project } from "./types"
 
 /**
  * یک الگوی شبه‌تصادفی ثابت برای پر کردن نمودارهای فعالیت؛ فقط برای نمایش، بدون معنای واقعی.
@@ -24,11 +24,36 @@ export const MOCK_PROJECTS: Project[] = [
     health: { active: 9, completed: 6, dueInPeriod: 3, overdue: 2 },
     statusDistribution: { todo: 5, inProgress: 7, completed: 6 },
     tasks: [
-      { id: "t1", displayId: "#301", title: "طراحی صفحه‌ی اصلی", assigneeName: "سارا احمدی", priority: "high", dueDate: "1404/05/10", status: "in-progress" },
+      {
+        id: "t1",
+        displayId: "#301",
+        title: "طراحی صفحه‌ی اصلی",
+        assigneeName: "سارا احمدی",
+        priority: "high",
+        dueDate: "1404/05/10",
+        status: "in-progress",
+        subtasks: [
+          { id: "t1-1", displayId: "#301-1", title: "وایرفریم موبایل", assigneeName: "سارا احمدی", priority: "medium", status: "completed" },
+          { id: "t1-2", displayId: "#301-2", title: "طراحی هایفای دسکتاپ", assigneeName: "سارا احمدی", priority: "medium", dueDate: "1404/05/09", status: "in-progress" },
+        ],
+      },
       { id: "t2", displayId: "#302", title: "پیاده‌سازی فرم تماس", assigneeName: "علی رضایی", priority: "medium", dueDate: "1404/05/14", status: "todo" },
-      { id: "t3", displayId: "#303", title: "بهینه‌سازی سرعت بارگذاری", assigneeName: "سارا احمدی", priority: "urgent", dueDate: "1404/05/08", status: "in-progress" },
+      {
+        id: "t3",
+        displayId: "#303",
+        title: "بهینه‌سازی سرعت بارگذاری",
+        assigneeName: "سارا احمدی",
+        priority: "urgent",
+        dueDate: "1404/05/08",
+        status: "in-progress",
+        subtasks: [
+          { id: "t3-1", displayId: "#303-1", title: "فشرده‌سازی تصاویر", assigneeName: "سارا احمدی", priority: "low", status: "completed" },
+        ],
+      },
       { id: "t4", displayId: "#304", title: "تست واکنش‌گرایی موبایل", priority: "low", status: "todo" },
       { id: "t5", displayId: "#305", title: "یکپارچه‌سازی آنالیتیکس", assigneeName: "مریم کریمی", priority: "none", status: "completed" },
+      { id: "t9", displayId: "#306", title: "تعریف ساختار اطلاعات", assigneeName: "علی رضایی", priority: "medium", dueDate: "1404/04/05", status: "completed" },
+      { id: "t10", displayId: "#307", title: "تست پذیرش نهایی", assigneeName: "مریم کریمی", priority: "high", dueDate: "1404/07/10", status: "todo" },
     ],
     activity: mockActivity(3),
   },
@@ -43,7 +68,9 @@ export const MOCK_PROJECTS: Project[] = [
     statusDistribution: { todo: 8, inProgress: 6, completed: 4 },
     tasks: [
       { id: "t6", displayId: "#401", title: "طراحی جریان ثبت‌نام", assigneeName: "علی رضایی", priority: "high", dueDate: "1404/05/20", status: "todo" },
-      { id: "t7", displayId: "#402", title: "اتصال به API نوتیفیکیشن", assigneeName: "مریم کریمی", priority: "medium", status: "in-progress" },
+      { id: "t7", displayId: "#402", title: "اتصال به API نوتیفیکیشن", assigneeName: "مریم کریمی", priority: "medium", dueDate: "1404/06/12", status: "in-progress" },
+      { id: "t11", displayId: "#403", title: "معماری اولیه‌ی اپ", assigneeName: "علی رضایی", priority: "high", dueDate: "1404/03/15", status: "completed" },
+      { id: "t12", displayId: "#404", title: "انتشار نسخه‌ی بتا", assigneeName: "مریم کریمی", priority: "urgent", dueDate: "1404/08/20", status: "todo" },
     ],
     activity: mockActivity(5),
   },
@@ -89,5 +116,71 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
     ],
     projects: projectRefs("org-2"),
     taskCount: 13,
+  },
+]
+
+export const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: "n1",
+    verb: "این تسک را به شما تخصیص داد",
+    actorName: "سارا احمدی",
+    target: { type: "task", id: "t2", label: "پیاده‌سازی فرم تماس", projectId: "proj-1" },
+    status: "unread",
+    requiresApproval: false,
+    createdAtLabel: "۲ ساعت پیش",
+  },
+  {
+    id: "n2",
+    verb: "روی تسک «بهینه‌سازی سرعت بارگذاری» کامنت گذاشت",
+    actorName: "علی رضایی",
+    target: { type: "task", id: "t3", label: "بهینه‌سازی سرعت بارگذاری", projectId: "proj-1" },
+    status: "unread",
+    requiresApproval: false,
+    createdAtLabel: "۵ ساعت پیش",
+  },
+  {
+    id: "n3",
+    verb: "درخواست عضویت در پروژه را ثبت کرد — نیاز به تایید شما",
+    actorName: "امیر صادقی",
+    target: { type: "project", id: "proj-1", label: "بازطراحی وب‌سایت" },
+    status: "unread",
+    requiresApproval: true,
+    createdAtLabel: "دیروز",
+  },
+  {
+    id: "n4",
+    verb: "شما را به‌عنوان ادمین سازمان تعیین کرد — نیاز به تایید شما",
+    actorName: "نگار ملکی",
+    target: { type: "organization", id: "org-2", label: "تیم طراحی آبی" },
+    status: "unread",
+    requiresApproval: true,
+    createdAtLabel: "دیروز",
+  },
+  {
+    id: "n5",
+    verb: "وضعیت تسک «طراحی جریان ثبت‌نام» را به «در انتظار» تغییر داد",
+    actorName: "علی رضایی",
+    target: { type: "task", id: "t6", label: "طراحی جریان ثبت‌نام", projectId: "proj-2" },
+    status: "read",
+    requiresApproval: false,
+    createdAtLabel: "۲ روز پیش",
+  },
+  {
+    id: "n6",
+    verb: "پروژه‌ی جدیدی در سازمان ساخت",
+    actorName: "نگار ملکی",
+    target: { type: "project", id: "proj-3", label: "کمپین تبلیغاتی بهار" },
+    status: "read",
+    requiresApproval: false,
+    createdAtLabel: "۳ روز پیش",
+  },
+  {
+    id: "n7",
+    verb: "شما را در سازمان «شرکت نوین‌ساز» عضو کرد",
+    actorName: "سارا احمدی",
+    target: { type: "organization", id: "org-1", label: "شرکت نوین‌ساز" },
+    status: "read",
+    requiresApproval: false,
+    createdAtLabel: "هفته‌ی پیش",
   },
 ]

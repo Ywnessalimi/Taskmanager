@@ -42,6 +42,8 @@ export type Task = {
   priority: TaskPriority
   dueDate?: string
   status: TaskStatus
+  /** زیر-تسک‌ها (Sublist) — فقط برای نمای Tree استفاده می‌شود، حداکثر یک سطح در مدل فعلی */
+  subtasks?: Task[]
 }
 
 export type Project = {
@@ -64,4 +66,22 @@ export type Organization = {
   members: Member[]
   projects: ProjectRef[]
   taskCount: number
+}
+
+export type NotificationStatus = "unread" | "read"
+
+export type NotificationTarget =
+  | { type: "task"; id: string; label: string; projectId: string }
+  | { type: "project"; id: string; label: string }
+  | { type: "organization"; id: string; label: string }
+
+export type Notification = {
+  id: string
+  verb: string
+  actorName?: string
+  target: NotificationTarget
+  status: NotificationStatus
+  requiresApproval: boolean
+  /** متن نسبی آماده برای نمایش (مثل «۲ ساعت پیش») — محاسبه‌ی زمان واقعی هنوز پیاده نشده */
+  createdAtLabel: string
 }

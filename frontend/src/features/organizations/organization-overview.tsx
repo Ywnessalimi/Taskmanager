@@ -1,17 +1,9 @@
 import Link from "next/link"
 import { ActivityBarRow } from "@/components/charts/activity-bar-row"
+import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MembersDialog } from "@/features/organizations/members-dialog"
 import type { Organization } from "@/lib/api/types"
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-sm font-medium text-foreground">{children}</h2>
-}
-
-/** باکس با بوردر و پدینگ ۱۲px — الگوی مشترک بخش‌های Overview سازمان (طبق بازخورد کاربر) */
-function SectionBox({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-md border border-border p-3">{children}</div>
-}
 
 export function OrganizationOverview({ organization }: { organization: Organization }) {
   return (

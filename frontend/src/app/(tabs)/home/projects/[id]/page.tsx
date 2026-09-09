@@ -38,7 +38,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <TabsTrigger value="overview">نمای‌کلی</TabsTrigger>
         </TabsList>
         <TabsContent value="list">
-          <ProjectTaskList tasks={project.tasks} />
+          <ProjectTaskList project={project} />
         </TabsContent>
         <TabsContent value="overview">
           <ProjectOverview project={project} />

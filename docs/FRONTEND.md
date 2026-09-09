@@ -56,14 +56,15 @@ app/
 | لیست Workspace در خانه | `features/home/WorkspaceList` |
 | Organization Overview (اعضا، پروژه‌های فعال، Activity) | `features/organizations/OrganizationOverview` |
 | Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
-| نماهای Tree/Board/Table/Timeline/Calendar | `features/tasks/views/{TreeView, BoardView, TableView, TimelineView, CalendarView}` |
-| مدیریت ستون‌های Board | `features/projects/ColumnManager` |
-| افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` |
-| کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Attachment، Comment، Priority، Sublist) | `features/tasks/TaskDetail` |
-| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` |
-| فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` |
-| تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` |
-| ویجت‌های تکرارشونده (Activity Heatmap، Pie Chart، خط زمانی وضعیت) | `components/charts/{ActivityHeatmap, StatusPieChart, HealthTimeline}` — این‌ها باید به‌صورت کامپوننت مشترک ساخته شوند چون در چند صفحه (Organization/Project/My Tasks) تکرار می‌شوند. |
+| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}` — ساخته شد؛ محل واقعی زیر `features/projects/` است نه `features/tasks/` (چون از اول در همین‌جا توسعه داده شد) |
+| مدیریت ستون‌های Board | `features/projects/ColumnManager` — هنوز ساخته نشده، ستون‌ها فعلاً ثابت‌اند |
+| افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` — هنوز ساخته نشده |
+| کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Attachment، Comment، Priority، Sublist) | `features/tasks/TaskDetail` — هنوز ساخته نشده (هیچ صفحه‌ی جزئیات تسکی وجود ندارد) |
+| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — هنوز ساخته نشده |
+| فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` — ساخته شد |
+| تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — هنوز ساخته نشده (صفحه‌ی account فقط دکمه‌ی خروج دارد) |
+| ویجت‌های تکرارشونده (Activity Heatmap، Pie/Donut Chart) | `components/charts/{ActivityHeatmap, ActivityBarRow, StatusDonutChart}` — ساخته شد |
+| باکس بوردردار مشترک صفحات Overview | `components/layout/{SectionTitle, SectionBox}` — ساخته شد |
 
 ## ۵. لایه‌ی رنگی (Color Tokens)
 
@@ -120,27 +121,29 @@ src/app/
   page.tsx             → ریدایرکت به /home
   (tabs)/
     layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
-    home/page.tsx        → Placeholder
+    home/page.tsx        → getOrganizations() + WorkspaceList
     my-tasks/page.tsx    → Placeholder
-    notifications/page.tsx → Placeholder
+    notifications/page.tsx → getNotifications() + NotificationList
     account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
 src/components/
   navigation/bottom-tab-bar.tsx → ناوبری ۴ تب پایین صفحه (Client Component، بر اساس pathname تب فعال را با رنگ brand مشخص می‌کند)
   navigation/page-header.tsx    → PageHeader مشترک صفحات جزئیات (بازگشت + عنوان + منوی سه‌نقطه) — رجوع به src/components/navigation/README.md
+  layout/section.tsx            → SectionTitle + SectionBox (باکس بوردر+پدینگ‌۱۲px مشترک همه‌ی Overview ها)
 ```
 
-صفحات my-tasks و notifications هنوز فقط اسکلت (عنوان + توضیح کوتاه + Badge) هستند و داده‌ای وصل نیست.
+صفحه‌ی my-tasks هنوز فقط اسکلت (عنوان + توضیح کوتاه + Badge) است و داده‌ای وصل نیست.
 
-**صفحه‌ی خانه، سازمان و پروژه ساخته شده‌اند:**
+**صفحه‌ی خانه، سازمان، پروژه و اعلان‌ها ساخته شده‌اند:**
 
 ```
 src/lib/api/
-  types.ts          → Member, ProjectRef, Task, Project, Organization (تایپ‌های مشترک همه‌ی این صفحات)
-  mock-data.ts       → MOCK_ORGANIZATIONS + MOCK_PROJECTS (منبع واحد Mock — شناسه‌ها بین سه صفحه هماهنگ‌اند)
+  types.ts          → Member, ProjectRef, Task, Project, Organization, Notification (تایپ‌های مشترک همه‌ی این صفحات)
+  mock-data.ts       → MOCK_ORGANIZATIONS + MOCK_PROJECTS + MOCK_NOTIFICATIONS (منبع واحد Mock — شناسه‌ها هماهنگ‌اند)
   organizations.ts   → getOrganizations(), getOrganization(id)
   projects.ts         → getProject(id)
+  notifications.ts    → getNotifications()
 src/components/charts/
-  activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — فقط پروژه فعلاً، بعداً تسک‌های من)
+  activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — پروژه، بعداً تسک‌های من)
   activity-bar-row.tsx    → ActivityBarRow (ردیف تک‌خطی با مستطیل‌های عمودی — فعالیت هر عضو در صفحه‌ی سازمان)
   status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی)
 src/features/home/
@@ -148,25 +151,38 @@ src/features/home/
                         وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند و یک آیکون + برای افزودن پروژه‌ی جدید
                         (فقط state محلی، غیرماندگار) کنار شورون ظاهر می‌شود. بدون آیکون نوع (طبق بازخورد کاربر حذف شد).
 src/features/organizations/
-  organization-overview.tsx → OrganizationOverview: اعضا (فقط اواتار روی‌هم‌افتاده)، پروژه‌های فعال (باکس بوردردار)،
-                                فعالیت اعضا (باکس بوردردار، هر عضو یک ردیف با ActivityBarRow)
+  organization-overview.tsx → OrganizationOverview: اعضا (فقط اواتار روی‌هم‌افتاده)، پروژه‌های فعال (SectionBox)،
+                                فعالیت اعضا (SectionBox، هر عضو یک ردیف با ActivityBarRow)
   members-dialog.tsx         → MembersDialog: مودال مدیریت اعضا (تاگل دسترسی دعوت، افزودن عضو، تغییر نقش/حذف — همه محلی)
 src/features/projects/
-  project-task-list.tsx  → ProjectTaskList (Client): سوییچر ۵ نما — فقط Table واقعی است، بقیه Placeholder «به‌زودی»
-  project-overview.tsx    → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، Project Health (۴ باکس آماری)،
-                             StatusDonutChart، تقویم سررسیدها (Placeholder ساده، بدون تراز واقعی روز هفته)، ActivityHeatmap
-src/app/(tabs)/home/
-  page.tsx                     → getOrganizations() + WorkspaceList
-  organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
-  projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
+  task-display.tsx        → ثابت‌ها/کامپوننت مشترک نماها: PRIORITY_LABEL/COLOR، STATUS_LABEL، STATUS_COLUMNS، PriorityDot
+  project-task-list.tsx    → ProjectTaskList (Client): سوییچر ۵ نما — همه‌ی ۵ تا واقعاً پیاده شده‌اند (زیر)
+  views/table-view.tsx      → TableView: لیست ساده‌ی تسک‌ها
+  views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks)
+  views/board-view.tsx       → BoardView: کانبان با Drag & Drop واقعی (@dnd-kit) بین ۳ ستون ثابت (وضعیت تسک)
+  views/timeline-view.tsx    → TimelineView: هر تسک یک نقطه روی محور زمان LTR (بر اساس dueDate در بازه‌ی پروژه)
+  views/calendar-view.tsx    → CalendarView: تقویم ماهانه با پیمایش بین ماه‌های دارای تسک
+  project-overview.tsx      → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
+                               پراکندگی وضعیت تسک‌ها (SectionBox + StatusDonutChart)، تقویم سررسیدها (SectionBox، Placeholder ساده)،
+                               فعالیت اعضا (SectionBox + ActivityHeatmap)
+src/features/notifications/
+  notification-list.tsx → NotificationList (Client): فیلتر همه/خوانده‌نشده/خوانده‌شده/تایید با Tabs کنترل‌شده؛
+                            کلیک روی ردیف = خواندن + هدایت به مقصد؛ دکمه‌های تایید/رد برای اعلان‌های requiresApproval
+src/app/(tabs)/
+  home/page.tsx                     → getOrganizations() + WorkspaceList
+  home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
+  home/projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
+  notifications/page.tsx            → getNotifications() + NotificationList
 ```
 
 نکات مهم برای ادامه‌ی کار:
 
-- **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم سررسیدها را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
+- **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم/Timeline را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
 - **فرمول `mockActivity` در `mock-data.ts` باید ضریب‌های غیرمضرب‌ ۵ روی هر دو پارامتر (index و seed) داشته باشد** — نسخه‌ی اول (`(i*seed+seed)%5`) وقتی seed مضرب ۵ بود (مثلاً ۵) همیشه صفر می‌داد و کل ردیف فعالیت آن عضو طوسی/خالی نشان داده می‌شد. اگر seed جدیدی اضافه می‌کنید حواستان به این تله باشد.
+- **`Timeline`/`Calendar` تاریخ‌ها را با یک تبدیل خطی ساده‌ی خودشان مقایسه می‌کنند** (نه تقویم جلالی واقعی با کبیسه/طول ماه دقیق) — کافی برای موقعیت نسبی، نه برای محاسبه‌ی تقویمی دقیق.
 - رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
-- افزودن پروژه از آکوردئون خانه، و افزودن/حذف/تغییر نقش عضو در `MembersDialog`، فقط در state مرورگر است و با رفرش از بین می‌رود — چون API واقعی هنوز وجود ندارد.
+- افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، و خواندن/تایید در `NotificationList` — همه فقط در state مرورگر است و با رفرش از بین می‌رود؛ هیچ‌کدام API واقعی ندارند.
 - منوی سه‌نقطه‌ی `PageHeader` (افزودن تسک/مایل‌استون/بخش، تنظیمات، حذف) فعلاً فقط UI است؛ آیتم‌ها `onClick` ندارند چون صفحه/فرم مقصدشان هنوز ساخته نشده.
+- **تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه `@dnd-kit` است** (`@dnd-kit/core` + `@dnd-kit/utilities`)، فقط در `views/board-view.tsx` — برای Drag & Drop واقعی روی موبایل/ماوس. تست کامل ژست Drag روی دستگاه واقعی توصیه می‌شود؛ ابزارهای خودکار مرورگر گاهی رویداد Pointer را درست شبیه‌سازی نمی‌کنند.
 
-برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`).
+برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`). اگر بعد از چند بار ادیت پیاپی فایل‌ها خطاهای عجیب/قدیمی در کنسول مرورگر دیدید (مثل ارجاع به فایلی که قبلاً rename شده)، احتمالاً کش Turbopack کهنه شده — سرور را متوقف کنید، `frontend/.next` را پاک کنید، و دوباره اجرا کنید.

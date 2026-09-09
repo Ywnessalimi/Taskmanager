@@ -1,11 +1,8 @@
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap"
 import { StatusDonutChart } from "@/components/charts/status-donut-chart"
+import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import type { Project } from "@/lib/api/types"
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-sm font-medium text-foreground">{children}</h2>
-}
 
 function HealthStat({ label, value }: { label: string; value: number }) {
   return (
@@ -60,34 +57,42 @@ export function ProjectOverview({ project }: { project: Project }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionTitle>Project Health</SectionTitle>
-        <div className="flex gap-2">
-          <HealthStat label="فعال" value={project.health.active} />
-          <HealthStat label="انجام‌شده" value={project.health.completed} />
-          <HealthStat label="سررسید این بازه" value={project.health.dueInPeriod} />
-          <HealthStat label="عقب‌افتاده" value={project.health.overdue} />
-        </div>
+        <SectionTitle>سلامت پروژه</SectionTitle>
+        <SectionBox>
+          <div className="flex gap-2">
+            <HealthStat label="فعال" value={project.health.active} />
+            <HealthStat label="انجام‌شده" value={project.health.completed} />
+            <HealthStat label="سررسید این بازه" value={project.health.dueInPeriod} />
+            <HealthStat label="عقب‌افتاده" value={project.health.overdue} />
+          </div>
+        </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionTitle>پراکندگی وضعیت تسک‌ها</SectionTitle>
-        <StatusDonutChart
-          segments={[
-            { label: "در انتظار", value: project.statusDistribution.todo, colorVar: "var(--text3)" },
-            { label: "در حال انجام", value: project.statusDistribution.inProgress, colorVar: "var(--warning)" },
-            { label: "انجام‌شده", value: project.statusDistribution.completed, colorVar: "var(--success)" },
-          ]}
-        />
+        <SectionBox>
+          <StatusDonutChart
+            segments={[
+              { label: "در انتظار", value: project.statusDistribution.todo, colorVar: "var(--text3)" },
+              { label: "در حال انجام", value: project.statusDistribution.inProgress, colorVar: "var(--warning)" },
+              { label: "انجام‌شده", value: project.statusDistribution.completed, colorVar: "var(--success)" },
+            ]}
+          />
+        </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionTitle>تقویم سررسیدها</SectionTitle>
-        <DeadlineCalendar dueDays={dueDays} />
+        <SectionBox>
+          <DeadlineCalendar dueDays={dueDays} />
+        </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionTitle>فعالیت اعضا</SectionTitle>
-        <ActivityHeatmap data={project.activity} />
+        <SectionBox>
+          <ActivityHeatmap data={project.activity} />
+        </SectionBox>
       </div>
     </div>
   )
