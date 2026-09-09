@@ -1,0 +1,163 @@
+# مستند فرانت‌اند (Frontend)
+
+> پیش‌نیاز خواندن: [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md) و [DESIGN.md](./DESIGN.md).
+> این سند نحوه‌ی پیاده‌سازی رابط کاربری با **Next.js** را مشخص می‌کند. کد واقعی در پوشه‌ی [`frontend/`](../frontend/) قرار می‌گیرد.
+
+## ۱. تصمیم فاز اول
+
+در فاز اول، **فقط فرانت‌اند به‌طور کامل ساخته می‌شود**. بک‌اند Django (رجوع به [BACKEND.md](./BACKEND.md)) یک API ساده فراهم می‌کند؛ فرانت باید از همان ابتدا در پشت یک لایه‌ی انتزاعی به داده دسترسی داشته باشد (نه فراخوانی مستقیم و پراکنده‌ی fetch در کامپوننت‌ها) تا:
+
+- بتوان بخش‌هایی را ابتدا با داده‌ی Mock ساخت و بعداً بدون تغییر UI به API واقعی وصل کرد.
+- مهاجرت بعدی بک‌اند (تغییر مدل داده، افزودن Auth واقعی، ...) حداقل تأثیر را روی کامپوننت‌های UI بگذارد.
+
+## ۲. تکنولوژی
+
+- **Next.js 16** (App Router، Turbopack) + **React 19** + **TypeScript**.
+- **Tailwind CSS v4** (پیکربندی CSS-first؛ بدون فایل `tailwind.config.ts` — همه‌چیز در `globals.css` با `@theme`).
+- **shadcn/ui** روی پایه‌ی **Base UI** (`@base-ui/react`) با پریست `nova` — کامپوننت‌ها با `npx shadcn@latest add <name>` اضافه می‌شوند و در `src/components/ui/` قرار می‌گیرند.
+- **جهت و زبان: RTL / فارسی** — `components.json` با `"rtl": true` مقداردهی شده، `<html lang="fa" dir="rtl">` و `DirectionProvider` (از `src/components/ui/direction.tsx`) در `layout.tsx` تنظیم شده‌اند.
+  > این تصمیم (فارسی/RTL) بر اساس زبان مکالمه و اسپک محصول گرفته شده؛ اگر محصول باید چندزبانه/LTR هم باشد باید اینجا و در `layout.tsx` بازنگری شود.
+- **فونت: IRANSansX** (فایل‌های محلی woff2، از کاربر دریافت شده، در `public/fonts/iransansx/`). چون فونتی از Google Fonts نیست، با `next/font` لود نمی‌شود — با `@font-face` دستی در `src/styles/fonts.css` (۹ وزن، ۱۰۰ تا ۹۰۰) تعریف شده و روی متغیر `--font-sans` سوار است.
+- **آیکون: RemixIcon** (فونت آیکون، از کاربر دریافت شده). فایل فونت در `public/fonts/remixicon.woff2` و CSS آن (کلاس‌های `ri-*`) در `src/styles/remixicon.css` (کپی از `assets/Icons/remixicon.css` با اصلاح مسیر فونت) — از `globals.css` ایمپورت می‌شود. کامپوننت کمکی `src/components/ui/remix-icon.tsx` (`<RemixIcon name="home-line" />`) رندر `<i className="ri-home-line" />` را انجام می‌دهد؛ رنگ از `currentColor` و سایز از `font-size` (کلاس‌های `text-*` تیلویند) گرفته می‌شود.
+  > نام دقیق هر آیکون را قبل از استفاده در `assets/Icons/remixicon.css` (یا [remixicon.com](https://remixicon.com)) چک کنید — اسم‌های شبیه به هم لزوماً یک شکل ندارند (مثلاً `ri-bell-line` آیکون «بی‌صدا» است، نه زنگ ساده؛ آیکون درست اعلان‌ها `ri-notification-line` است).
+- مدیریت State سرور: یک لایه‌ی fetch متمرکز (client) + کتابخانه‌ی کش/سرور-استیت (مثل React Query) در آینده؛ در فاز اول می‌تواند ساده و دستی باشد. هنوز پیاده نشده — صفحات فعلی فقط UI اسکلتی/Placeholder دارند.
+- Drag & Drop برای نمای Board: هنوز انتخاب نشده؛ تصمیم دقیق هنگام پیاده‌سازی نمای Board گرفته می‌شود و همین‌جا ثبت خواهد شد.
+
+## ۳. ساختار مسیرها (Routing)
+
+ناوبری اصلی حول ۴ تب پایین صفحه است (مطابق [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md#۳-معماری-اطلاعات-۴-تب-اصلی)):
+
+```
+app/
+  (tabs)/
+    home/                        → تب خانه: لیست Workspace ها
+      organizations/[orgId]/     → صفحه‌ی Overview سازمان
+      projects/[projectId]/      → صفحه‌ی پروژه
+        list/                    → بخش List با ساب-روت برای هر نما
+          tree/
+          board/
+          table/
+          timeline/
+          calendar/
+        overview/                → بخش Overview پروژه
+    my-tasks/                    → تب تسک‌های من (همان نماها + Overview شخصی)
+    notifications/                → تب اعلان‌ها
+    account/                     → تب حساب کاربری
+  tasks/[taskId]/                → صفحه/پنل جزئیات یک تسک (قابل باز شدن از هرکدام از نماها)
+```
+
+> ساختار دقیق فولدرهای Next.js (Route Groups، Layout ها و ...) هنگام Scaffold واقعی پروژه در `frontend/` نهایی و در همان‌جا مستند می‌شود (طبق قانون مستندسازی در [AGENTS.md](../AGENTS.md)).
+
+## ۴. نگاشت مفاهیم محصول به کامپوننت‌ها
+
+| مفهوم محصول | کامپوننت/ماژول فرانت پیشنهادی |
+|---|---|
+| Bottom Tab Bar | `components/navigation/BottomTabBar` |
+| لیست Workspace در خانه | `features/home/WorkspaceList` |
+| Organization Overview (اعضا، پروژه‌های فعال، Activity) | `features/organizations/OrganizationOverview` |
+| Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
+| نماهای Tree/Board/Table/Timeline/Calendar | `features/tasks/views/{TreeView, BoardView, TableView, TimelineView, CalendarView}` |
+| مدیریت ستون‌های Board | `features/projects/ColumnManager` |
+| افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` |
+| کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Attachment، Comment، Priority، Sublist) | `features/tasks/TaskDetail` |
+| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` |
+| فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` |
+| تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` |
+| ویجت‌های تکرارشونده (Activity Heatmap، Pie Chart، خط زمانی وضعیت) | `components/charts/{ActivityHeatmap, StatusPieChart, HealthTimeline}` — این‌ها باید به‌صورت کامپوننت مشترک ساخته شوند چون در چند صفحه (Organization/Project/My Tasks) تکرار می‌شوند. |
+
+## ۵. لایه‌ی رنگی (Color Tokens)
+
+منبع اصلی حقیقت رنگ‌ها فایل **`src/styles/colors.css`** است (نه فایل‌های تولیدشده‌ی خودکار shadcn). این فایل شامل توکن‌های خام (`--bg`, `--text`, `--brand`, `--success`, `--warning`, `--error`, ...) برای حالت روشن و تیره است؛ سوییچ بین روشن/تیره از طریق `@media (prefers-color-scheme: dark)` **داخل همین فایل** انجام می‌شود — فعلاً سوییچر دستی تم (مثل `next-themes` یا کلاس `.dark`) نداریم.
+
+در `src/app/globals.css`:
+
+1. `colors.css` ایمپورت می‌شود.
+2. توکن‌های استاندارد shadcn (`--background`, `--foreground`, `--primary`, `--muted`, `--border`, ...) در بلوک `@theme inline` به توکن‌های خام بالا نگاشت (map) می‌شوند — مثلاً `--color-primary: var(--brand)`.
+3. توکن‌های اضافه‌ی خاص این پروژه که در پالت پیش‌فرض shadcn نیستند (`bg2`, `bg3`, `bg4`, `text2`, `text3`, `text4`, `icon`, `icon2`, `icon3`, `brand`, `link`, `success`, `warning`, `overlay`, ...) هم به همان بلوک اضافه شده‌اند تا کلاس‌های Tailwind مثل `text-text2`, `bg-bg2`, `text-brand` در دسترس باشند.
+4. `--radius` روی `0.375rem` تنظیم شده (شعاع کوچک و ثابت، مطابق [DESIGN.md](./DESIGN.md#۴-اندازهی-المانها)).
+
+**قانون مهم:** اگر رنگ جدیدی لازم شد، اول به `colors.css` اضافه شود (چون آن فایل منبع طراحی است)، بعد در صورت نیاز در `@theme inline` نگاشت داده شود. رنگ‌های Hardcode (مثل `#B473F4` مستقیم در کامپوننت) ممنوع است — همیشه از طریق کلاس‌های Tailwind متصل به این توکن‌ها استفاده شود.
+
+> رنگ‌های اختصاصی اولویت تسک (Priority: none/low/medium/high/urgent) که در [DESIGN.md](./DESIGN.md#۲-سیستم-رنگ-color-system) پیشنهاد شده‌اند، هنوز در `colors.css` تعریف نشده‌اند — هر وقت کامپوننت تسک ساخته شد باید این توکن‌ها به `colors.css` اضافه و اینجا مستند شوند.
+
+## ۶. لایه‌ی دسترسی به داده (API Client)
+
+- تمام درخواست‌ها به بک‌اند از یک ماژول متمرکز (مثلاً `lib/api/`) عبور می‌کنند؛ کامپوننت‌ها مستقیماً آدرس API را نمی‌دانند.
+- تایپ‌های TypeScript مربوط به موجودیت‌ها (Task، Project، Organization، User، Notification) باید با فیلدهای مدل بک‌اند (رجوع به [BACKEND.md](./BACKEND.md#۳-مدل-داده)) هماهنگ نگه داشته شوند.
+- آدرس پایه‌ی API از متغیر محیطی خوانده می‌شود تا سوییچ بین Mock/Local/آینده ساده باشد.
+
+## ۷. قانون مستندسازی ماژول‌ها
+
+طبق [AGENTS.md](../AGENTS.md)، هر فیچر جدید که داخل `frontend/` ساخته می‌شود (مثلاً `features/tasks/`) باید یک `README.md` کوتاه داخل همان پوشه داشته باشد که توضیح دهد: این ماژول چه می‌کند، به کدام API/موجودیت‌های بک‌اند وابسته است، و با کدام ماژول‌های دیگر فرانت ارتباط دارد (مثلاً `TaskDetail` توسط `BoardView`، `TableView` و `TreeView` مشترکاً استفاده می‌شود). کامپوننت‌های خیلی کوچک/زیرساختی (مثل `BottomTabBar`) که هنوز به‌اندازه‌ی یک «فیچر» بزرگ نشده‌اند، فعلاً همین‌جا (بخش ۸) مستند می‌شوند؛ وقتی حجمشان زیاد شد به الگوی «پوشه + README.md» منتقل می‌شوند.
+
+## ۸. وضعیت فعلی پیاده‌سازی (Implementation Status)
+
+> این بخش با هر تغییر واقعی در کد به‌روزرسانی می‌شود؛ فهرست کامل نیست، فقط چیزی را که واقعاً ساخته شده ثبت می‌کند.
+
+پروژه Next.js با `create-next-app` (TypeScript + Tailwind v4 + App Router + `src/`) در `frontend/` ساخته شده و shadcn/ui (Base UI، پریست Nova، RTL) روی آن Init شده است.
+
+**کامپوننت‌های نصب‌شده از shadcn** (`src/components/ui/`):
+
+| کامپوننت | دلیل نصب اولیه |
+|---|---|
+| `button` | دکمه‌ی Ghost/Primary در سراسر اپ (سایز پیش‌فرض ۳۲px، `lg` معادل ۳۶px — مطابق [DESIGN.md](./DESIGN.md#۵-الگوی-دکمهها)) |
+| `tabs` | سوییچ List/Overview در صفحه‌ی پروژه (`src/app/(tabs)/home/projects/[id]/page.tsx`) استفاده شده؛ فیلتر All/Unread/Read/Approval در اعلان‌ها هنوز نه |
+| `avatar` | نمایش اعضا در `OrganizationOverview` استفاده شده (فعلاً فقط `AvatarFallback` با حرف اول اسم، بدون عکس واقعی) |
+| `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
+| `separator` | جداکننده‌ی ظریف بین بخش‌ها — هنوز در UI استفاده نشده |
+| `direction` | `DirectionProvider`/`useDirection` برای پشتیبانی RTL |
+
+هر وقت کامپوننت جدیدی از shadcn اضافه شود، همین جدول به‌روزرسانی می‌شود.
+
+**ساختار مسیر پیاده‌سازی‌شده:**
+
+```
+src/app/
+  layout.tsx          → html[lang=fa][dir=rtl] + DirectionProvider + فونت Vazirmatn
+  page.tsx             → ریدایرکت به /home
+  (tabs)/
+    layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
+    home/page.tsx        → Placeholder
+    my-tasks/page.tsx    → Placeholder
+    notifications/page.tsx → Placeholder
+    account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
+src/components/
+  navigation/bottom-tab-bar.tsx → ناوبری ۴ تب پایین صفحه (Client Component، بر اساس pathname تب فعال را با رنگ brand مشخص می‌کند)
+```
+
+صفحات my-tasks و notifications هنوز فقط اسکلت (عنوان + توضیح کوتاه + Badge) هستند و داده‌ای وصل نیست.
+
+**صفحه‌ی خانه، سازمان و پروژه ساخته شده‌اند:**
+
+```
+src/lib/api/
+  types.ts          → Member, ProjectRef, Task, Project, Organization (تایپ‌های مشترک همه‌ی این صفحات)
+  mock-data.ts       → MOCK_ORGANIZATIONS + MOCK_PROJECTS (منبع واحد Mock — شناسه‌ها بین سه صفحه هماهنگ‌اند)
+  organizations.ts   → getOrganizations(), getOrganization(id)
+  projects.ts         → getProject(id)
+src/components/charts/
+  activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — سازمان/پروژه/بعداً تسک‌های من)
+  status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی)
+src/features/home/
+  workspace-list.tsx → WorkspaceList: آکوردئون سازمان‌ها؛ هر سازمان یک ردیف با نام (لینک) + شورون باز/بسته (سمت چپ)؛
+                        وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند و یک آیکون + برای افزودن پروژه‌ی جدید
+                        (فقط state محلی، غیرماندگار) کنار شورون ظاهر می‌شود. بدون آیکون نوع (طبق بازخورد کاربر حذف شد).
+src/features/organizations/
+  organization-overview.tsx → OrganizationOverview: اعضا، پروژه‌های فعال، ActivityHeatmap
+src/features/projects/
+  project-task-list.tsx  → ProjectTaskList (Client): سوییچر ۵ نما — فقط Table واقعی است، بقیه Placeholder «به‌زودی»
+  project-overview.tsx    → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، Project Health (۴ باکس آماری)،
+                             StatusDonutChart، تقویم سررسیدها (Placeholder ساده، بدون تراز واقعی روز هفته)، ActivityHeatmap
+src/app/(tabs)/home/
+  page.tsx                     → getOrganizations() + WorkspaceList
+  organizations/[id]/page.tsx  → getOrganization(id) + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
+  projects/[id]/page.tsx       → getProject(id) + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
+```
+
+نکات مهم برای ادامه‌ی کار:
+
+- **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم سررسیدها را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
+- رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
+- افزودن پروژه از آکوردئون خانه فقط در state مرورگر است و با رفرش از بین می‌رود — چون API واقعی ساخت پروژه هنوز وجود ندارد.
+
+برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`).

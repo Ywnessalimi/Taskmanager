@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/colors.css";
+@import "../styles/fonts.css";
+@import "../styles/remixicon.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * توکن‌های رنگی از src/styles/colors.css می‌آیند (منبع اصلی حقیقت رنگ‌ها).
+ * حالت تیره از طریق prefers-color-scheme در همان فایل مدیریت می‌شود، نه کلاس .dark —
+ * پس فعلاً سوییچر تم دستی نداریم (رجوع به docs/FRONTEND.md بخش «لایه‌ی رنگی»).
+ */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-ring: var(--brand);
+  --color-input: var(--border);
+  --color-border: var(--border);
+  --color-destructive: var(--error);
+  --color-accent-foreground: var(--text);
+  --color-accent: var(--bg3);
+  --color-muted-foreground: var(--text2);
+  --color-muted: var(--bg2);
+  --color-secondary-foreground: var(--text);
+  --color-secondary: var(--bg3);
+  --color-primary-foreground: var(--text-on-brand);
+  --color-primary: var(--brand);
+  --color-popover-foreground: var(--text);
+  --color-popover: var(--bg);
+  --color-card-foreground: var(--text);
+  --color-card: var(--bg);
+
+  /* توکن‌های اضافه‌ی خاص این پروژه (فراتر از پالت پیش‌فرض shadcn) */
+  --color-bg2: var(--bg2);
+  --color-bg3: var(--bg3);
+  --color-bg4: var(--bg4);
+  --color-text2: var(--text2);
+  --color-text3: var(--text3);
+  --color-text4: var(--text4);
+  --color-icon: var(--icon);
+  --color-icon2: var(--icon2);
+  --color-icon3: var(--icon3);
+  --color-brand: var(--brand);
+  --color-link: var(--link);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-overlay: var(--overlay);
+  --color-text-on-brand: var(--text-on-brand);
+  --color-icon-on-brand: var(--icon-on-brand);
+  --color-bg-brand: var(--bg-brand);
+  --color-icon-brand: var(--icon-brand);
+  --color-text-brand: var(--text-brand);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* شعاع گوشه‌ی کوچک و ثابت، مطابق docs/DESIGN.md (بخش ۴) */
+  --radius: 0.375rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
