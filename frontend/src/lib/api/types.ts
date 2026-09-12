@@ -42,6 +42,10 @@ export type Task = {
   priority: TaskPriority
   dueDate?: string
   status: TaskStatus
+  /** برچسب‌های تسک (Tag) — فعلاً فقط در فرم ساخت تسک ست می‌شود و هیچ نمایی آن را نشان نمی‌دهد */
+  tags?: string[]
+  /** توضیحات تسک — فعلاً فقط در فرم ساخت تسک ست می‌شود (صفحه‌ی جزئیات تسک هنوز وجود ندارد) */
+  description?: string
   /** زیر-تسک‌ها (Sublist) — فقط برای نمای Tree استفاده می‌شود، حداکثر یک سطح در مدل فعلی */
   subtasks?: Task[]
 }
@@ -84,4 +88,78 @@ export type Notification = {
   requiresApproval: boolean
   /** متن نسبی آماده برای نمایش (مثل «۲ ساعت پیش») — محاسبه‌ی زمان واقعی هنوز پیاده نشده */
   createdAtLabel: string
+}
+
+/** تنظیمات اعلان کاربر — مطابق سوییچ‌های صفحه‌ی «حساب کاربری». */
+export type NotificationPreferences = {
+  /** وقتی تسکی به من تخصیص داده می‌شود */
+  taskAssigned: boolean
+  /** کامنت جدید روی تسک‌های من */
+  taskComments: boolean
+  /** خلاصه‌ی هفتگی فعالیت */
+  weeklyDigest: boolean
+}
+
+/** فایلی که کاربر به پروفایل خودش پیوست کرده — در Overview تب «تسک‌های من» نمایش داده می‌شود. */
+export type UserAttachment = {
+  id: string
+  name: string
+  /** اندازه‌ی آماده برای نمایش (مثل «۱.۲ مگابایت») — محاسبه‌ی واقعی حجم هنوز پیاده نشده */
+  sizeLabel: string
+}
+
+/**
+ * کاربر واردشده (Current User). فیلدهای پروفایل (نام، ایمیل، عکس، توضیحات) علاوه بر تب
+ * «حساب کاربری»، در Overview تب «تسک‌های من» هم استفاده خواهند شد.
+ */
+export type CurrentUser = {
+  id: string
+  name: string
+  email: string
+  /** آدرس عکس پروفایل؛ اگر نبود، حرف اول نام در AvatarFallback نمایش داده می‌شود */
+  avatarUrl?: string
+  /** توضیح کوتاه کاربر (Bio) */
+  bio?: string
+  notifications: NotificationPreferences
+  /** فایل‌های پیوست‌شده‌ی کاربر (بخش پروفایل در Overview تب «تسک‌های من») */
+  attachments: UserAttachment[]
+}
+
+/** تسک تخصیص‌داده‌شده به کاربر، به‌همراه پروژه‌ای که از آن آمده (چون لیست بین‌پروژه‌ای است). */
+export type MyTask = Task & {
+  projectId: string
+  projectName: string
+}
+
+/**
+ * داده‌ی تجمیعی Overview تب «تسک‌های من» — همان مفاهیم سطح پروژه، اما روی همه‌ی
+ * پروژه‌های کاربر (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تب ۲ — تسک‌های من»).
+ */
+export type MyTasksOverview = {
+  /** تسک‌هایی که نیاز به رسیدگی فوری دارند (عقب‌افتاده یا اولویت فوری) */
+  attentionRequired: MyTask[]
+  statusDistribution: StatusDistribution
+  /** Project Health تجمیع‌شده روی همه‌ی پروژه‌های کاربر */
+  health: ProjectHealth
+  /** سطح فعالیت روزانه‌ی خود کاربر برای ActivityHeatmap (Portfolio Activity) */
+  activity: number[]
+}
+
+/** ورودی ساخت تسک جدید (فرم `features/tasks/TaskCreateForm`). */
+export type NewTaskInput = {
+  title: string
+  projectId: string
+  assigneeName?: string
+  dueDate?: string
+  priority: TaskPriority
+  tags: string[]
+  description?: string
+}
+
+/** یک گزینه‌ی پروژه در فرم ساخت تسک، به‌همراه اعضایی که می‌توانند مسئول تسک شوند. */
+export type TaskFormProjectOption = {
+  id: string
+  name: string
+  organizationName: string
+  memberNames: string[]
 }

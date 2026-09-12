@@ -77,7 +77,7 @@ export function NotificationList({ notifications: initial }: { notifications: No
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col rounded-md border border-border bg-background px-3">
         {filtered.map((notification, index) => (
           <div
             key={notification.id}

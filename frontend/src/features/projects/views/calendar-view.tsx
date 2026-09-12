@@ -4,26 +4,7 @@ import { useMemo, useState } from "react"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { PriorityDot } from "@/features/projects/task-display"
 import type { Task } from "@/lib/api/types"
-
-type ParsedDate = { year: number; month: number; day: number }
-
-function parseDate(date: string): ParsedDate | null {
-  const [year, month, day] = date.split("/").map(Number)
-  if ([year, month, day].some((n) => Number.isNaN(n))) return null
-  return { year, month, day }
-}
-
-/** طول تقریبی ماه‌های جلالی (۶ ماه اول ۳۱ روز، ۶ ماه بعد ۳۰، اسفند ۲۹) — کافی برای این نمای ساده. */
-function daysInMonth(month: number) {
-  if (month <= 6) return 31
-  if (month <= 11) return 30
-  return 29
-}
-
-const MONTH_NAMES = [
-  "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-  "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-]
+import { daysInMonth, MONTH_NAMES, parseDate, type JalaliDate } from "@/lib/jalali"
 
 /** بدون تراز واقعی روز هفته (نیازمند محاسبه‌ی تقویم جلالی واقعی) — فقط شبکه‌ی روزهای ماه. */
 export function CalendarView({ tasks }: { tasks: Task[] }) {
@@ -31,7 +12,7 @@ export function CalendarView({ tasks }: { tasks: Task[] }) {
     () =>
       tasks
         .map((task) => ({ task, date: task.dueDate ? parseDate(task.dueDate) : null }))
-        .filter((item): item is { task: Task; date: ParsedDate } => item.date !== null),
+        .filter((item): item is { task: Task; date: JalaliDate } => item.date !== null),
     [tasks]
   )
 

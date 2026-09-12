@@ -17,7 +17,11 @@ export type PageHeaderMenuItem = {
   destructive?: boolean
 }
 
-/** هدر مشترک صفحات سازمان و پروژه: دکمه‌ی بازگشت (فلش رو‌به‌راست، چون RTL)، عنوان، و منوی سه‌نقطه. */
+/**
+ * هدر مشترک صفحات جزئیات (سازمان، پروژه، تسک جدید): دکمه‌ی بازگشت (فلش رو‌به‌راست، چون RTL)،
+ * عنوان، و منوی سه‌نقطه. مثل `components/layout/AppHeader` سفید و تمام‌عرض است، پس باید
+ * بیرون از کانتینر padding‌دار صفحه رندر شود.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -31,7 +35,7 @@ export function PageHeader({
   const router = useRouter()
 
   return (
-    <header className="flex items-center gap-1 border-b border-border pb-3">
+    <header className="flex min-h-13 items-center gap-1 border-b border-border bg-background px-4 py-2">
       <button
         type="button"
         onClick={() => router.back()}

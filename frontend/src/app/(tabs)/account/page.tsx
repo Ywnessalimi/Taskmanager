@@ -1,15 +1,16 @@
-import { Button } from "@/components/ui/button"
-import { RemixIcon } from "@/components/ui/remix-icon"
+import { AppHeader } from "@/components/layout/app-header"
+import { AccountSettings } from "@/features/account/account-settings"
+import { getCurrentUser } from "@/lib/api/users"
 
-export default function AccountPage() {
+export default async function AccountPage() {
+  const user = await getCurrentUser()
+
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <h1 className="text-base font-medium text-foreground">حساب کاربری</h1>
-      <p className="text-sm text-text2">تنظیمات حساب کاربری در این‌جا قرار می‌گیرد.</p>
-      <Button variant="ghost" className="w-fit text-destructive">
-        <RemixIcon name="logout-box-r-line" />
-        خروج از حساب
-      </Button>
+    <div className="flex flex-col">
+      <AppHeader title="حساب کاربری" />
+      <div className="p-4">
+        <AccountSettings user={user} />
+      </div>
     </div>
   )
 }

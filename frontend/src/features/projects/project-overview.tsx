@@ -1,17 +1,9 @@
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap"
 import { StatusDonutChart } from "@/components/charts/status-donut-chart"
 import { SectionBox, SectionTitle } from "@/components/layout/section"
+import { StatTile } from "@/components/layout/stat-tile"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import type { Project } from "@/lib/api/types"
-
-function HealthStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-1 flex-col items-center gap-0.5 rounded-md bg-bg2 py-3">
-      <span className="text-base font-medium text-foreground">{value}</span>
-      <span className="text-xs text-text2">{label}</span>
-    </div>
-  )
-}
 
 /** تقویم ماهانه‌ی ساده (بدون تراز واقعی روز هفته) که فقط روزهای دارای سررسید را نشانه‌گذاری می‌کند. */
 function DeadlineCalendar({ dueDays }: { dueDays: number[] }) {
@@ -60,10 +52,10 @@ export function ProjectOverview({ project }: { project: Project }) {
         <SectionTitle>سلامت پروژه</SectionTitle>
         <SectionBox>
           <div className="flex gap-2">
-            <HealthStat label="فعال" value={project.health.active} />
-            <HealthStat label="انجام‌شده" value={project.health.completed} />
-            <HealthStat label="سررسید این بازه" value={project.health.dueInPeriod} />
-            <HealthStat label="عقب‌افتاده" value={project.health.overdue} />
+            <StatTile label="فعال" value={project.health.active} />
+            <StatTile label="انجام‌شده" value={project.health.completed} />
+            <StatTile label="سررسید این بازه" value={project.health.dueInPeriod} />
+            <StatTile label="عقب‌افتاده" value={project.health.overdue} />
           </div>
         </SectionBox>
       </div>

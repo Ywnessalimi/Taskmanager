@@ -73,8 +73,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /*
+   * پس‌زمینه‌ی کل اپ bg2 است و سطح‌های محتوایی (هدر، باکس‌ها، نوار تب‌ها) روی آن
+   * با bg-background (سفید در تم روشن) می‌نشینند — رجوع به docs/DESIGN.md بخش ۲.
+   */
   body {
-    @apply bg-background text-foreground;
+    @apply bg-bg2 text-foreground;
   }
   html {
     @apply font-sans;

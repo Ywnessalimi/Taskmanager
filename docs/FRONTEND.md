@@ -43,6 +43,7 @@ app/
     my-tasks/                    → تب تسک‌های من (همان نماها + Overview شخصی)
     notifications/                → تب اعلان‌ها
     account/                     → تب حساب کاربری
+  tasks/new/                     → صفحه‌ی ساخت تسک جدید (مقصد دکمه‌ی شناور + در تب‌های خانه و تسک‌های من)
   tasks/[taskId]/                → صفحه/پنل جزئیات یک تسک (قابل باز شدن از هرکدام از نماها)
 ```
 
@@ -53,18 +54,22 @@ app/
 | مفهوم محصول | کامپوننت/ماژول فرانت پیشنهادی |
 |---|---|
 | Bottom Tab Bar | `components/navigation/BottomTabBar` |
+| دکمه‌ی شناور «تسک جدید» (FAB) | `components/navigation/AddTaskFab` — ساخته شد (در `home` و `my-tasks`) |
+| فرم ساخت تسک جدید | `features/tasks/TaskCreateForm` — ساخته شد (`app/tasks/new/page.tsx`) |
 | لیست Workspace در خانه | `features/home/WorkspaceList` |
 | Organization Overview (اعضا، پروژه‌های فعال، Activity) | `features/organizations/OrganizationOverview` |
 | Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
-| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}` — ساخته شد؛ محل واقعی زیر `features/projects/` است نه `features/tasks/` (چون از اول در همین‌جا توسعه داده شد) |
+| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}` + سوییچر مشترک `features/projects/ViewSwitcher` — ساخته شد؛ محل واقعی زیر `features/projects/` است نه `features/tasks/` (چون از اول در همین‌جا توسعه داده شد) |
+| نوار تب اصلی صفحه + صفحه‌های افزودنی (سند/چت) | `features/pages/{SectionTabs, DocumentPage, ChatPage}` — ساخته شد |
 | مدیریت ستون‌های Board | `features/projects/ColumnManager` — هنوز ساخته نشده، ستون‌ها فعلاً ثابت‌اند |
 | افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` — هنوز ساخته نشده |
 | کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Attachment، Comment، Priority، Sublist) | `features/tasks/TaskDetail` — هنوز ساخته نشده (هیچ صفحه‌ی جزئیات تسکی وجود ندارد) |
-| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — هنوز ساخته نشده |
+| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — ساخته شد (به‌همراه `MyTaskList` برای بخش لیست) |
 | فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` — ساخته شد |
-| تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — هنوز ساخته نشده (صفحه‌ی account فقط دکمه‌ی خروج دارد) |
+| تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — ساخته شد (پروفایل، تنظیمات حساب، سوییچ‌های اعلان، خروج با تایید) |
 | ویجت‌های تکرارشونده (Activity Heatmap، Pie/Donut Chart) | `components/charts/{ActivityHeatmap, ActivityBarRow, StatusDonutChart}` — ساخته شد |
-| باکس بوردردار مشترک صفحات Overview | `components/layout/{SectionTitle, SectionBox}` — ساخته شد |
+| باکس بوردردار مشترک صفحات Overview | `components/layout/{SectionTitle, SectionBox}` + `components/layout/StatTile` (باکس آماری «سلامت») — ساخته شد |
+| هدر صفحه‌های اصلی تب‌ها | `components/layout/AppHeader` — ساخته شد (سفید، تمام‌عرض، با بوردر پایین) |
 
 ## ۵. لایه‌ی رنگی (Color Tokens)
 
@@ -74,6 +79,7 @@ app/
 
 1. `colors.css` ایمپورت می‌شود.
 2. توکن‌های استاندارد shadcn (`--background`, `--foreground`, `--primary`, `--muted`, `--border`, ...) در بلوک `@theme inline` به توکن‌های خام بالا نگاشت (map) می‌شوند — مثلاً `--color-primary: var(--brand)`.
+2.۵. **پس‌زمینه‌ی `body` روی `bg-bg2` است، نه `bg-background`** — دو سطح رنگی داریم: صفحه خاکستری روشن، سطح‌ها (هدر، نوار تب، باکس‌ها، فیلدها) سفید. هر باکس جدیدی که ساخته می‌شود باید `bg-background` بگیرد وگرنه در زمینه گم می‌شود؛ و هر المان شناوری که روی زمینه‌ی خاکستری حالت «انتخاب‌شده» دارد نباید از `bg-bg2` برای آن استفاده کند (چون هم‌رنگ زمینه می‌شود) — رجوع به [DESIGN.md](./DESIGN.md#۲-سیستم-رنگ-color-system).
 3. توکن‌های اضافه‌ی خاص این پروژه که در پالت پیش‌فرض shadcn نیستند (`bg2`, `bg3`, `bg4`, `text2`, `text3`, `text4`, `icon`, `icon2`, `icon3`, `brand`, `link`, `success`, `warning`, `overlay`, ...) هم به همان بلوک اضافه شده‌اند تا کلاس‌های Tailwind مثل `text-text2`, `bg-bg2`, `text-brand` در دسترس باشند.
 4. `--radius` روی `0.375rem` تنظیم شده (شعاع کوچک و ثابت، مطابق [DESIGN.md](./DESIGN.md#۴-اندازهی-المانها)).
 
@@ -131,8 +137,6 @@ src/components/
   layout/section.tsx            → SectionTitle + SectionBox (باکس بوردر+پدینگ‌۱۲px مشترک همه‌ی Overview ها)
 ```
 
-صفحه‌ی my-tasks هنوز فقط اسکلت (عنوان + توضیح کوتاه + Badge) است و داده‌ای وصل نیست.
-
 **صفحه‌ی خانه، سازمان، پروژه و اعلان‌ها ساخته شده‌اند:**
 
 ```
@@ -142,6 +146,10 @@ src/lib/api/
   organizations.ts   → getOrganizations(), getOrganization(id)
   projects.ts         → getProject(id)
   notifications.ts    → getNotifications()
+  users.ts            → getCurrentUser() (کاربر واردشده؛ تایپ CurrentUser + NotificationPreferences در types.ts)
+  my-tasks.ts         → getMyTasks() (فقط «در حال انجام»)، getMyTasksOverview() (همه‌ی وضعیت‌ها)
+  calendar.ts         → getToday() (تاریخ «امروز» از لایه‌ی داده می‌آید، نه new Date())
+  tasks.ts            → getTaskFormOptions() (پروژه‌ها + اعضای سازمانشان برای سلکت‌های فرم)، createTask() (فعلاً no-op)
 src/components/charts/
   activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — پروژه، بعداً تسک‌های من)
   activity-bar-row.tsx    → ActivityBarRow (ردیف تک‌خطی با مستطیل‌های عمودی — فعالیت هر عضو در صفحه‌ی سازمان)
@@ -157,14 +165,31 @@ src/features/organizations/
 src/features/projects/
   task-display.tsx        → ثابت‌ها/کامپوننت مشترک نماها: PRIORITY_LABEL/COLOR، STATUS_LABEL، STATUS_COLUMNS، PriorityDot
   project-task-list.tsx    → ProjectTaskList (Client): سوییچر ۵ نما — همه‌ی ۵ تا واقعاً پیاده شده‌اند (زیر)
-  views/table-view.tsx      → TableView: لیست ساده‌ی تسک‌ها
+  views/table-view.tsx      → TableView: جدول واقعی با هدر ستون و بوردر بین همه‌ی سلول‌ها
   views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks)
   views/board-view.tsx       → BoardView: کانبان با Drag & Drop واقعی (@dnd-kit) بین ۳ ستون ثابت (وضعیت تسک)
-  views/timeline-view.tsx    → TimelineView: هر تسک یک نقطه روی محور زمان LTR (بر اساس dueDate در بازه‌ی پروژه)
+  view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: نوار سوییچ ۵ نما (آیکون + متن، با بوردر زیرین) — مشترک بین ProjectTaskList و MyTaskList
+  views/timeline-view.tsx    → TimelineView: ساید‌بار جمع‌شونده‌ی تسک‌ها + تقویم افقی اسکرول‌شونده (مقیاس روزانه/هفتگی/ماهانه، دکمه‌ی «امروز»)
   views/calendar-view.tsx    → CalendarView: تقویم ماهانه با پیمایش بین ماه‌های دارای تسک
   project-overview.tsx      → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
                                پراکندگی وضعیت تسک‌ها (SectionBox + StatusDonutChart)، تقویم سررسیدها (SectionBox، Placeholder ساده)،
                                فعالیت اعضا (SectionBox + ActivityHeatmap)
+src/features/pages/
+  section-tabs.tsx      → SectionTabs (Client): نوار تب اصلی (لیست/نمای‌کلی + صفحه‌های افزوده‌شده + دکمه‌ی +)
+  document-page.tsx      → DocumentPage: صفحه‌ی خالی نوشتن متن
+  chat-page.tsx          → ChatPage: صفحه‌ی چت (state محلی، بدون بلادرنگ)
+src/features/tasks/
+  task-create-form.tsx  → TaskCreateForm (Client): فرم ساخت تسک جدید (عنوان، پروژه، مسئول، سررسید،
+                           اولویت، برچسب، توضیحات) — ذخیره فقط شبیه‌سازی است و به صفحه‌ی قبل برمی‌گردد
+src/features/my-tasks/
+  my-task-list.tsx      → MyTaskList (Client): فیلتر پروژه + همان ۵ نمای صفحه‌ی پروژه (ری‌یوز مستقیم، بدون کپی)
+  my-tasks-overview.tsx  → MyTasksOverview: پروفایل + پیوست‌ها، نیازمند رسیدگی، پراکندگی وضعیت،
+                            سلامت تجمیعی پروژه‌ها، فعالیت شخصی (Portfolio Activity)
+src/features/account/
+  account-settings.tsx → AccountSettings (Client): پروفایل (اواتار/نام/ایمیل/توضیحات + دکمه‌ی ویرایش)، گروه «حساب»،
+                          سوییچ‌های «اعلان‌ها»، گروه «درباره»، و خروج با دیالوگ تایید
+  profile-dialog.tsx    → ProfileDialog: مودال ویرایش نام/ایمیل/توضیحات (state در والد، بدون API)
+  settings-row.tsx      → SettingsGroup / SettingsLinkRow / SettingsToggleRow (ردیف‌های تکرارشونده‌ی تنظیمات)
 src/features/notifications/
   notification-list.tsx → NotificationList (Client): فیلتر همه/خوانده‌نشده/خوانده‌شده/تایید با Tabs کنترل‌شده؛
                             کلیک روی ردیف = خواندن + هدایت به مقصد؛ دکمه‌های تایید/رد برای اعلان‌های requiresApproval
@@ -173,15 +198,27 @@ src/app/(tabs)/
   home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
   home/projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
   notifications/page.tsx            → getNotifications() + NotificationList
+  account/page.tsx                  → getCurrentUser() + AccountSettings
+  my-tasks/page.tsx                 → getCurrentUser() + getMyTasks/Range/Overview + Tabs (لیست/نمای‌کلی)
+src/app/tasks/new/page.tsx          → getTaskFormOptions() + PageHeader + TaskCreateForm (خارج از (tabs)، بدون Bottom Tab Bar)
 ```
 
 نکات مهم برای ادامه‌ی کار:
 
+- **هدرها بیرون از کانتینر `p-4` صفحه رندر می‌شوند**: `AppHeader` و `PageHeader` تمام‌عرض و سفیدند، پس ساختار هر صفحه به شکل «هدر + یک `div` با `p-4` برای محتوا» است، نه یک کانتینر `p-4` دور همه‌چیز. در صفحه‌ی پروژه و تسک‌های من، `SectionTabs` هم بیرون از پدینگ می‌نشیند (نوار تب تمام‌عرض، پدینگ داخل پنل‌ها).
+- **`TimelineView` عمداً دو جهت دارد**: ساید‌بار تسک‌ها در جریان RTL صفحه می‌ماند، اما ناحیه‌ی تقویم `dir="ltr"` است تا تاریخ از چپ به راست جلو برود و `scrollLeft` رفتار استاندارد داشته باشد. هدر تاریخ داخل همان کانتینر اسکرول است تا با تقویم هم‌زمان حرکت کند؛ ارتفاع ردیف‌های ساید‌بار (`h-9`) و ردیف خالی زیر عنوان آن (`h-7`) باید دقیقاً با دو ردیف هدر تقویم یکی بماند وگرنه ردیف‌ها از تراز خارج می‌شوند.
+- **`AddTaskFab` با کلاس‌های منطقی (`start-4`) جای‌گذاری شده**، نه `right-4` — چون کل اپ RTL است و `start` همان سمت راست است؛ اگر روزی LTR اضافه شد، دکمه خودبه‌خود به سمت درست می‌رود. ارتفاع `bottom` هم باید بالاتر از `h-14` نوار تب‌ها بماند.
+- **همه‌ی محاسبه‌های تاریخ در `src/lib/jalali.ts` متمرکز است** (`parseDate`, `formatDate`, `toOrdinal`/`fromOrdinal`, `addDays`, `startOfWeek`, `daysInMonth`, `MONTH_NAMES`, `isBefore`). این تقویم **واقعی نیست**: کبیسه ندارد (اسفند همیشه ۲۹ روز، هر سال ۳۶۵ روز) و `weekdayIndex` یک قرارداد داخلی است نه روزِ هفته‌ی واقعی — فقط برای ترتیب، فاصله و چیدمان نسبی معتبر است. `TimelineView` و `CalendarView` هر دو از همین ماژول استفاده می‌کنند (قبلاً هرکدام نسخه‌ی خودشان را داشتند).
+- **«امروز» یک ثابت Mock است** (`MOCK_TODAY` در `mock-data.ts`)، نه تاریخ سیستم — چون تاریخ‌های داده جلالی و دستی‌اند و مقایسه با تاریخ واقعی نتیجه‌ی بی‌معنا می‌دهد.
+- **تخصیص تسک به کاربر با مقایسه‌ی نام انجام می‌شود** چون `Task` هنوز `assigneeId` ندارد؛ با آمدن بک‌اند باید به شناسه تغییر کند.
 - **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم/Timeline را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
 - **فرمول `mockActivity` در `mock-data.ts` باید ضریب‌های غیرمضرب‌ ۵ روی هر دو پارامتر (index و seed) داشته باشد** — نسخه‌ی اول (`(i*seed+seed)%5`) وقتی seed مضرب ۵ بود (مثلاً ۵) همیشه صفر می‌داد و کل ردیف فعالیت آن عضو طوسی/خالی نشان داده می‌شد. اگر seed جدیدی اضافه می‌کنید حواستان به این تله باشد.
 - **`Timeline`/`Calendar` تاریخ‌ها را با یک تبدیل خطی ساده‌ی خودشان مقایسه می‌کنند** (نه تقویم جلالی واقعی با کبیسه/طول ماه دقیق) — کافی برای موقعیت نسبی، نه برای محاسبه‌ی تقویمی دقیق.
 - رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
-- افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، و خواندن/تایید در `NotificationList` — همه فقط در state مرورگر است و با رفرش از بین می‌رود؛ هیچ‌کدام API واقعی ندارند.
+- صفحه‌های افزوده‌شده با دکمه‌ی «+» (سند/چت)، متن سند و پیام‌های چت هم فقط در state مرورگرند و با رفرش پاک می‌شوند؛ چت اتصال بلادرنگ ندارد.
+- افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، خواندن/تایید در `NotificationList`، و ویرایش پروفایل/سوییچ‌های اعلان در `AccountSettings` — همه فقط در state مرورگر است و با رفرش از بین می‌رود؛ هیچ‌کدام API واقعی ندارند.
+- **هنوز Auth واقعی وجود ندارد**: `getCurrentUser()` یک کاربر ثابت (`u1`، سارا احمدی از `org-1`) برمی‌گرداند و دکمه‌ی «خروج» در `AccountSettings` فقط دیالوگ تایید را می‌بندد. تب «تسک‌های من» هم وقتی ساخته شد باید از همین `getCurrentUser()` استفاده کند، نه یک منبع کاربرِ موازی.
+- ردیف‌های تنظیمات حساب که هنوز صفحه‌ی مقصد ندارند (تغییر ایمیل/رمز، زبان، ظاهر، راهنما، حریم خصوصی) عمداً غیرفعال و بدون فلش رندر می‌شوند تا کلیک‌پذیر به‌نظر نرسند. «ظاهر» هم به همین دلیل سوییچ نیست (تم فقط با `prefers-color-scheme` عوض می‌شود — بخش ۵).
 - منوی سه‌نقطه‌ی `PageHeader` (افزودن تسک/مایل‌استون/بخش، تنظیمات، حذف) فعلاً فقط UI است؛ آیتم‌ها `onClick` ندارند چون صفحه/فرم مقصدشان هنوز ساخته نشده.
 - **تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه `@dnd-kit` است** (`@dnd-kit/core` + `@dnd-kit/utilities`)، فقط در `views/board-view.tsx` — برای Drag & Drop واقعی روی موبایل/ماوس. تست کامل ژست Drag روی دستگاه واقعی توصیه می‌شود؛ ابزارهای خودکار مرورگر گاهی رویداد Pointer را درست شبیه‌سازی نمی‌کنند.
 

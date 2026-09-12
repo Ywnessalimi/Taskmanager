@@ -19,7 +19,7 @@ export default async function OrganizationOverviewPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col">
       <PageHeader
         title={organization.name}
         subtitle={`${organization.taskCount} تسک`}
@@ -28,7 +28,9 @@ export default async function OrganizationOverviewPage({
           [{ label: "حذف سازمان", icon: "delete-bin-line", destructive: true }],
         ]}
       />
-      <OrganizationOverview organization={organization} />
+      <div className="p-4">
+        <OrganizationOverview organization={organization} />
+      </div>
     </div>
   )
 }

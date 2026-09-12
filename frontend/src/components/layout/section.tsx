@@ -4,5 +4,5 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
 
 /** باکس با بوردر و پدینگ ۱۲px — الگوی مشترک بخش‌های Overview (سازمان و پروژه). */
 export function SectionBox({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-md border border-border p-3">{children}</div>
+  return <div className="rounded-md border border-border bg-background p-3">{children}</div>
 }

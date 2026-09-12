@@ -1,4 +1,4 @@
-import type { Notification, Organization, Project } from "./types"
+import type { CurrentUser, Notification, Organization, Project } from "./types"
 
 /**
  * یک الگوی شبه‌تصادفی ثابت برای پر کردن نمودارهای فعالیت؛ فقط برای نمایش، بدون معنای واقعی.
@@ -71,6 +71,8 @@ export const MOCK_PROJECTS: Project[] = [
       { id: "t7", displayId: "#402", title: "اتصال به API نوتیفیکیشن", assigneeName: "مریم کریمی", priority: "medium", dueDate: "1404/06/12", status: "in-progress" },
       { id: "t11", displayId: "#403", title: "معماری اولیه‌ی اپ", assigneeName: "علی رضایی", priority: "high", dueDate: "1404/03/15", status: "completed" },
       { id: "t12", displayId: "#404", title: "انتشار نسخه‌ی بتا", assigneeName: "مریم کریمی", priority: "urgent", dueDate: "1404/08/20", status: "todo" },
+      { id: "t13", displayId: "#405", title: "طراحی سیستم آیکون اپ", assigneeName: "سارا احمدی", priority: "medium", dueDate: "1404/06/01", status: "in-progress" },
+      { id: "t14", displayId: "#406", title: "بازبینی دسترس‌پذیری فرم‌ها", assigneeName: "سارا احمدی", priority: "urgent", dueDate: "1404/05/06", status: "todo" },
     ],
     activity: mockActivity(5),
   },
@@ -85,6 +87,8 @@ export const MOCK_PROJECTS: Project[] = [
     statusDistribution: { todo: 1, inProgress: 2, completed: 10 },
     tasks: [
       { id: "t8", displayId: "#501", title: "طراحی بنر شبکه‌های اجتماعی", assigneeName: "نگار ملکی", priority: "low", status: "completed" },
+      { id: "t15", displayId: "#502", title: "کاور کمپین برای اینستاگرام", assigneeName: "سارا احمدی", priority: "low", dueDate: "1404/02/20", status: "completed" },
+      { id: "t16", displayId: "#503", title: "بازطراحی لندینگ کمپین", assigneeName: "سارا احمدی", priority: "high", dueDate: "1404/05/18", status: "in-progress" },
     ],
     activity: mockActivity(7),
   },
@@ -184,3 +188,33 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     createdAtLabel: "هفته‌ی پیش",
   },
 ]
+
+/**
+ * کاربر واردشده. عمداً همان `u1` (سارا احمدی) از اعضای `org-1` است تا وقتی تب «تسک‌های من»
+ * ساخته شد، تسک‌ها و فعالیت او با داده‌ی سازمان/پروژه‌ها هم‌خوان باشد.
+ */
+export const MOCK_CURRENT_USER: CurrentUser = {
+  id: "u1",
+  name: "سارا احمدی",
+  email: "sara.ahmadi@example.com",
+  bio: "طراح محصول در شرکت نوین‌ساز",
+  notifications: {
+    taskAssigned: true,
+    taskComments: true,
+    weeklyDigest: false,
+  },
+  attachments: [
+    { id: "f1", name: "رزومه.pdf", sizeLabel: "۱.۲ مگابایت" },
+    { id: "f2", name: "قرارداد-همکاری.pdf", sizeLabel: "۸۴۰ کیلوبایت" },
+  ],
+}
+
+/**
+ * «امروز» ثابتِ داده‌ی Mock. چون تاریخ‌ها جلالی و دستی‌اند، مقایسه با تاریخ واقعی سیستم
+ * نتیجه‌ی بی‌معنا می‌دهد؛ محاسبه‌ی «عقب‌افتاده» به همین مقدار ثابت تکیه می‌کند.
+ * وقتی بک‌اند واقعی آمد، این ثابت حذف و «امروز» از سرور/تقویم واقعی گرفته می‌شود.
+ */
+export const MOCK_TODAY = "1404/05/12"
+
+/** فعالیت روزانه‌ی خود کاربر واردشده (Portfolio Activity در تب «تسک‌های من»). */
+export const MOCK_MY_ACTIVITY = mockActivity(2)

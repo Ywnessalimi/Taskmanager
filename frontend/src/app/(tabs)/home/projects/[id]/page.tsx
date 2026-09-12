@@ -1,12 +1,14 @@
 import { PageHeader } from "@/components/navigation/page-header"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SectionTabs } from "@/features/pages/section-tabs"
 import { ProjectOverview } from "@/features/projects/project-overview"
 import { ProjectTaskList } from "@/features/projects/project-task-list"
+import { getToday } from "@/lib/api/calendar"
 import { getProject } from "@/lib/api/projects"
+import { getCurrentUser } from "@/lib/api/users"
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const project = await getProject(id)
+  const [project, today, user] = await Promise.all([getProject(id), getToday(), getCurrentUser()])
 
   if (!project) {
     return (
@@ -17,7 +19,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col">
       <PageHeader
         title={project.name}
         subtitle={project.organizationName}
@@ -32,18 +34,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         ]}
       />
 
-      <Tabs defaultValue="list">
-        <TabsList variant="line" className="w-fit">
-          <TabsTrigger value="list">لیست</TabsTrigger>
-          <TabsTrigger value="overview">نمای‌کلی</TabsTrigger>
-        </TabsList>
-        <TabsContent value="list">
-          <ProjectTaskList project={project} />
-        </TabsContent>
-        <TabsContent value="overview">
-          <ProjectOverview project={project} />
-        </TabsContent>
-      </Tabs>
+      <SectionTabs
+        currentUserName={user.name}
+        listContent={<ProjectTaskList project={project} today={today} />}
+        overviewContent={<ProjectOverview project={project} />}
+      />
     </div>
   )
 }

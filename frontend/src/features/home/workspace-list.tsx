@@ -73,7 +73,7 @@ function OrganizationRow({ org }: { org: Organization }) {
               }}
               onBlur={commitNewProject}
               placeholder="نام پروژه‌ی جدید"
-              className="rounded-md border border-border bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
             />
           )}
         </div>

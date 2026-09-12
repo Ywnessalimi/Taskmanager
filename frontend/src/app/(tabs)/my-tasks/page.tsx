@@ -1,15 +1,29 @@
-import { Badge } from "@/components/ui/badge"
+import { AppHeader } from "@/components/layout/app-header"
+import { AddTaskFab } from "@/components/navigation/add-task-fab"
+import { SectionTabs } from "@/features/pages/section-tabs"
+import { MyTaskList } from "@/features/my-tasks/my-task-list"
+import { MyTasksOverview } from "@/features/my-tasks/my-tasks-overview"
+import { getToday } from "@/lib/api/calendar"
+import { getMyTasks, getMyTasksOverview } from "@/lib/api/my-tasks"
+import { getCurrentUser } from "@/lib/api/users"
 
-export default function MyTasksPage() {
+export default async function MyTasksPage() {
+  const [user, tasks, today, overview] = await Promise.all([
+    getCurrentUser(),
+    getMyTasks(),
+    getToday(),
+    getMyTasksOverview(),
+  ])
+
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <h1 className="text-base font-medium text-foreground">تسک‌های من</h1>
-      <p className="text-sm text-text2">
-        تسک‌های در حال انجامی که به شما تخصیص داده شده، همراه با نمای Overview شخصی شما.
-      </p>
-      <Badge variant="secondary" className="w-fit">
-        این بخش هنوز ساخته نشده
-      </Badge>
+    <div className="flex flex-col">
+      <AppHeader title="تسک‌های من" />
+      <SectionTabs
+        currentUserName={user.name}
+        listContent={<MyTaskList tasks={tasks} today={today} />}
+        overviewContent={<MyTasksOverview user={user} overview={overview} />}
+      />
+      <AddTaskFab />
     </div>
   )
 }
