@@ -7,6 +7,13 @@
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "quire-frontend-4000",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "-p", "4000"],
+      "port": 4000,
+      "autoPort": false
     }
   ]
 }
