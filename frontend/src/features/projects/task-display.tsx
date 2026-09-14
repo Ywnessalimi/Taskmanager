@@ -29,12 +29,17 @@ export const PRIORITY_COLOR: Record<Task["priority"], string> = {
   urgent: "var(--error)",
 }
 
-export function PriorityDot({ priority }: { priority: Task["priority"] }) {
+/**
+ * `label` اختیاری است تا محل‌های چندزبانه (مثل `TaskCreateForm`) بتوانند برچسب ترجمه‌شده
+ * بدهند؛ بدون آن (نماهای Board/Table/Tree/Timeline/Calendar) همان `PRIORITY_LABEL` فارسی
+ * پیش‌فرض است.
+ */
+export function PriorityDot({ priority, label }: { priority: Task["priority"]; label?: string }) {
   return (
     <span
       className="size-2 shrink-0 rounded-full"
       style={{ backgroundColor: PRIORITY_COLOR[priority] }}
-      title={PRIORITY_LABEL[priority]}
+      title={label ?? PRIORITY_LABEL[priority]}
     />
   )
 }

@@ -8,33 +8,49 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * توکن‌های رنگی از src/styles/colors.css می‌آیند (منبع اصلی حقیقت رنگ‌ها).
- * حالت تیره از طریق prefers-color-scheme در همان فایل مدیریت می‌شود، نه کلاس .dark —
- * پس فعلاً سوییچر تم دستی نداریم (رجوع به docs/FRONTEND.md بخش «لایه‌ی رنگی»).
+ * توکن‌های رنگی از src/styles/colors.css می‌آیند (منبع اصلی حقیقت رنگ‌ها) — همان
+ * نام‌گذاری استاندارد shadcn/ui (--background, --primary, --card, --sidebar-*, --chart-*, ...)
+ * مستقیماً اینجا به کلاس‌های Tailwind نگاشت می‌شود. حالت تیره از طریق prefers-color-scheme
+ * در همان فایل مدیریت می‌شود، نه کلاس .dark — پس فعلاً سوییچر تم دستی نداریم
+ * (رجوع به docs/FRONTEND.md بخش «لایه‌ی رنگی»).
  */
 @theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-sans);
-  --color-ring: var(--brand);
-  --color-input: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
-  --color-destructive: var(--error);
-  --color-accent-foreground: var(--text);
-  --color-accent: var(--bg3);
-  --color-muted-foreground: var(--text2);
-  --color-muted: var(--bg2);
-  --color-secondary-foreground: var(--text);
-  --color-secondary: var(--bg3);
-  --color-primary-foreground: var(--text-on-brand);
-  --color-primary: var(--brand);
-  --color-popover-foreground: var(--text);
-  --color-popover: var(--bg);
-  --color-card-foreground: var(--text);
-  --color-card: var(--bg);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-  /* توکن‌های اضافه‌ی خاص این پروژه (فراتر از پالت پیش‌فرض shadcn) */
+  /* توکن‌های اضافه‌ی خاص این پروژه (فراتر از پالت استاندارد shadcn) */
   --color-bg2: var(--bg2);
   --color-bg3: var(--bg3);
   --color-bg4: var(--bg4);

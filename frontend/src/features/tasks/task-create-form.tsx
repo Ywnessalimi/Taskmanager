@@ -2,33 +2,50 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
+import { DialogTrigger } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { PRIORITY_LABEL } from "@/features/projects/task-display"
+import { useT } from "@/components/providers/locale-provider"
+import { PriorityDot } from "@/features/projects/task-display"
 import { createTask } from "@/lib/api/tasks"
+import type { TranslationKey } from "@/lib/i18n/dictionary"
 import type { TaskFormProjectOption, TaskPriority } from "@/lib/api/types"
-
-const FIELD_CLASS =
-  "w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
 
 const PRIORITIES: TaskPriority[] = ["none", "low", "medium", "high", "urgent"]
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs text-text2">{label}</span>
-      {children}
-      {hint && <span className="text-xs text-text3">{hint}</span>}
-    </label>
-  )
+const PRIORITY_KEY: Record<TaskPriority, TranslationKey> = {
+  none: "priority.none",
+  low: "priority.low",
+  medium: "priority.medium",
+  high: "priority.high",
+  urgent: "priority.urgent",
 }
 
+const PILL_CLASS =
+  "flex items-center gap-1.5 rounded-md p-2 text-sm text-text2 hover:bg-bg2 hover:text-foreground"
+
+const INLINE_FIELD_CLASS =
+  "min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
+
 /**
- * فرم ساخت تسک جدید. فیلدها همان فیلدهای اولیه‌ی مدل تسک‌اند؛ پیوست/کامنت/تایمر/زیر-تسک
- * عمداً اینجا نیستند چون طبق docs/PRODUCT_OVERVIEW.md به صفحه‌ی جزئیات تسک تعلق دارند.
+ * فرم ساخت تسک جدید — الگوی بصری برگرفته از طرح Figma «Create Task modal» (پیل‌های Ghost
+ * قابل‌کلیک برای پروژه/تگ/تاریخ/مسئول به‌جای سلکت‌های ساده، عنوان بزرگ با انتخابگر اولویت
+ * کنارش)، اما با آیکون‌های خودمان (RemixIcon) به‌جای آیکون‌های طرح. بخش‌های طرح که به مدل
+ * داده‌ی فعلی ما تعلق ندارند (شناسه‌ی تسک، علاقه‌مندی، ساخته‌شده‌توسط/کامنت — چون تسک هنوز
+ * ذخیره نشده) عمداً حذف شده‌اند؛ فقط ردیف «الصاق فایل» به‌صورت غیرفعال مثل بقیه‌ی اپ نگه
+ * داشته شده (رجوع به src/features/tasks/README.md).
  */
 export function TaskCreateForm({ projects }: { projects: TaskFormProjectOption[] }) {
   const router = useRouter()
+  const t = useT()
 
   const [title, setTitle] = useState("")
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "")
@@ -38,6 +55,7 @@ export function TaskCreateForm({ projects }: { projects: TaskFormProjectOption[]
   const [tagsText, setTagsText] = useState("")
   const [description, setDescription] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [editingTag, setEditingTag] = useState(false)
 
   const selectedProject = projects.find((project) => project.id === projectId)
   const canSubmit = title.trim().length > 0 && projectId.length > 0 && !submitting
@@ -62,103 +80,130 @@ export function TaskCreateForm({ projects }: { projects: TaskFormProjectOption[]
   }
 
   if (projects.length === 0) {
-    return <p className="py-8 text-center text-sm text-text2">هنوز پروژه‌ای برای ساخت تسک وجود ندارد.</p>
+    return <p className="py-8 text-center text-sm text-text2">{t("taskForm.noProjects")}</p>
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <Field label="عنوان تسک">
+    <form onSubmit={submit} className="flex flex-col">
+      <div className="flex items-center gap-2 py-2">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="مثلاً: طراحی صفحه‌ی ورود"
+          placeholder={t("taskForm.titlePlaceholder")}
           autoFocus
-          className={FIELD_CLASS}
+          className="min-w-0 flex-1 bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-text3"
         />
-      </Field>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={t("taskForm.priorityAria")}
+            className="flex shrink-0 items-center gap-1 rounded-md p-1.5 text-text2 hover:bg-bg2 hover:text-foreground"
+          >
+            <RemixIcon name="arrow-down-s-line" className="text-lg" />
+            <PriorityDot priority={priority} label={t(PRIORITY_KEY[priority])} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuRadioGroup value={priority} onValueChange={(value) => setPriority(value as TaskPriority)}>
+              {PRIORITIES.map((value) => (
+                <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+                  <PriorityDot priority={value} label={t(PRIORITY_KEY[value])} />
+                  {t(PRIORITY_KEY[value])}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-      <Field label="پروژه" hint={selectedProject?.organizationName}>
-        <select
-          value={projectId}
-          onChange={(e) => {
-            setProjectId(e.target.value)
-            setAssigneeName("")
-          }}
-          className={FIELD_CLASS}
-        >
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="flex flex-wrap items-center gap-1 py-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className={PILL_CLASS}>
+            <RemixIcon name="folder-3-line" className="text-base" />
+            {selectedProject?.name ?? t("taskForm.project")}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuRadioGroup
+              value={projectId}
+              onValueChange={(value) => {
+                setProjectId(value as string)
+                setAssigneeName("")
+              }}
+            >
+              {projects.map((project) => (
+                <DropdownMenuRadioItem key={project.id} value={project.id} closeOnClick>
+                  {project.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <Field label="مسئول">
-        <select
-          value={assigneeName}
-          onChange={(e) => setAssigneeName(e.target.value)}
-          className={FIELD_CLASS}
-        >
-          <option value="">بدون مسئول</option>
-          {selectedProject?.memberNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </Field>
+        {editingTag ? (
+          <input
+            value={tagsText}
+            onChange={(e) => setTagsText(e.target.value)}
+            onBlur={() => setEditingTag(false)}
+            placeholder={t("taskForm.tagPlaceholder")}
+            autoFocus
+            className={`${INLINE_FIELD_CLASS} flex-1`}
+          />
+        ) : (
+          <button type="button" onClick={() => setEditingTag(true)} className={PILL_CLASS}>
+            <RemixIcon name="price-tag-3-line" className="text-base" />
+            {tagsText.trim() || t("taskForm.addTag")}
+          </button>
+        )}
 
-      <Field label="تاریخ سررسید" hint="قالب: ۱۴۰۴/۰۶/۰۱ (با رقم لاتین)">
-        <input
+        <DatePickerDialog
           value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          placeholder="1404/06/01"
-          inputMode="numeric"
-          className={FIELD_CLASS}
+          onChange={setDueDate}
+          trigger={
+            <DialogTrigger className={PILL_CLASS}>
+              <RemixIcon name="calendar-line" className="text-base" />
+              {dueDate || t("taskForm.addDate")}
+            </DialogTrigger>
+          }
         />
-      </Field>
 
-      <Field label="اولویت">
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as TaskPriority)}
-          className={FIELD_CLASS}
-        >
-          {PRIORITIES.map((value) => (
-            <option key={value} value={value}>
-              {PRIORITY_LABEL[value]}
-            </option>
-          ))}
-        </select>
-      </Field>
+        <DropdownMenu>
+          <DropdownMenuTrigger className={PILL_CLASS}>
+            <RemixIcon name="user-line" className="text-base" />
+            {assigneeName || t("taskForm.assign")}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuRadioGroup value={assigneeName} onValueChange={(value) => setAssigneeName(value as string)}>
+              <DropdownMenuRadioItem value="" closeOnClick>
+                {t("taskForm.noAssignee")}
+              </DropdownMenuRadioItem>
+              {selectedProject?.memberNames.map((name) => (
+                <DropdownMenuRadioItem key={name} value={name} closeOnClick>
+                  {name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-      <Field label="برچسب" hint="چند برچسب را با «،» از هم جدا کنید">
-        <input
-          value={tagsText}
-          onChange={(e) => setTagsText(e.target.value)}
-          placeholder="طراحی، فوری"
-          className={FIELD_CLASS}
-        />
-      </Field>
+      <textarea
+        rows={4}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder={t("taskForm.descriptionPlaceholder")}
+        className="w-full resize-none border-t border-border bg-transparent py-3 text-sm text-foreground outline-none placeholder:text-text2"
+      />
 
-      <Field label="توضیحات">
-        <textarea
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="توضیح کوتاهی درباره‌ی این تسک"
-          className={`${FIELD_CLASS} resize-none`}
-        />
-      </Field>
+      <div className="flex cursor-not-allowed items-center gap-1.5 border-y border-border py-3 text-sm text-text3">
+        <RemixIcon name="attachment-line" className="text-base" />
+        {t("taskForm.attachFile")}
+      </div>
 
-      <div className="flex gap-2">
+      <div className="sticky bottom-0 -mx-4 mt-4 flex items-center justify-between border-t border-border bg-background px-4 py-3">
         <Button type="submit" disabled={!canSubmit}>
           <RemixIcon name="check-line" className="text-base" />
-          ساخت تسک
+          {t("taskForm.submit")}
         </Button>
         <Button type="button" variant="ghost" onClick={() => router.back()}>
-          انصراف
+          {t("taskForm.cancel")}
         </Button>
       </div>
     </form>

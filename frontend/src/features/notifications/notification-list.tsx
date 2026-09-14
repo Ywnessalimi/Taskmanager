@@ -1,18 +1,21 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Notification } from "@/lib/api/types"
+import type { TranslationKey } from "@/lib/i18n/dictionary"
+import type { Notification, NotificationVerb, TaskStatus } from "@/lib/api/types"
 
 const FILTERS = [
-  { id: "all", label: "همه" },
-  { id: "unread", label: "خوانده‌نشده" },
-  { id: "read", label: "خوانده‌شده" },
-  { id: "approval", label: "تایید" },
-] as const
+  { id: "all", labelKey: "notifications.filterAll" },
+  { id: "unread", labelKey: "notifications.filterUnread" },
+  { id: "read", labelKey: "notifications.filterRead" },
+  { id: "approval", labelKey: "notifications.filterApproval" },
+] satisfies { id: string; labelKey: TranslationKey }[]
 
 type FilterId = (typeof FILTERS)[number]["id"]
 
@@ -20,6 +23,35 @@ const TARGET_ICON: Record<Notification["target"]["type"], string> = {
   task: "task-line",
   project: "briefcase-line",
   organization: "building-4-line",
+}
+
+const VERB_KEY: Record<NotificationVerb, TranslationKey> = {
+  taskAssigned: "notifications.verb.taskAssigned",
+  taskCommented: "notifications.verb.taskCommented",
+  projectJoinRequested: "notifications.verb.projectJoinRequested",
+  orgAdminAssigned: "notifications.verb.orgAdminAssigned",
+  taskStatusChanged: "notifications.verb.taskStatusChanged",
+  projectCreated: "notifications.verb.projectCreated",
+  orgMemberAdded: "notifications.verb.orgMemberAdded",
+}
+
+const STATUS_KEY: Record<TaskStatus, TranslationKey> = {
+  todo: "status.todo",
+  "in-progress": "status.inProgress",
+  completed: "status.completed",
+}
+
+function formatRelativeTime(t: (key: TranslationKey) => string, value: Notification["createdAt"]): string {
+  switch (value.unit) {
+    case "yesterday":
+      return t("time.yesterday")
+    case "week":
+      return t("time.aWeekAgo")
+    case "hours":
+      return `${value.amount} ${value.amount === 1 ? t("time.hour") : t("time.hours")} ${t("time.ago")}`
+    case "days":
+      return `${value.amount} ${value.amount === 1 ? t("time.day") : t("time.days")} ${t("time.ago")}`
+  }
 }
 
 function targetHref(target: Notification["target"]) {
@@ -36,6 +68,7 @@ function targetHref(target: Notification["target"]) {
 
 export function NotificationList({ notifications: initial }: { notifications: Notification[] }) {
   const router = useRouter()
+  const t = useT()
   const [notifications, setNotifications] = useState(initial)
   const [filter, setFilter] = useState<FilterId>("all")
 
@@ -71,7 +104,7 @@ export function NotificationList({ notifications: initial }: { notifications: No
         <TabsList variant="line" className="w-fit">
           {FILTERS.map((f) => (
             <TabsTrigger key={f.id} value={f.id}>
-              {f.label}
+              {t(f.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -93,12 +126,27 @@ export function NotificationList({ notifications: initial }: { notifications: No
 
             <div className="min-w-0 flex-1">
               <p className="text-sm text-foreground">
-                <span className="font-medium">{notification.actorName}</span> {notification.verb}
-                {notification.target.type !== "task" && (
-                  <span className="text-text2"> · {notification.target.label}</span>
+                {notification.actorId ? (
+                  <Link
+                    href={`/users/${notification.actorId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium hover:text-brand hover:underline"
+                  >
+                    {notification.actorName}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{notification.actorName}</span>
+                )}{" "}
+                {t(VERB_KEY[notification.verb])}
+                {notification.verb === "taskStatusChanged" && notification.verbStatus && (
+                  <> {t(STATUS_KEY[notification.verbStatus])}</>
+                )}
+                <span className="text-text2"> · {notification.target.label}</span>
+                {notification.requiresApproval && (
+                  <span className="text-text2"> — {t("notifications.needsApproval")}</span>
                 )}
               </p>
-              <p className="mt-0.5 text-xs text-text2">{notification.createdAtLabel}</p>
+              <p className="mt-0.5 text-xs text-text2">{formatRelativeTime(t, notification.createdAt)}</p>
 
               {notification.requiresApproval && (
                 <div className="mt-2 flex gap-2">
@@ -110,7 +158,7 @@ export function NotificationList({ notifications: initial }: { notifications: No
                       resolveApproval(notification.id)
                     }}
                   >
-                    تایید
+                    {t("notifications.approve")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -121,20 +169,20 @@ export function NotificationList({ notifications: initial }: { notifications: No
                       resolveApproval(notification.id)
                     }}
                   >
-                    رد
+                    {t("notifications.reject")}
                   </Button>
                 </div>
               )}
             </div>
 
             {notification.status === "unread" && (
-              <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-label="خوانده‌نشده" />
+              <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-label={t("notifications.unreadAria")} />
             )}
           </div>
         ))}
 
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-text2">اعلانی در این فیلتر وجود ندارد.</p>
+          <p className="py-8 text-center text-sm text-text2">{t("notifications.empty")}</p>
         )}
       </div>
     </div>

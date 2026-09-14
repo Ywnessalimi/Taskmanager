@@ -2,7 +2,8 @@
 
 اجزای ناوبری مشترک در سراسر اپ.
 
-- `bottom-tab-bar.tsx` → `BottomTabBar`: ناوبری ۴ تب پایین صفحه (Client Component).
+- `bottom-tab-bar.tsx` → `BottomTabBar`: ناوبری ۴ تب پایین صفحه (Client Component). از `lg` (≥1024px) به بالا مخفی است (`lg:hidden`) — جایش را `SidebarNav` می‌گیرد.
+- `sidebar-nav.tsx` → `SidebarNav`: نسخه‌ی دسکتاپ همان ۴ تب، به‌صورت ستون کناری ثابت (`hidden lg:flex`، عرض ۲۴۰px) با دکمه‌ی «تسک جدید» بالای لیست. چون اپ RTL است و به‌عنوان اولین فرزند یک ردیف flex در `(tabs)/layout.tsx` قرار می‌گیرد، خودبه‌خود سمت راست می‌نشیند. مصرف‌کننده: `src/app/(tabs)/layout.tsx`.
 - `page-header.tsx` → `PageHeader`: هدر مشترک صفحات جزئیات (سازمان، پروژه، …) — دکمه‌ی بازگشت (فلش رو‌به‌راست چون RTL، با `router.back()`)، عنوان/زیرعنوان، و منوی سه‌نقطه‌ی اختیاری (`menu`: آرایه‌ای از گروه‌ها که با جداکننده از هم جدا می‌شوند). مصرف‌کننده‌ها: `src/app/(tabs)/home/organizations/[id]/page.tsx` و `.../projects/[id]/page.tsx`.
 
 - `add-task-fab.tsx` → `AddTaskFab`: دکمه‌ی گرد شناور به رنگ برند با آیکون «+» که به `/tasks/new` می‌رود. مصرف‌کننده‌ها: `src/app/(tabs)/home/page.tsx` و `src/app/(tabs)/my-tasks/page.tsx`. جای‌گذاری با کلاس‌های منطقی (`start-4`) انجام شده نه `right-4`، چون اپ RTL است و `start` همان سمت راست می‌شود؛ `bottom-18` هم دکمه را بالای نوار تب‌های `h-14` نگه می‌دارد. تنها المان پررنگ برند در این صفحه‌هاست (طبق docs/DESIGN.md).

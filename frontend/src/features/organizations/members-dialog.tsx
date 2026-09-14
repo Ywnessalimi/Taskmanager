@@ -18,11 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Switch } from "@/components/ui/switch"
+import { useT } from "@/components/providers/locale-provider"
+import type { TranslationKey } from "@/lib/i18n/dictionary"
 import type { Member } from "@/lib/api/types"
 
-const ROLE_LABEL: Record<Member["role"], string> = {
-  admin: "ادمین",
-  member: "عضو عادی",
+const ROLE_LABEL_KEY: Record<Member["role"], TranslationKey> = {
+  admin: "members.roleAdmin",
+  member: "members.roleMember",
 }
 
 const STACK_LIMIT = 5
@@ -32,6 +34,7 @@ const STACK_LIMIT = 5
  * افزودن/حذف/تغییر نقش عمداً فقط در state محلی همین کامپوننت اعمال می‌شود (بدون بک‌اند واقعی).
  */
 export function MembersDialog({ members: initialMembers }: { members: Member[] }) {
+  const t = useT()
   const [members, setMembers] = useState(initialMembers)
   const [adminOnlyInvite, setAdminOnlyInvite] = useState(false)
   const [draftName, setDraftName] = useState("")
@@ -58,7 +61,7 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
   return (
     <Dialog>
       <DialogTrigger
-        aria-label={`نمایش و مدیریت ${members.length} عضو`}
+        aria-label={`${t("members.manage")} ${members.length} ${t("members.membersUnit")}`}
         className="flex w-fit items-center"
       >
         {members.slice(0, STACK_LIMIT).map((member) => (
@@ -75,11 +78,13 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
 
       <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>اعضا ({members.length})</DialogTitle>
+          <DialogTitle>
+            {t("members.title")} ({members.length})
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex items-center justify-between gap-2 rounded-md border border-border p-3">
-          <span className="text-sm text-foreground">فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند</span>
+          <span className="text-sm text-foreground">{t("members.adminOnlyInvite")}</span>
           <Switch checked={adminOnlyInvite} onCheckedChange={setAdminOnlyInvite} />
         </div>
 
@@ -88,10 +93,10 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addMember()}
-            placeholder="نام عضو جدید"
+            placeholder={t("members.newMemberPlaceholder")}
             className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
           />
-          <Button variant="ghost" size="icon" aria-label="افزودن عضو" onClick={addMember}>
+          <Button variant="ghost" size="icon" aria-label={t("members.addAria")} onClick={addMember}>
             <RemixIcon name="add-line" className="text-base" />
           </Button>
         </div>
@@ -104,11 +109,11 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-foreground">{member.name}</p>
-                <p className="text-xs text-text2">{ROLE_LABEL[member.role]}</p>
+                <p className="text-xs text-text2">{t(ROLE_LABEL_KEY[member.role])}</p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  aria-label={`گزینه‌های ${member.name}`}
+                  aria-label={`${t("members.optionsAria")} ${member.name}`}
                   className="flex size-7 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
                 >
                   <RemixIcon name="more-line" className="text-base" />
@@ -116,11 +121,11 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => toggleRole(member.id)}>
                     <RemixIcon name="shield-user-line" className="text-base" />
-                    {member.role === "admin" ? "تغییر به عضو عادی" : "تغییر به ادمین"}
+                    {member.role === "admin" ? t("members.makeMember") : t("members.makeAdmin")}
                   </DropdownMenuItem>
                   <DropdownMenuItem variant="destructive" onClick={() => removeMember(member.id)}>
                     <RemixIcon name="delete-bin-line" className="text-base" />
-                    حذف از سازمان
+                    {t("members.remove")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

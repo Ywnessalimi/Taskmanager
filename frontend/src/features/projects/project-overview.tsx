@@ -1,8 +1,11 @@
+"use client"
+
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap"
 import { StatusDonutChart } from "@/components/charts/status-donut-chart"
 import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { StatTile } from "@/components/layout/stat-tile"
 import { RemixIcon } from "@/components/ui/remix-icon"
+import { useT } from "@/components/providers/locale-provider"
 import type { Project } from "@/lib/api/types"
 
 /** تقویم ماهانه‌ی ساده (بدون تراز واقعی روز هفته) که فقط روزهای دارای سررسید را نشانه‌گذاری می‌کند. */
@@ -26,6 +29,7 @@ function dayOfMonth(date: string) {
 }
 
 export function ProjectOverview({ project }: { project: Project }) {
+  const t = useT()
   const dueDays = project.tasks
     .map((task) => task.dueDate)
     .filter((date): date is string => Boolean(date))
@@ -35,53 +39,53 @@ export function ProjectOverview({ project }: { project: Project }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <SectionTitle>بازه‌ی زمانی پروژه</SectionTitle>
+        <SectionTitle>{t("project.timeline")}</SectionTitle>
         <p className="text-sm text-text2">
-          {project.startDate} تا {project.endDate}
+          {project.startDate} — {project.endDate}
         </p>
         <button
           type="button"
           className="flex w-fit items-center gap-1.5 rounded-md py-1.5 text-sm text-text2 hover:text-foreground"
         >
           <RemixIcon name="attachment-line" className="text-base" />
-          افزودن پیوست
+          {t("project.addAttachment")}
         </button>
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionTitle>سلامت پروژه</SectionTitle>
+        <SectionTitle>{t("project.health")}</SectionTitle>
         <SectionBox>
           <div className="flex gap-2">
-            <StatTile label="فعال" value={project.health.active} />
-            <StatTile label="انجام‌شده" value={project.health.completed} />
-            <StatTile label="سررسید این بازه" value={project.health.dueInPeriod} />
-            <StatTile label="عقب‌افتاده" value={project.health.overdue} />
+            <StatTile label={t("health.active")} value={project.health.active} />
+            <StatTile label={t("health.completed")} value={project.health.completed} />
+            <StatTile label={t("health.dueThisPeriod")} value={project.health.dueInPeriod} />
+            <StatTile label={t("health.overdue")} value={project.health.overdue} />
           </div>
         </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionTitle>پراکندگی وضعیت تسک‌ها</SectionTitle>
+        <SectionTitle>{t("project.statusDistribution")}</SectionTitle>
         <SectionBox>
           <StatusDonutChart
             segments={[
-              { label: "در انتظار", value: project.statusDistribution.todo, colorVar: "var(--text3)" },
-              { label: "در حال انجام", value: project.statusDistribution.inProgress, colorVar: "var(--warning)" },
-              { label: "انجام‌شده", value: project.statusDistribution.completed, colorVar: "var(--success)" },
+              { label: t("status.todo"), value: project.statusDistribution.todo, colorVar: "var(--text3)" },
+              { label: t("status.inProgress"), value: project.statusDistribution.inProgress, colorVar: "var(--warning)" },
+              { label: t("status.completed"), value: project.statusDistribution.completed, colorVar: "var(--success)" },
             ]}
           />
         </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionTitle>تقویم سررسیدها</SectionTitle>
+        <SectionTitle>{t("project.deadlineCalendar")}</SectionTitle>
         <SectionBox>
           <DeadlineCalendar dueDays={dueDays} />
         </SectionBox>
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionTitle>فعالیت اعضا</SectionTitle>
+        <SectionTitle>{t("project.memberActivity")}</SectionTitle>
         <SectionBox>
           <ActivityHeatmap data={project.activity} />
         </SectionBox>

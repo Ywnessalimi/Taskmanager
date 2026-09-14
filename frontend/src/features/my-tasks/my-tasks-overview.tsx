@@ -1,15 +1,20 @@
+"use client"
+
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap"
 import { StatusDonutChart } from "@/components/charts/status-donut-chart"
 import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { StatTile } from "@/components/layout/stat-tile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RemixIcon } from "@/components/ui/remix-icon"
+import { useT } from "@/components/providers/locale-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import type { CurrentUser, MyTasksOverview as MyTasksOverviewData } from "@/lib/api/types"
 
 /**
  * بخش Overview تب «تسک‌های من» (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تب ۲»):
  * پروفایل کاربر، تسک‌های نیازمند رسیدگی، پراکندگی وضعیت، سلامت تجمیعی و فعالیت شخصی.
+ * چون از `useT` استفاده می‌کند (زبان جاری)، Client Component است — داده‌اش هنوز از
+ * Server Component والدش (`app/(tabs)/my-tasks/page.tsx`) می‌آید.
  */
 export function MyTasksOverview({
   user,
@@ -18,6 +23,8 @@ export function MyTasksOverview({
   user: CurrentUser
   overview: MyTasksOverviewData
 }) {
+  const t = useT()
+
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
@@ -54,10 +61,10 @@ export function MyTasksOverview({
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>نیازمند رسیدگی</SectionTitle>
+        <SectionTitle>{t("myTasksOverview.attentionRequired")}</SectionTitle>
         <SectionBox>
           {overview.attentionRequired.length === 0 ? (
-            <p className="py-2 text-center text-sm text-text2">چیزی نیاز به رسیدگی فوری ندارد.</p>
+            <p className="py-2 text-center text-sm text-text2">{t("myTasksOverview.noAttention")}</p>
           ) : (
             <div className="flex flex-col">
               {overview.attentionRequired.map((task) => (
@@ -79,18 +86,18 @@ export function MyTasksOverview({
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>پراکندگی وضعیت تسک‌ها</SectionTitle>
+        <SectionTitle>{t("myTasksOverview.statusDistribution")}</SectionTitle>
         <SectionBox>
           <StatusDonutChart
             segments={[
-              { label: "در انتظار", value: overview.statusDistribution.todo, colorVar: "var(--text3)" },
+              { label: t("status.todo"), value: overview.statusDistribution.todo, colorVar: "var(--text3)" },
               {
-                label: "در حال انجام",
+                label: t("status.inProgress"),
                 value: overview.statusDistribution.inProgress,
                 colorVar: "var(--warning)",
               },
               {
-                label: "انجام‌شده",
+                label: t("status.completed"),
                 value: overview.statusDistribution.completed,
                 colorVar: "var(--success)",
               },
@@ -100,19 +107,19 @@ export function MyTasksOverview({
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>سلامت پروژه‌ها</SectionTitle>
+        <SectionTitle>{t("myTasksOverview.projectsHealth")}</SectionTitle>
         <SectionBox>
           <div className="flex gap-2">
-            <StatTile label="فعال" value={overview.health.active} />
-            <StatTile label="انجام‌شده" value={overview.health.completed} />
-            <StatTile label="سررسید پیش‌رو" value={overview.health.dueInPeriod} />
-            <StatTile label="عقب‌افتاده" value={overview.health.overdue} />
+            <StatTile label={t("health.active")} value={overview.health.active} />
+            <StatTile label={t("health.completed")} value={overview.health.completed} />
+            <StatTile label={t("health.dueUpcoming")} value={overview.health.dueInPeriod} />
+            <StatTile label={t("health.overdue")} value={overview.health.overdue} />
           </div>
         </SectionBox>
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>فعالیت من</SectionTitle>
+        <SectionTitle>{t("myTasksOverview.myActivity")}</SectionTitle>
         <SectionBox>
           <ActivityHeatmap data={overview.activity} />
         </SectionBox>

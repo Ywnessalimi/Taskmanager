@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/navigation/page-header"
 import { OrganizationOverview } from "@/features/organizations/organization-overview"
+import { t } from "@/lib/i18n/dictionary"
+import { getLocale } from "@/lib/i18n/server"
 import { getOrganization } from "@/lib/api/organizations"
 
 export default async function OrganizationOverviewPage({
@@ -8,12 +10,12 @@ export default async function OrganizationOverviewPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const organization = await getOrganization(id)
+  const [organization, locale] = await Promise.all([getOrganization(id), getLocale()])
 
   if (!organization) {
     return (
       <div className="p-4">
-        <p className="text-sm text-text2">سازمانی با این شناسه پیدا نشد.</p>
+        <p className="text-sm text-text2">{t(locale, "org.notFound")}</p>
       </div>
     )
   }
@@ -22,10 +24,10 @@ export default async function OrganizationOverviewPage({
     <div className="flex flex-col">
       <PageHeader
         title={organization.name}
-        subtitle={`${organization.taskCount} تسک`}
+        subtitle={`${organization.taskCount} ${t(locale, "org.taskCountSuffix")}`}
         menu={[
-          [{ label: "تنظیمات سازمان", icon: "settings-3-line" }],
-          [{ label: "حذف سازمان", icon: "delete-bin-line", destructive: true }],
+          [{ label: t(locale, "org.settings"), icon: "settings-3-line" }],
+          [{ label: t(locale, "org.delete"), icon: "delete-bin-line", destructive: true }],
         ]}
       />
       <div className="p-4">

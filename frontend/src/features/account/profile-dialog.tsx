@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useLocale } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -30,6 +31,7 @@ export function ProfileDialog({
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [bio, setBio] = useState(user.bio ?? "")
+  const { t } = useLocale()
 
   function reset() {
     setName(user.name)
@@ -41,22 +43,22 @@ export function ProfileDialog({
     <Dialog onOpenChange={(open) => !open && reset()}>
       <DialogTrigger render={<Button variant="ghost" className="text-text2" />}>
         <RemixIcon name="pencil-line" className="text-base" />
-        ویرایش
+        {t("account.edit")}
       </DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>ویرایش پروفایل</DialogTitle>
+          <DialogTitle>{t("account.editProfileTitle")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-text2">نام</span>
+            <span className="text-xs text-text2">{t("account.name")}</span>
             <input value={name} onChange={(e) => setName(e.target.value)} className={FIELD_CLASS} />
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-text2">ایمیل</span>
+            <span className="text-xs text-text2">{t("account.email")}</span>
             <input
               type="email"
               dir="ltr"
@@ -67,12 +69,12 @@ export function ProfileDialog({
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-text2">توضیحات</span>
+            <span className="text-xs text-text2">{t("account.bio")}</span>
             <textarea
               rows={3}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="یک توضیح کوتاه درباره‌ی خودتان"
+              placeholder={t("account.bioPlaceholder")}
               className={`${FIELD_CLASS} resize-none`}
             />
           </label>
@@ -87,9 +89,9 @@ export function ProfileDialog({
               />
             }
           >
-            ذخیره
+            {t("account.save")}
           </DialogClose>
-          <DialogClose render={<Button variant="ghost" />}>انصراف</DialogClose>
+          <DialogClose render={<Button variant="ghost" />}>{t("account.cancel")}</DialogClose>
         </div>
       </DialogContent>
     </Dialog>

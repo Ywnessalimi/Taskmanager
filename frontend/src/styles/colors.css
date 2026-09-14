@@ -1,59 +1,201 @@
 /* ============================================ */
-/* Color Variables - Light & Dark Theme         */
+/* Color Tokens — پالت استاندارد shadcn          */
 /* ============================================ */
+/*
+ * منبع اصلی حقیقت رنگ‌ها. دو لایه دارد:
+ *   ۱. توکن‌های استاندارد shadcn/ui (--background, --primary, --card, --sidebar-*, --chart-*, ...)
+ *      — همان نام‌گذاری‌ای که ابزار theme رسمی shadcn تولید می‌کند؛ در globals.css مستقیماً
+ *      به کلاس‌های Tailwind (bg-background, bg-primary, ...) نگاشت می‌شوند.
+ *   ۲. نام‌مستعارهای اضافه‌ی این پروژه (--bg2, --text2, --icon, --brand, ...) که روی همان
+ *      توکن‌های استاندارد سوارند و در سراسر کامپوننت‌ها استفاده شده‌اند — رجوع به
+ *      docs/FRONTEND.md بخش ۵.
+ * رنگ برند/Primary این پروژه بنفش (#B473F4) است و در هر دو تم روشن/تیره ثابت می‌ماند.
+ *
+ * سه حالت ظاهر: پیش‌فرض `:root` روشن است؛ وقتی کاربر «ظاهر» را روی «سیستم» گذاشته
+ * (یعنی هیچ `data-theme` روی `<html>` نیست)، `@media (prefers-color-scheme: dark)` تصمیم
+ * می‌گیرد؛ و وقتی کاربر صریحاً «روشن»/«تیره» را انتخاب کرده، `<html data-theme="light|dark">`
+ * (در `src/app/layout.tsx` از روی کوکی `theme` تنظیم می‌شود) این تصمیم را override می‌کند —
+ * رجوع به docs/FRONTEND.md بخش «زبان و ظاهر».
+ */
 
 :root {
-  /* Light Theme (Default) */
-  --bg2: #f8f8f6;
-  --bg: #ffffff;
-  --bg3: #e9e9e2;
-  --bg4: #f6ebe9;
+  /* --- توکن‌های استاندارد shadcn (تم روشن) --- */
+  --background: #ffffff;
+  --foreground: #444436;
+  --card: #ffffff;
+  --card-foreground: #444436;
+  --popover: #ffffff;
+  --popover-foreground: #444436;
+  --primary: #b473f4;
+  --primary-foreground: #ffffff;
+  --secondary: #e9e9e2;
+  --secondary-foreground: #444436;
+  --muted: #f8f8f6;
+  --muted-foreground: #86857a;
+  --accent: #e9e9e2;
+  --accent-foreground: #444436;
+  --destructive: #ff5555;
+  --destructive-foreground: #ffffff;
   --border: #edece2;
-  --text: #444436;
-  --text2: #86857a;
+  --input: #edece2;
+  --ring: #b473f4;
+  --chart-1: #b473f4;
+  --chart-2: #53a871;
+  --chart-3: #d8b448;
+  --chart-4: #6870ff;
+  --chart-5: #ff5555;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #444436;
+  --sidebar-primary: #b473f4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8f8f6;
+  --sidebar-accent-foreground: #b473f4;
+  --sidebar-border: #edece2;
+  --sidebar-ring: #b473f4;
+
+  /* --- نام‌مستعارهای اضافه‌ی این پروژه (تم روشن) --- */
+  --bg: var(--background);
+  --bg2: var(--muted);
+  --bg3: var(--accent);
+  --bg4: #f6ebe9;
+  --text: var(--foreground);
+  --text2: var(--muted-foreground);
   --text3: #aaa79c;
+  --text4: #efefef;
   --icon: #2d2d29;
   --icon2: #918f87;
-  --brand: #B473F4;
-  --success: #53a871;
-  --error: #ff5555;
-  --warning: #d8b448;
   --icon3: #f2f2f2;
+  --brand: var(--primary);
+  --link: var(--primary);
+  --success: #53a871;
+  --warning: #d8b448;
+  --error: var(--destructive);
   --overlay: #00000033;
-  --text4: #efefef;
-  --link: #B473F4;
-  --text-on-brand: #ffffff;
+  --text-on-brand: var(--primary-foreground);
   --icon-on-brand: #ffffff;
-  --bg-brand: #B473F4;
-  --icon-brand: #B473F4;
-  --text-brand: #B473F4;
+  --bg-brand: var(--primary);
+  --icon-brand: var(--primary);
+  --text-brand: var(--primary);
 }
 
-/* Dark Theme */
+/* تم تیره — وقتی سیستم تیره است و کاربر صریحاً «روشن» را انتخاب نکرده */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg2: #1f1f1e;
-    --bg: #222221;
-    --bg3: #2c2c2b;
-    --bg4: #2f2826;
+  :root:not([data-theme="light"]) {
+    /* --- توکن‌های استاندارد shadcn (تم تیره) --- */
+    --background: #222221;
+    --foreground: #efefef;
+    --card: #222221;
+    --card-foreground: #efefef;
+    --popover: #222221;
+    --popover-foreground: #efefef;
+    --primary: #b473f4;
+    --primary-foreground: #ffffff;
+    --secondary: #2c2c2b;
+    --secondary-foreground: #efefef;
+    --muted: #1f1f1e;
+    --muted-foreground: #c9c9c8;
+    --accent: #2c2c2b;
+    --accent-foreground: #efefef;
+    --destructive: #ff5555;
+    --destructive-foreground: #ffffff;
     --border: #292925;
-    --text: #efefef;
-    --text2: #c9c9c8;
+    --input: #292925;
+    --ring: #b473f4;
+    --chart-1: #b473f4;
+    --chart-2: #349155;
+    --chart-3: #f5d167;
+    --chart-4: #6870ff;
+    --chart-5: #ff5555;
+    --sidebar: #222221;
+    --sidebar-foreground: #efefef;
+    --sidebar-primary: #b473f4;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1f1f1e;
+    --sidebar-accent-foreground: #b473f4;
+    --sidebar-border: #292925;
+    --sidebar-ring: #b473f4;
+
+    /* --- نام‌مستعارهای اضافه‌ی این پروژه (تم تیره) --- */
+    --bg: var(--background);
+    --bg2: var(--muted);
+    --bg3: var(--accent);
+    --bg4: #2f2826;
+    --text: var(--foreground);
+    --text2: var(--muted-foreground);
     --text3: #9e9d92;
+    --text4: #969696;
     --icon: #efefef;
     --icon2: #c9c9c8;
-    --brand: #B473F4;
-    --success: #349155;
-    --error: #ff5555;
-    --warning: #f5d167;
     --icon3: #272726;
-    --overlay: #00000033;
-    --text4: #969696;
+    --brand: var(--primary);
     --link: #6870ff;
-    --text-on-brand: #ffffff;
+    --success: #349155;
+    --warning: #f5d167;
+    --error: var(--destructive);
+    --overlay: #00000033;
+    --text-on-brand: var(--primary-foreground);
     --icon-on-brand: #ffffff;
-    --bg-brand: #B473F4;
-    --icon-brand: #B473F4;
-    --text-brand: #B473F4;
+    --bg-brand: var(--primary);
+    --icon-brand: var(--primary);
+    --text-brand: var(--primary);
   }
+}
+
+/* تم تیره — وقتی کاربر صریحاً «تیره» را انتخاب کرده، صرف‌نظر از تنظیم سیستم */
+:root[data-theme="dark"] {
+  --background: #222221;
+  --foreground: #efefef;
+  --card: #222221;
+  --card-foreground: #efefef;
+  --popover: #222221;
+  --popover-foreground: #efefef;
+  --primary: #b473f4;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2c2b;
+  --secondary-foreground: #efefef;
+  --muted: #1f1f1e;
+  --muted-foreground: #c9c9c8;
+  --accent: #2c2c2b;
+  --accent-foreground: #efefef;
+  --destructive: #ff5555;
+  --destructive-foreground: #ffffff;
+  --border: #292925;
+  --input: #292925;
+  --ring: #b473f4;
+  --chart-1: #b473f4;
+  --chart-2: #349155;
+  --chart-3: #f5d167;
+  --chart-4: #6870ff;
+  --chart-5: #ff5555;
+  --sidebar: #222221;
+  --sidebar-foreground: #efefef;
+  --sidebar-primary: #b473f4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f1f1e;
+  --sidebar-accent-foreground: #b473f4;
+  --sidebar-border: #292925;
+  --sidebar-ring: #b473f4;
+
+  --bg: var(--background);
+  --bg2: var(--muted);
+  --bg3: var(--accent);
+  --bg4: #2f2826;
+  --text: var(--foreground);
+  --text2: var(--muted-foreground);
+  --text3: #9e9d92;
+  --text4: #969696;
+  --icon: #efefef;
+  --icon2: #c9c9c8;
+  --icon3: #272726;
+  --brand: var(--primary);
+  --link: #6870ff;
+  --success: #349155;
+  --warning: #f5d167;
+  --error: var(--destructive);
+  --overlay: #00000033;
+  --text-on-brand: var(--primary-foreground);
+  --icon-on-brand: #ffffff;
+  --bg-brand: var(--primary);
+  --icon-brand: var(--primary);
+  --text-brand: var(--primary);
 }

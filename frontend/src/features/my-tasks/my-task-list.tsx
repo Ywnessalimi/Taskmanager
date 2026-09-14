@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useT } from "@/components/providers/locale-provider"
 import { BoardView } from "@/features/projects/views/board-view"
 import { CalendarView } from "@/features/projects/views/calendar-view"
 import { TableView } from "@/features/projects/views/table-view"
@@ -19,6 +20,7 @@ const ALL_PROJECTS = "all"
 export function MyTaskList({ tasks, today }: { tasks: MyTask[]; today: string }) {
   const [view, setView] = useState<TaskViewId>("table")
   const [projectId, setProjectId] = useState<string>(ALL_PROJECTS)
+  const t = useT()
 
   const projects = useMemo(() => {
     const seen = new Map<string, string>()
@@ -32,13 +34,13 @@ export function MyTaskList({ tasks, today }: { tasks: MyTask[]; today: string })
   )
 
   if (tasks.length === 0) {
-    return <p className="py-8 text-center text-sm text-text2">تسک در حال انجامی به شما تخصیص داده نشده.</p>
+    return <p className="py-8 text-center text-sm text-text2">{t("myTasks.empty")}</p>
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 overflow-x-auto">
-        {[{ id: ALL_PROJECTS, name: "همه‌ی پروژه‌ها" }, ...projects].map((project) => (
+        {[{ id: ALL_PROJECTS, name: t("myTasks.allProjects") }, ...projects].map((project) => (
           <button
             key={project.id}
             type="button"

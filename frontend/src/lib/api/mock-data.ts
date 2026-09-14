@@ -1,4 +1,4 @@
-import type { CurrentUser, Notification, Organization, Project } from "./types"
+import type { CurrentUser, Notification, Organization, Project, ProjectRef } from "./types"
 
 /**
  * یک الگوی شبه‌تصادفی ثابت برای پر کردن نمودارهای فعالیت؛ فقط برای نمایش، بدون معنای واقعی.
@@ -94,14 +94,20 @@ export const MOCK_PROJECTS: Project[] = [
   },
 ]
 
-function projectRefs(organizationId: string): { id: string; name: string }[] {
-  return MOCK_PROJECTS.filter((p) => p.organizationId === organizationId).map((p) => ({ id: p.id, name: p.name }))
+/** درصد پیشرفت هر پروژه از روی سهم تسک‌های completed، برای ردیف پروژه در صفحه‌ی سازمان. */
+function projectRefs(organizationId: string): ProjectRef[] {
+  return MOCK_PROJECTS.filter((p) => p.organizationId === organizationId).map((p) => {
+    const { todo, inProgress, completed } = p.statusDistribution
+    const total = todo + inProgress + completed
+    return { id: p.id, name: p.name, progress: total > 0 ? Math.round((completed / total) * 100) : 0 }
+  })
 }
 
 export const MOCK_ORGANIZATIONS: Organization[] = [
   {
     id: "org-1",
     name: "شرکت نوین‌ساز",
+    createdAt: "1402/01/11",
     members: [
       { id: "u1", name: "سارا احمدی", role: "admin", activity: mockMemberActivity(2) },
       { id: "u2", name: "علی رضایی", role: "member", activity: mockMemberActivity(3) },
@@ -114,6 +120,7 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
   {
     id: "org-2",
     name: "تیم طراحی آبی",
+    createdAt: "1402/03/20",
     members: [
       { id: "u5", name: "نگار ملکی", role: "admin", activity: mockMemberActivity(4) },
       { id: "u6", name: "امیر صادقی", role: "member", activity: mockMemberActivity(6) },
@@ -126,66 +133,74 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
 export const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: "n1",
-    verb: "این تسک را به شما تخصیص داد",
+    verb: "taskAssigned",
+    actorId: "u1",
     actorName: "سارا احمدی",
     target: { type: "task", id: "t2", label: "پیاده‌سازی فرم تماس", projectId: "proj-1" },
     status: "unread",
     requiresApproval: false,
-    createdAtLabel: "۲ ساعت پیش",
+    createdAt: { unit: "hours", amount: 2 },
   },
   {
     id: "n2",
-    verb: "روی تسک «بهینه‌سازی سرعت بارگذاری» کامنت گذاشت",
+    verb: "taskCommented",
+    actorId: "u2",
     actorName: "علی رضایی",
     target: { type: "task", id: "t3", label: "بهینه‌سازی سرعت بارگذاری", projectId: "proj-1" },
     status: "unread",
     requiresApproval: false,
-    createdAtLabel: "۵ ساعت پیش",
+    createdAt: { unit: "hours", amount: 5 },
   },
   {
     id: "n3",
-    verb: "درخواست عضویت در پروژه را ثبت کرد — نیاز به تایید شما",
+    verb: "projectJoinRequested",
+    actorId: "u6",
     actorName: "امیر صادقی",
     target: { type: "project", id: "proj-1", label: "بازطراحی وب‌سایت" },
     status: "unread",
     requiresApproval: true,
-    createdAtLabel: "دیروز",
+    createdAt: { unit: "yesterday" },
   },
   {
     id: "n4",
-    verb: "شما را به‌عنوان ادمین سازمان تعیین کرد — نیاز به تایید شما",
+    verb: "orgAdminAssigned",
+    actorId: "u5",
     actorName: "نگار ملکی",
     target: { type: "organization", id: "org-2", label: "تیم طراحی آبی" },
     status: "unread",
     requiresApproval: true,
-    createdAtLabel: "دیروز",
+    createdAt: { unit: "yesterday" },
   },
   {
     id: "n5",
-    verb: "وضعیت تسک «طراحی جریان ثبت‌نام» را به «در انتظار» تغییر داد",
+    verb: "taskStatusChanged",
+    verbStatus: "todo",
+    actorId: "u2",
     actorName: "علی رضایی",
     target: { type: "task", id: "t6", label: "طراحی جریان ثبت‌نام", projectId: "proj-2" },
     status: "read",
     requiresApproval: false,
-    createdAtLabel: "۲ روز پیش",
+    createdAt: { unit: "days", amount: 2 },
   },
   {
     id: "n6",
-    verb: "پروژه‌ی جدیدی در سازمان ساخت",
+    verb: "projectCreated",
+    actorId: "u5",
     actorName: "نگار ملکی",
     target: { type: "project", id: "proj-3", label: "کمپین تبلیغاتی بهار" },
     status: "read",
     requiresApproval: false,
-    createdAtLabel: "۳ روز پیش",
+    createdAt: { unit: "days", amount: 3 },
   },
   {
     id: "n7",
-    verb: "شما را در سازمان «شرکت نوین‌ساز» عضو کرد",
+    verb: "orgMemberAdded",
+    actorId: "u1",
     actorName: "سارا احمدی",
     target: { type: "organization", id: "org-1", label: "شرکت نوین‌ساز" },
     status: "read",
     requiresApproval: false,
-    createdAtLabel: "هفته‌ی پیش",
+    createdAt: { unit: "week" },
   },
 ]
 

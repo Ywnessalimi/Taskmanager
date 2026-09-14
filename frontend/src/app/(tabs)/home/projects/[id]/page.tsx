@@ -2,18 +2,25 @@ import { PageHeader } from "@/components/navigation/page-header"
 import { SectionTabs } from "@/features/pages/section-tabs"
 import { ProjectOverview } from "@/features/projects/project-overview"
 import { ProjectTaskList } from "@/features/projects/project-task-list"
+import { t } from "@/lib/i18n/dictionary"
+import { getLocale } from "@/lib/i18n/server"
 import { getToday } from "@/lib/api/calendar"
 import { getProject } from "@/lib/api/projects"
 import { getCurrentUser } from "@/lib/api/users"
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [project, today, user] = await Promise.all([getProject(id), getToday(), getCurrentUser()])
+  const [project, today, user, locale] = await Promise.all([
+    getProject(id),
+    getToday(),
+    getCurrentUser(),
+    getLocale(),
+  ])
 
   if (!project) {
     return (
       <div className="p-4">
-        <p className="text-sm text-text2">پروژه‌ای با این شناسه پیدا نشد.</p>
+        <p className="text-sm text-text2">{t(locale, "project.notFound")}</p>
       </div>
     )
   }
@@ -25,12 +32,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         subtitle={project.organizationName}
         menu={[
           [
-            { label: "افزودن تسک", icon: "task-line" },
-            { label: "افزودن مایل‌استون", icon: "flag-line" },
-            { label: "افزودن بخش", icon: "layout-column-line" },
+            { label: t(locale, "project.addTask"), icon: "task-line" },
+            { label: t(locale, "project.addMilestone"), icon: "flag-line" },
+            { label: t(locale, "project.addSection"), icon: "layout-column-line" },
           ],
-          [{ label: "تنظیمات پروژه", icon: "settings-3-line" }],
-          [{ label: "حذف پروژه", icon: "delete-bin-line", destructive: true }],
+          [{ label: t(locale, "project.settings"), icon: "settings-3-line" }],
+          [{ label: t(locale, "project.delete"), icon: "delete-bin-line", destructive: true }],
         ]}
       />
 

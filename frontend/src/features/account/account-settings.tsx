@@ -11,45 +11,66 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Switch } from "@/components/ui/switch"
 import { SectionTitle } from "@/components/layout/section"
+import { useLocale } from "@/components/providers/locale-provider"
+import { useTheme } from "@/components/providers/theme-provider"
+import type { Locale, TranslationKey } from "@/lib/i18n/dictionary"
+import type { Theme } from "@/lib/theme"
+import { THEMES } from "@/lib/theme"
 import type { CurrentUser, NotificationPreferences } from "@/lib/api/types"
 import { ProfileDialog } from "./profile-dialog"
-import { SettingsGroup, SettingsLinkRow, SettingsToggleRow } from "./settings-row"
+import { ROW_BASE, SettingsGroup, SettingsLinkRow, SettingsToggleRow } from "./settings-row"
 
 const NOTIFICATION_ROWS: {
   key: keyof NotificationPreferences
   icon: string
-  label: string
-  description: string
+  labelKey: TranslationKey
+  descriptionKey: TranslationKey
 }[] = [
   {
     key: "taskAssigned",
     icon: "user-line",
-    label: "تخصیص تسک",
-    description: "وقتی تسکی به شما داده می‌شود",
+    labelKey: "account.notifTaskAssigned",
+    descriptionKey: "account.notifTaskAssignedDesc",
   },
   {
     key: "taskComments",
     icon: "notification-line",
-    label: "کامنت‌ها",
-    description: "کامنت جدید روی تسک‌های شما",
+    labelKey: "account.notifComments",
+    descriptionKey: "account.notifCommentsDesc",
   },
   {
     key: "weeklyDigest",
     icon: "file-list-line",
-    label: "خلاصه‌ی هفتگی",
-    description: "گزارش فعالیت هفته، هر شنبه",
+    labelKey: "account.notifWeeklyDigest",
+    descriptionKey: "account.notifWeeklyDigestDesc",
   },
 ]
 
+const THEME_LABEL_KEY: Record<Theme, TranslationKey> = {
+  light: "account.appearanceLight",
+  dark: "account.appearanceDark",
+  system: "account.appearanceSystem",
+}
+
 /**
- * محتوای تب «حساب کاربری»: پروفایل، تنظیمات حساب، تنظیمات اعلان و خروج.
- * همه‌ی تغییرها فقط در state همین کامپوننت‌اند (بدون API واقعی) — رجوع به README.md همین پوشه.
+ * محتوای تب «حساب کاربری»: پروفایل، تنظیمات حساب (شامل انتخابگرهای زبان و ظاهر که واقعاً
+ * کار می‌کنند)، تنظیمات اعلان و خروج. تغییرهای پروفایل/اعلان فقط در state همین کامپوننت‌اند
+ * (بدون API واقعی)؛ زبان و ظاهر اما سراسری‌اند (`LocaleProvider`/`ThemeProvider`) — رجوع به
+ * README.md همین پوشه.
  */
 export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
   const [user, setUser] = useState(initialUser)
+  const { locale, setLocale, t } = useLocale()
 
   function toggleNotification(key: keyof NotificationPreferences) {
     setUser((prev) => ({
@@ -76,29 +97,29 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>حساب</SectionTitle>
+        <SectionTitle>{t("account.sectionAccount")}</SectionTitle>
         <SettingsGroup>
-          <SettingsLinkRow icon="mail-line" label="تغییر ایمیل" value={user.email} />
-          <SettingsLinkRow icon="lock-password-line" label="تغییر رمز عبور" />
-          <SettingsLinkRow icon="global-line" label="زبان" value="فارسی" />
-          <SettingsLinkRow icon="moon-line" label="ظاهر" value="هماهنگ با سیستم" />
+          <SettingsLinkRow icon="mail-line" label={t("account.changeEmail")} value={user.email} />
+          <SettingsLinkRow icon="lock-password-line" label={t("account.changePassword")} />
+          <LanguagePickerRow locale={locale} onChange={setLocale} />
+          <AppearancePickerRow />
         </SettingsGroup>
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>اعلان‌ها</SectionTitle>
+        <SectionTitle>{t("account.sectionNotifications")}</SectionTitle>
         <SettingsGroup>
           {NOTIFICATION_ROWS.map((row) => (
             <SettingsToggleRow
               key={row.key}
               icon={row.icon}
-              label={row.label}
-              description={row.description}
+              label={t(row.labelKey)}
+              description={t(row.descriptionKey)}
               control={
                 <Switch
                   checked={user.notifications[row.key]}
                   onCheckedChange={() => toggleNotification(row.key)}
-                  aria-label={row.label}
+                  aria-label={t(row.labelKey)}
                 />
               }
             />
@@ -107,11 +128,11 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
       </section>
 
       <section className="flex flex-col gap-2">
-        <SectionTitle>درباره</SectionTitle>
+        <SectionTitle>{t("account.sectionAbout")}</SectionTitle>
         <SettingsGroup>
-          <SettingsLinkRow icon="question-line" label="راهنما و پشتیبانی" />
-          <SettingsLinkRow icon="shield-check-line" label="حریم خصوصی" />
-          <SettingsLinkRow icon="information-line" label="نسخه" value="۰.۱.۰" />
+          <SettingsLinkRow icon="question-line" label={t("account.help")} />
+          <SettingsLinkRow icon="shield-check-line" label={t("account.privacy")} />
+          <SettingsLinkRow icon="information-line" label={t("account.version")} value="۰.۱.۰" />
         </SettingsGroup>
       </section>
 
@@ -120,27 +141,80 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
   )
 }
 
+/** ردیف «زبان»: منوی کشویی با دو گزینه‌ی فارسی/English، مقدار جاری کنار برچسب نشان داده می‌شود. */
+function LanguagePickerRow({ locale, onChange }: { locale: Locale; onChange: (locale: Locale) => void }) {
+  const { t } = useLocale()
+  const currentLabel = locale === "fa" ? t("account.languageFa") : t("account.languageEn")
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={`${ROW_BASE} enabled:hover:bg-bg2`}>
+        <RemixIcon name="global-line" className="text-base text-icon2" />
+        <span className="flex-1 text-sm text-foreground">{t("account.language")}</span>
+        <span className="text-xs text-text2">{currentLabel}</span>
+        <RemixIcon name="arrow-left-s-line" className="text-base text-icon2" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup value={locale} onValueChange={(value) => onChange(value as Locale)}>
+          <DropdownMenuRadioItem value="fa" closeOnClick>
+            {t("account.languageFa")}
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="en" closeOnClick>
+            {t("account.languageEn")}
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/** ردیف «ظاهر»: منوی کشویی با سه گزینه‌ی روشن/تیره/هماهنگ با سیستم. */
+function AppearancePickerRow() {
+  const { t } = useLocale()
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={`${ROW_BASE} enabled:hover:bg-bg2`}>
+        <RemixIcon name="moon-line" className="text-base text-icon2" />
+        <span className="flex-1 text-sm text-foreground">{t("account.appearance")}</span>
+        <span className="text-xs text-text2">{t(THEME_LABEL_KEY[theme])}</span>
+        <RemixIcon name="arrow-left-s-line" className="text-base text-icon2" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+          {THEMES.map((value) => (
+            <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+              {t(THEME_LABEL_KEY[value])}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /** خروج یک اکشن برگشت‌ناپذیر است، پس قبل از اجرا تایید گرفته می‌شود. */
 function LogoutDialog() {
+  const { t } = useLocale()
+
   return (
     <Dialog>
       <DialogTrigger
         render={<Button variant="ghost" className="w-fit text-destructive" />}
       >
         <RemixIcon name="logout-box-r-line" className="text-base" />
-        خروج از حساب
+        {t("account.logout")}
       </DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>خروج از حساب</DialogTitle>
+          <DialogTitle>{t("account.logout")}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-text2">
-          از حساب کاربری خود خارج می‌شوید. برای ورود دوباره به ایمیل و رمز عبور نیاز دارید.
-        </p>
+        <p className="text-sm text-text2">{t("account.logoutConfirmBody")}</p>
         <div className="flex justify-start gap-2">
-          <DialogClose render={<Button variant="destructive" />}>خروج</DialogClose>
-          <DialogClose render={<Button variant="ghost" />}>انصراف</DialogClose>
+          <DialogClose render={<Button variant="destructive" />}>{t("account.logoutConfirm")}</DialogClose>
+          <DialogClose render={<Button variant="ghost" />}>{t("account.cancel")}</DialogClose>
         </div>
       </DialogContent>
     </Dialog>

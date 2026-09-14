@@ -16,6 +16,8 @@ export type Member = {
 export type ProjectRef = {
   id: string
   name: string
+  /** درصد پیشرفت (سهم تسک‌های completed از کل تسک‌های پروژه)، برای ردیف پروژه در صفحه‌ی سازمان */
+  progress: number
 }
 
 export type ProjectHealth = {
@@ -67,6 +69,8 @@ export type Project = {
 export type Organization = {
   id: string
   name: string
+  /** تاریخ ساخت سازمان (جلالی، رقم لاتین — مثل بقیه‌ی تاریخ‌های این مدل) */
+  createdAt: string
   members: Member[]
   projects: ProjectRef[]
   taskCount: number
@@ -79,15 +83,33 @@ export type NotificationTarget =
   | { type: "project"; id: string; label: string }
   | { type: "organization"; id: string; label: string }
 
+/**
+ * نوع رخداد اعلان — کلید ترجمه است، نه متن آماده، تا با تغییر زبان محتوای اعلان هم عوض شود
+ * (رجوع به `src/lib/i18n/dictionary.ts` کلیدهای `notifications.verb.*`).
+ */
+export type NotificationVerb =
+  | "taskAssigned"
+  | "taskCommented"
+  | "projectJoinRequested"
+  | "orgAdminAssigned"
+  | "taskStatusChanged"
+  | "projectCreated"
+  | "orgMemberAdded"
+
+/** زمان نسبی به‌صورت ساختاریافته (نه رشته‌ی آماده) تا در هر زبان جداگانه فرمت شود. */
+export type RelativeTime = { unit: "hours" | "days"; amount: number } | { unit: "yesterday" } | { unit: "week" }
+
 export type Notification = {
   id: string
-  verb: string
+  verb: NotificationVerb
+  /** فقط برای verb === "taskStatusChanged": وضعیت جدیدی که تسک به آن تغییر کرد. */
+  verbStatus?: TaskStatus
+  actorId?: string
   actorName?: string
   target: NotificationTarget
   status: NotificationStatus
   requiresApproval: boolean
-  /** متن نسبی آماده برای نمایش (مثل «۲ ساعت پیش») — محاسبه‌ی زمان واقعی هنوز پیاده نشده */
-  createdAtLabel: string
+  createdAt: RelativeTime
 }
 
 /** تنظیمات اعلان کاربر — مطابق سوییچ‌های صفحه‌ی «حساب کاربری». */
@@ -106,6 +128,24 @@ export type UserAttachment = {
   name: string
   /** اندازه‌ی آماده برای نمایش (مثل «۱.۲ مگابایت») — محاسبه‌ی واقعی حجم هنوز پیاده نشده */
   sizeLabel: string
+}
+
+/**
+ * پروفایل عمومیِ قابل‌مشاهده‌ی هر کاربر (نه فقط کاربر واردشده) — برای صفحه‌ی `/users/[id]`.
+ * چون مدل داده هنوز موجودیت جدای «User» ندارد (فقط `Member` داخل هر Organization)، این تایپ
+ * با جست‌وجوی همان شناسه در میان اعضای همه‌ی سازمان‌ها ساخته می‌شود — رجوع به
+ * `src/lib/api/users.ts` (`getUserById`) و `src/features/users/README.md`.
+ */
+export type PublicUser = {
+  id: string
+  name: string
+  role: MemberRole
+  activity: number[]
+  /** فقط وقتی این کاربر همان کاربر واردشده باشد پر می‌شود (بقیه‌ی اعضا ایمیل/توضیح ندارند). */
+  email?: string
+  bio?: string
+  avatarUrl?: string
+  organizations: { id: string; name: string }[]
 }
 
 /**

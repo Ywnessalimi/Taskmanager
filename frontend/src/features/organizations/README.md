@@ -4,10 +4,13 @@
 
 ## چه‌کار می‌کند
 
-- `organization-overview.tsx` → کامپوننت `OrganizationOverview`: سه بخش —
-  1. **اعضا**: فقط اواتارهای دایره‌ای روی‌هم‌افتاده (تریگر `MembersDialog`)، بدون لیست کامل در صفحه‌ی اصلی.
-  2. **پروژه‌های فعال**: داخل یک باکس با بوردر و پدینگ ۱۲px (`SectionBox`)، لینک به صفحه‌ی هر پروژه.
-  3. **فعالیت اعضا**: همان باکس بوردردار؛ هر عضو یک ردیف است (اواتار + نام کوتاه‌شده با `truncate` + `ActivityBarRow`).
+- `organization-overview.tsx` → کامپوننت `OrganizationOverview` (Client): چیدمانش از طرح Figma «AlignUI — Home/OrganizationPage» گرفته شده، اما با آیکون‌های خودمان (RemixIcon) به‌جای آیکون‌های طرح، و بدون تکرار نوار بالا/پایین طرح (همان `PageHeader`/`BottomTabBar`/`SidebarNav` موجود پروژه‌اند، نه اینجا).
+  - **هدر**: نام سازمان (با برچسب کوچک بالای آن) + جای‌گزین لوگو (مربع با حرف اول نام، چون سازمان عکس واقعی ندارد)، زیرش تاریخ ساخت سازمان (`organization.createdAt`).
+  - **اعضا**: همان اواتارهای دایره‌ای روی‌هم‌افتاده (تریگر `MembersDialog`)، بدون لیست کامل در صفحه‌ی اصلی.
+  - دو ردیف دکوراتیو مطابق طرح («توضیحات بیشتر»، «افزودن فایل») — سازمان هنوز فیلد توضیحات/پیوست فایل در مدل داده ندارد؛ مثل ردیف غیرفعال «الصاق فایل» در `features/tasks/task-create-form.tsx` و دکمه‌ی «افزودن پیوست» در `features/projects/project-overview.tsx`، فقط دکوراتیو هستند.
+  - **خلاصه‌ای از پروژه‌ها**: هر پروژه یک ردیف قابل‌کلیک (لینک به صفحه‌ی پروژه) با نوار پیشرفت (`project.progress`، درصد تسک‌های completed) + نام پروژه. «پروژه جدید» مثل الگوی مشابه در `features/home/workspace-list.tsx` (کلیک → اینپوت این‌لاین → Enter/blur برای افزودن) فقط در state محلی همین کامپوننت اضافه می‌کند.
+  - **آخرین فعالیت‌ها**: فعلاً همیشه حالت خالی («هنوز هیچ فعالیتی ثبت نشده است») — مطابق طرح Figma که این بخش را خالی نشان می‌دهد؛ هیچ فید فعالیتی هنوز پیاده نشده.
+  - جداکننده‌های بین بخش‌ها از `components/ui/separator.tsx` (`Separator`، shadcn/Base UI).
 - `members-dialog.tsx` → کامپوننت `MembersDialog`: دیالوگ مدیریت اعضا —
   - تاگل «فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند» (state محلی، بدون پرسیستنس).
   - افزودن عضو جدید با تایپ نام (محلی/غیرماندگار).
@@ -15,16 +18,19 @@
 
 ## وابستگی‌ها
 
-- داده: `src/lib/api/organizations.ts` (`getOrganization`) و تایپ‌های `Organization`/`Member` در `src/lib/api/types.ts` (`Member` شامل `role` و `activity` است).
-- کامپوننت‌های مشترک: `src/components/charts/activity-bar-row.tsx`، `src/components/ui/{avatar,dialog,dropdown-menu,switch,button}.tsx`.
+- داده: `src/lib/api/organizations.ts` (`getOrganization`) و تایپ‌های `Organization`/`Member`/`ProjectRef` در `src/lib/api/types.ts` (`Organization.createdAt` و `ProjectRef.progress` مخصوص همین صفحه اضافه شده‌اند).
+- کامپوننت‌های مشترک: `src/components/layout/section.tsx` (`SectionBox`/`SectionTitle`)، `src/components/ui/{avatar,dialog,dropdown-menu,switch,button,separator}.tsx`.
 - هدر صفحه از `src/components/navigation/page-header.tsx` می‌آید، نه اینجا.
 - مصرف‌کننده: `src/app/(tabs)/home/organizations/[id]/page.tsx`.
 
 ## ارتباط با بقیه‌ی بخش‌ها
 
-لیست پروژه‌های فعال به `/home/projects/[id]` لینک می‌شود ([../projects](../projects)). فهرست سازمان‌ها/پروژه‌ها در صفحه‌ی خانه از همین منبع داده (`getOrganizations`) می‌آید ([../home](../home)) — هر سه صفحه باید همیشه به یک شناسه‌ی سازمان/پروژه برسند.
+خلاصه‌ی پروژه‌ها به `/home/projects/[id]` لینک می‌شود ([../projects](../projects)). فهرست سازمان‌ها/پروژه‌ها در صفحه‌ی خانه از همین منبع داده (`getOrganizations`) می‌آید ([../home](../home)) — هر سه صفحه باید همیشه به یک شناسه‌ی سازمان/پروژه برسند.
 
 ## نکات ناقص فعلی
 
 - تغییر نقش/حذف عضو و تاگل «فقط ادمین‌ها» فقط در state مرورگر است؛ با رفرش از بین می‌رود (هنوز API واقعی عضویت وجود ندارد).
-- اعضا با `AvatarFallback` (حرف اول اسم) نشان داده می‌شوند، نه عکس واقعی.
+- اعضا با `AvatarFallback` (حرف اول اسم) نشان داده می‌شوند، نه عکس واقعی؛ لوگوی سازمان هم همین‌طور.
+- «توضیحات بیشتر» و «افزودن فایل» فقط دکوراتیوند (بدون `onClick`) — سازمان هنوز فیلد توضیحات/پیوست در مدل داده ندارد.
+- «پروژه جدید» فقط در state محلی این کامپوننت اضافه می‌شود؛ با رفرش از بین می‌رود و در صفحه‌ی خانه (`WorkspaceList`) دیده نمی‌شود، چون هر دو از یک `getOrganizations()` مجزا (نه state مشترک) می‌خوانند.
+- بخش «آخرین فعالیت‌ها» فعلاً همیشه خالی است؛ فید فعالیت واقعی هنوز طراحی/پیاده نشده.

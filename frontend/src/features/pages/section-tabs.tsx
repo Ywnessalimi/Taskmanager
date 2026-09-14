@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useT } from "@/components/providers/locale-provider"
+import type { TranslationKey } from "@/lib/i18n/dictionary"
 import { ChatPage } from "./chat-page"
 import { DocumentPage } from "./document-page"
 
@@ -20,9 +22,14 @@ type CustomPage = {
   title: string
 }
 
-const PAGE_KINDS: { kind: CustomPageKind; icon: string; label: string; title: string }[] = [
-  { kind: "document", icon: "file-text-line", label: "سند", title: "سند جدید" },
-  { kind: "chat", icon: "chat-3-line", label: "چت", title: "چت" },
+const PAGE_KINDS: {
+  kind: CustomPageKind
+  icon: string
+  labelKey: TranslationKey
+  titleKey: TranslationKey
+}[] = [
+  { kind: "document", icon: "file-text-line", labelKey: "tabs.document", titleKey: "tabs.newDocument" },
+  { kind: "chat", icon: "chat-3-line", labelKey: "tabs.chat", titleKey: "tabs.chat" },
 ]
 
 const TRIGGER_CLASS =
@@ -48,14 +55,16 @@ export function SectionTabs({
   const [value, setValue] = useState("list")
   /** شمارنده‌ی محلی برای شناسه‌ی صفحه‌ها؛ عمداً Date.now نیست تا رندر خالص بماند. */
   const nextId = useRef(1)
+  const t = useT()
 
   function addPage(kind: CustomPageKind) {
     const meta = PAGE_KINDS.find((item) => item.kind === kind)!
     const sameKindCount = pages.filter((page) => page.kind === kind).length
+    const title = t(meta.titleKey)
     const page: CustomPage = {
       id: `${kind}-${nextId.current++}`,
       kind,
-      title: sameKindCount === 0 ? meta.title : `${meta.title} ${sameKindCount + 1}`,
+      title: sameKindCount === 0 ? title : `${title} ${sameKindCount + 1}`,
     }
     setPages((prev) => [...prev, page])
     setValue(page.id)
@@ -68,10 +77,10 @@ export function SectionTabs({
         className="w-full justify-start gap-1 rounded-none border-b border-border bg-background px-4"
       >
         <TabsTrigger value="list" className={TRIGGER_CLASS}>
-          لیست
+          {t("tabs.list")}
         </TabsTrigger>
         <TabsTrigger value="overview" className={TRIGGER_CLASS}>
-          نمای‌کلی
+          {t("tabs.overview")}
         </TabsTrigger>
 
         {pages.map((page) => (
@@ -86,7 +95,7 @@ export function SectionTabs({
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label="افزودن صفحه‌ی جدید"
+            aria-label={t("tabs.addPage")}
             className="flex size-7 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
           >
             <RemixIcon name="add-line" className="text-base" />
@@ -95,7 +104,7 @@ export function SectionTabs({
             {PAGE_KINDS.map((item) => (
               <DropdownMenuItem key={item.kind} onClick={() => addPage(item.kind)}>
                 <RemixIcon name={item.icon} className="text-base" />
-                {item.label}
+                {t(item.labelKey)}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

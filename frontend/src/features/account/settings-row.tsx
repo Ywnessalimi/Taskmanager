@@ -8,7 +8,7 @@ export function SettingsGroup({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col rounded-md border border-border bg-background">{children}</div>
 }
 
-const ROW_BASE =
+export const ROW_BASE =
   "flex w-full items-center gap-2.5 border-b border-border px-3 py-2.5 text-start last:border-b-0"
 
 /** ردیف قابل کلیک (با فلش انتهایی). اگر onClick نداشته باشد، غیرفعال و کم‌رنگ رندر می‌شود. */
