@@ -29,7 +29,7 @@
 ```
 app/
   (tabs)/
-    home/                        → تب خانه: لیست Workspace ها
+    home/                        → تب خانه: خوش‌آمدگویی + تعداد تسک‌های در حال انجام + لیست Workspace ها
       organizations/[orgId]/     → صفحه‌ی Overview سازمان
       projects/[projectId]/      → صفحه‌ی پروژه
         list/                    → بخش List با ساب-روت برای هر نما
@@ -55,10 +55,12 @@ app/
 |---|---|
 | Bottom Tab Bar | `components/navigation/BottomTabBar` |
 | ناوبری کناری دسکتاپ (`lg` به بالا) | `components/navigation/SidebarNav` — ساخته شد (رجوع به [DESIGN.md](./DESIGN.md#۸۱-نسخهی-دسکتاپ-نسخهی-اولیه)) |
+| هدر مستقل بالای محتوای دسکتاپ (اواتار، اعلان‌ها، جستجو، تسک جدید) | `components/navigation/DesktopHeader` — ساخته شد، طرح Figma «Header»؛ جدا از SidebarNav |
 | دکمه‌ی شناور «تسک جدید» (FAB) | `components/navigation/AddTaskFab` — ساخته شد (در `home` و `my-tasks`) |
 | فرم ساخت تسک جدید | `features/tasks/TaskCreateForm` — ساخته شد (`app/tasks/new/page.tsx`) |
 | پروفایل عمومی کاربر | `features/users/UserProfile` — ساخته شد (`app/users/[id]/page.tsx`) |
-| لیست Workspace در خانه | `features/home/WorkspaceList` |
+| هدر خوش‌آمدگویی + تعداد تسک‌های در حال انجام در خانه | `features/home/HomeGreeting` — ساخته شد، طرح Figma «Home» |
+| لیست Workspace در خانه (با درصد پیشرفت هر پروژه) | `features/home/WorkspaceList` |
 | Organization Overview (هدر، اعضا، خلاصه‌ی پروژه‌ها، آخرین فعالیت‌ها) | `features/organizations/OrganizationOverview` — بازطراحی‌شده مطابق طرح Figma «Home/OrganizationPage» |
 | Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
 | نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}` + سوییچر مشترک `features/projects/ViewSwitcher` — ساخته شد؛ محل واقعی زیر `features/projects/` است نه `features/tasks/` (چون از اول در همین‌جا توسعه داده شد) |
@@ -70,7 +72,7 @@ app/
 | فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` — ساخته شد |
 | تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — ساخته شد (پروفایل، تنظیمات حساب، سوییچ‌های اعلان، خروج با تایید) |
 | ویجت‌های تکرارشونده (Activity Heatmap، Pie/Donut Chart) | `components/charts/{ActivityHeatmap, StatusDonutChart}` — ساخته شد |
-| باکس بوردردار مشترک صفحات Overview | `components/layout/{SectionTitle, SectionBox}` + `components/layout/StatTile` (باکس آماری «سلامت») — ساخته شد |
+| باکس بوردردار مشترک صفحات Overview | `components/layout/{SectionTitle, SectionBox}` + `components/layout/StatTile` (باکس آماری «سلامت») + `components/layout/OrgLogo` (جای‌گزین لوگوی سازمان) — ساخته شد |
 | هدر صفحه‌های اصلی تب‌ها | `components/layout/AppHeader` — ساخته شد (سفید، تمام‌عرض، با بوردر پایین) |
 
 ## ۵. لایه‌ی رنگی (Color Tokens)
@@ -119,8 +121,9 @@ app/
 | `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
 | `separator` | جداکننده‌ی بین بخش‌های `OrganizationOverview` (هدر/خلاصه‌ی پروژه‌ها/آخرین فعالیت‌ها) |
 | `direction` | `DirectionProvider`/`useDirection` برای پشتیبانی RTL |
-| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان) |
+| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان)؛ `DialogContent` دو واریانت دارد — `variant="center"` (پیش‌فرض، مودال وسط‌چین معمولی) و `variant="side"` (پنل تمام‌ارتفاع چسبیده به سمت راست صفحه، تقریباً ۳۰٪ عرض — `NewTaskDialog` در دسکتاپ) |
 | `dropdown-menu` | منوی سه‌نقطه‌ی `PageHeader` و منوی سه‌نقطه‌ی هر ردیف عضو در `MembersDialog` |
+| `popover` | `NotificationsPreviewDialog` — برخلاف `dialog`، **غیرمودال** است: بدون پس‌زمینه‌ی تیره، دقیقاً کنار همان آیکونی که کلیک شده باز می‌شود، با سایه‌ی کوچک (نه backdrop) از بقیه‌ی صفحه متمایز می‌شود، و با کلیک روی هر نقطه‌ی دیگر خودش بسته می‌شود |
 | `switch` | تاگل «فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند» در `MembersDialog` |
 
 هر وقت کامپوننت جدیدی از shadcn اضافه شود، همین جدول به‌روزرسانی می‌شود.
@@ -133,13 +136,16 @@ src/app/
   page.tsx             → ریدایرکت به /home
   (tabs)/
     layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
-    home/page.tsx        → getOrganizations() + WorkspaceList
+    home/page.tsx        → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
     my-tasks/page.tsx    → Placeholder
     notifications/page.tsx → getNotifications() + NotificationList
     account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
 src/components/
   navigation/bottom-tab-bar.tsx → ناوبری ۴ تب پایین صفحه (Client Component، بر اساس pathname تب فعال را با رنگ brand مشخص می‌کند؛ از lg به بالا مخفی)
-  navigation/sidebar-nav.tsx    → SidebarNav: نسخه‌ی دسکتاپ همان ۴ تب (hidden lg:flex، ستون کناری راست چون RTL) + دکمه‌ی «تسک جدید»
+  navigation/sidebar-nav.tsx    → SidebarNav: ناوبری دسکتاپ (hidden lg:flex، ستون کناری راست چون RTL) — عنوان «Quire»
+                                   + آیتم «تسک‌های من» + فهرست سازمان‌ها/پروژه‌ها (WorkspaceList، از (tabs)/layout.tsx prop می‌آید)
+  navigation/desktop-header.tsx → DesktopHeader: هدر مستقل دسکتاپ، دقیقاً بالای ستون محتوا (نه بخشی از SidebarNav) — طرح
+                                   Figma «Header»: اواتار→/account، NotificationsPreviewDialog، جستجوی دکوراتیو، دکمه‌ی «تسک جدید»
   navigation/page-header.tsx    → PageHeader مشترک صفحات جزئیات (بازگشت + عنوان + منوی سه‌نقطه) — رجوع به src/components/navigation/README.md
   layout/section.tsx            → SectionTitle + SectionBox (باکس بوردر+پدینگ‌۱۲px مشترک همه‌ی Overview ها)
 ```
@@ -159,10 +165,16 @@ src/lib/api/
   tasks.ts            → getTaskFormOptions() (پروژه‌ها + اعضای سازمانشان برای سلکت‌های فرم)، createTask() (فعلاً no-op)
 src/components/charts/
   activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — پروژه، تسک‌های من، پروفایل کاربر)
-  status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی)
+  status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای چندبخشی SVG بدون کتابخانه‌ی خارجی)
+  progress-ring.tsx       → ProgressRing (حلقه‌ی پیشرفت کوچک تک‌مقداری — WorkspaceList)
+src/components/layout/
+  org-logo.tsx            → OrgLogo (جای‌گزین لوگوی سازمان، اندازه‌پذیر — OrganizationOverview و WorkspaceList)
 src/features/home/
-  workspace-list.tsx → WorkspaceList: آکوردئون سازمان‌ها؛ هر سازمان یک ردیف با نام (لینک) + شورون باز/بسته (سمت چپ)؛
-                        وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند و یک آیکون + برای افزودن پروژه‌ی جدید
+  home-greeting.tsx → HomeGreeting: هدر خوش‌آمدگویی صفحه‌ی خانه (جایگزین AppHeader فقط اینجا) — «خوش آمدی {نام}» +
+                        ردیف لینک «N تسک برای انجام داری امروز» (تعداد تسک‌های در حال انجام کاربر) → /my-tasks
+  workspace-list.tsx → WorkspaceList: آکوردئون سازمان‌ها؛ هر سازمان یک ردیف با نام (لینک) + OrgLogo + شورون باز/بسته؛
+                        وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند، هرکدام با شماره‌ی ترتیبی + نام + درصد
+                        پیشرفت (ProjectRef.progress) + ProgressRing. یک آیکون + برای افزودن پروژه‌ی جدید
                         (فقط state محلی، غیرماندگار) کنار شورون ظاهر می‌شود. بدون آیکون نوع (طبق بازخورد کاربر حذف شد).
 src/features/organizations/
   organization-overview.tsx → OrganizationOverview: هدر (نام + جای‌گزین لوگو + تاریخ ساخت) + اعضا (اواتار روی‌هم‌افتاده)،
@@ -201,7 +213,7 @@ src/features/notifications/
   notification-list.tsx → NotificationList (Client): فیلتر همه/خوانده‌نشده/خوانده‌شده/تایید با Tabs کنترل‌شده؛
                             کلیک روی ردیف = خواندن + هدایت به مقصد؛ دکمه‌های تایید/رد برای اعلان‌های requiresApproval
 src/app/(tabs)/
-  home/page.tsx                     → getOrganizations() + WorkspaceList
+  home/page.tsx                     → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
   home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
   home/projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
   notifications/page.tsx            → getNotifications() + NotificationList
@@ -258,7 +270,7 @@ src/components/providers/
 - `<html lang dir>` و `DirectionProvider` (Base UI) هر دو از زبان جاری مشتق می‌شوند (`localeDir()`): فارسی = `rtl`، انگلیسی = `ltr`.
 - **جهت آیکون‌های جهت‌دار باید دستی هماهنگ شود** — مثلاً فلش بازگشت `PageHeader` بر اساس جهت زبان بین `arrow-right-line` (RTL) و `arrow-left-line` (LTR) سوییچ می‌کند. آیکون‌های جهت‌دار عمیق‌تر (پیمایش ماه در `CalendarView`، اسکرول `TimelineView`) هنوز این‌کار را نکرده‌اند — اگر جایی به‌صورت بصری اشتباه به‌نظر رسید، همین الگو را تکرار کنید.
 
-**پوشش فعلی ترجمه** (فقط زیرمجموعه‌ای از UI که مستقیماً لمس شد؛ کامل نیست): ناوبری (`BottomTabBar`, `SidebarNav`, `PageHeader`), صفحه‌ی «حساب کاربری» (کامل، هر دو دیالوگ), «خانه» (`WorkspaceList`), «تسک‌های من» (فهرست + Overview), «اعلان‌ها», Overview سازمان/پروژه + `MembersDialog`, `ViewSwitcher`, `SectionTabs`, برچسب‌های وضعیت/اولویت مشترک (`status.*`/`priority.*` در دیکشنری — `PriorityDot` هم یک prop اختیاری `label` گرفته تا محل‌های چندزبانه بتوانند آن را بدهند)، و فرم ساخت تسک. **داخل نماها** (`board-view.tsx`, `table-view.tsx`, `tree-view.tsx`, `timeline-view.tsx`, `calendar-view.tsx`) و صفحه‌های سند/چت (`document-page.tsx`, `chat-page.tsx`) هنوز به این دیکشنری وصل نشده‌اند و همیشه فارسی نشان داده می‌شوند — وقتی کسی روی آن‌ها کار کرد، باید همین الگو (کلید در دیکشنری + `useT`/`t`) را ادامه دهد.
+**پوشش فعلی ترجمه** (فقط زیرمجموعه‌ای از UI که مستقیماً لمس شد؛ کامل نیست): ناوبری (`BottomTabBar`, `SidebarNav`, `DesktopHeader`, `NotificationsPreviewDialog`, `PageHeader`), صفحه‌ی «حساب کاربری» (کامل، هر دو دیالوگ), «خانه» (`HomeGreeting`, `WorkspaceList`), «تسک‌های من» (فهرست + Overview), «اعلان‌ها», Overview سازمان/پروژه + `MembersDialog`, `ViewSwitcher`, `SectionTabs`, برچسب‌های وضعیت/اولویت مشترک (`status.*`/`priority.*` در دیکشنری — `PriorityDot` هم یک prop اختیاری `label` گرفته تا محل‌های چندزبانه بتوانند آن را بدهند)، و فرم ساخت تسک. **داخل نماها** (`board-view.tsx`, `table-view.tsx`, `tree-view.tsx`, `timeline-view.tsx`, `calendar-view.tsx`) و صفحه‌های سند/چت (`document-page.tsx`, `chat-page.tsx`) هنوز به این دیکشنری وصل نشده‌اند و همیشه فارسی نشان داده می‌شوند — وقتی کسی روی آن‌ها کار کرد، باید همین الگو (کلید در دیکشنری + `useT`/`t`) را ادامه دهد.
 
 ### ۹.۲. ظاهر (روشن/تیره/سیستم)
 

@@ -4,25 +4,34 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
+import { WorkspaceList } from "@/features/home/workspace-list"
+import type { Organization } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import { cn } from "cn"
 
 const NAV_ITEMS = [
-  { href: "/home", labelKey: "nav.home", icon: "home" },
   { href: "/my-tasks", labelKey: "nav.myTasks", icon: "task" },
-  { href: "/notifications", labelKey: "nav.notifications", icon: "notification" },
-  { href: "/account", labelKey: "nav.account", icon: "account-circle" },
 ] satisfies { href: string; labelKey: TranslationKey; icon: string }[]
 
 /**
  * ناوبری کناری برای نسخه‌ی دسکتاپ — جایگزین `BottomTabBar` از breakpoint `lg` به بالا
- * (رجوع به `components/navigation/README.md`). چون اپ RTL است، به‌عنوان اولین فرزند
- * یک ردیف flex قرار می‌گیرد و طبیعتاً سمت راست می‌نشیند؛ `border-e` هم لبه‌ی سمت چپش
+ * (رجوع به `components/navigation/README.md` و docs/DESIGN.md بخش ۸.۱). چون اپ RTL است، به‌عنوان
+ * اولین فرزند یک ردیف flex قرار می‌گیرد و طبیعتاً سمت راست می‌نشیند؛ `border-e` هم لبه‌ی سمت چپش
  * (مرز با محتوا) را مشخص می‌کند.
+ *
+ * برخلاف `BottomTabBar` (۴ آیتم مساوی)، اینجا «خانه» و «اعلان‌ها»/«حساب کاربری»/«تسک جدید» دیگر
+ * اینجا نیستند: اعلان‌ها/حساب کاربری/تسک جدید به `components/navigation/desktop-header.tsx`
+ * (هدر مستقل بالای محتوا، نه ساید‌بار) منتقل شده‌اند، و «خانه» با نمایش مستقیم `WorkspaceList`
+ * (همان فهرست سازمان‌ها/پروژه‌های صفحه‌ی خانه‌ی موبایل) جایگزین شده. فقط «تسک‌های من» به‌صورت
+ * آیتم معمولی باقی مانده است.
  */
-export function SidebarNav() {
+export function SidebarNav({ organizations }: { organizations: Organization[] }) {
   const pathname = usePathname()
   const t = useT()
+
+  function isActive(href: string) {
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
 
   return (
     <aside
@@ -33,21 +42,9 @@ export function SidebarNav() {
         <span className="text-base font-medium text-foreground">Quire</span>
       </div>
 
-      <div className="px-3 pb-3">
-        <Link
-          href="/tasks/new"
-          className="flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-2.5 text-sm font-medium text-text-on-brand hover:opacity-90"
-        >
-          <RemixIcon name="add-line" className="text-base" />
-          {t("nav.newTask")}
-        </Link>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-0.5 px-3">
+      <nav className="flex flex-col gap-0.5 px-3 pb-2">
         {NAV_ITEMS.map(({ href, labelKey, icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`)
-          const label = t(labelKey)
-
+          const active = isActive(href)
           return (
             <Link
               key={href}
@@ -58,11 +55,15 @@ export function SidebarNav() {
               )}
             >
               <RemixIcon name={`${icon}-${active ? "fill" : "line"}`} className="text-lg" />
-              {label}
+              {t(labelKey)}
             </Link>
           )
         })}
       </nav>
+
+      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-3 pt-2">
+        <WorkspaceList organizations={organizations} />
+      </div>
     </aside>
   )
 }

@@ -2,21 +2,13 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { OrgLogo } from "@/components/layout/org-logo"
 import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { Separator } from "@/components/ui/separator"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
 import { MembersDialog } from "@/features/organizations/members-dialog"
 import type { Organization, ProjectRef } from "@/lib/api/types"
-
-/** جای‌گزین لوگوی سازمان (بدون عکس واقعی) — مربعی هم‌راستا با اواتارهای دایره‌ای اعضا. */
-function OrgLogo({ name }: { name: string }) {
-  return (
-    <div className="flex size-[60px] shrink-0 items-center justify-center rounded-lg border border-border bg-bg2 text-lg font-medium text-text2">
-      {name.slice(0, 1)}
-    </div>
-  )
-}
 
 function ProjectRow({ project }: { project: ProjectRef }) {
   return (

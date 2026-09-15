@@ -4,15 +4,18 @@ import { t } from "@/lib/i18n/dictionary"
 import { getLocale } from "@/lib/i18n/server"
 import { getTaskFormOptions } from "@/lib/api/tasks"
 
+/**
+ * `h-dvh flex-col` روی این صفحه است تا نوار «ساخت تسک»/«انصراف» بتواند همیشه (حتی وقتی
+ * فرم کوتاه است و اسکرول لازم ندارد) دقیقاً چسبیده به پایین صفحه بماند — رجوع به
+ * `TaskCreateForm` (فیلدها در ناحیه‌ی میانیِ اسکرول‌شونده‌اند، نوار پایین بیرون آن).
+ */
 export default async function NewTaskPage() {
   const [projects, locale] = await Promise.all([getTaskFormOptions(), getLocale()])
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-dvh flex-col">
       <PageHeader title={t(locale, "taskForm.title")} />
-      <div className="p-4">
-        <TaskCreateForm projects={projects} />
-      </div>
+      <TaskCreateForm projects={projects} />
     </div>
   )
 }

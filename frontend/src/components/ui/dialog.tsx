@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
@@ -39,23 +40,45 @@ function DialogOverlay({
   )
 }
 
+const dialogContentVariants = cva(
+  "fixed z-50 bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-closed:animate-out",
+  {
+    variants: {
+      /** `center`: مودال معمولی وسط صفحه. `side`: پنل تمام‌ارتفاع چسبیده به سمت راست صفحه
+       * (`start` چون اپ RTL است) — برای وقتی محتوا بیشتر شبیه یک فرم/پنل کناری است تا یک
+       * دیالوگ تاییدی کوچک، مثل `NewTaskDialog`. عمداً خودش اسکرول/پدینگ نمی‌گیرد (بدون
+       * `overflow-y-auto`/`p-4`) — چون محتوایی که این واریانت را استفاده می‌کند (مثل
+       * `TaskCreateForm`) خودش یک ستون flex تمام‌ارتفاع با ناحیه‌ی اسکرول‌شونده‌ی داخلی و نوار
+       * پایین ثابت است؛ اگر اینجا هم اسکرول/پدینگ می‌گذاشتیم، آن نوار پایین دیگر واقعاً به
+       * «پایین پنل» نمی‌چسبید (فقط به‌انتهای محتوایی که اسکرول شده). */
+      variant: {
+        center:
+          "top-1/2 start-1/2 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-sm",
+        side: "inset-y-0 start-0 flex h-full w-[30%] min-w-80 max-w-md flex-col overflow-hidden border-e border-border data-open:fade-in-0 data-closed:fade-out-0",
+      },
+    },
+    defaultVariants: {
+      variant: "center",
+    },
+  }
+)
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  variant = "center",
   ...props
-}: DialogPrimitive.Popup.Props & {
-  showCloseButton?: boolean
-}) {
+}: DialogPrimitive.Popup.Props &
+  VariantProps<typeof dialogContentVariants> & {
+    showCloseButton?: boolean
+  }) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
-        className={cn(
-          "fixed top-1/2 start-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
-        )}
+        className={cn(dialogContentVariants({ variant }), className)}
         {...props}
       >
         {children}

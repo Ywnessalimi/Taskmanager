@@ -74,7 +74,7 @@ export function SectionTabs({
     <Tabs value={value} onValueChange={(next) => setValue(next as string)}>
       <TabsList
         variant="line"
-        className="w-full justify-start gap-1 rounded-none border-b border-border bg-background px-4"
+        className="group-data-horizontal/tabs:h-16 w-full justify-start gap-1 rounded-none border-b border-border bg-background px-4"
       >
         <TabsTrigger value="list" className={TRIGGER_CLASS}>
           {t("tabs.list")}

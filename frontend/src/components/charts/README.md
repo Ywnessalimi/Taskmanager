@@ -3,7 +3,8 @@
 ویجت‌های نموداری مشترکی که در چند صفحه‌ی Overview تکرار می‌شوند (طبق docs/PRODUCT_OVERVIEW.md، این سه ویجت هم در سازمان، هم در پروژه و هم بعداً در «تسک‌های من» ظاهر می‌شوند).
 
 - `activity-heatmap.tsx` → `ActivityHeatmap`: گرید فعالیت روزانه (۷ ردیف × چند هفته) شبیه GitHub. مصرف‌کننده: `features/projects`، `features/users` (پروفایل کاربر).
-- `status-donut-chart.tsx` → `StatusDonutChart`: چارت دایره‌ای SVG بدون کتابخانه‌ی خارجی. مصرف‌کننده: `features/projects` (بعداً `features/my-tasks`).
+- `status-donut-chart.tsx` → `StatusDonutChart`: چارت دایره‌ای چندبخشی SVG بدون کتابخانه‌ی خارجی (با legend). مصرف‌کننده: `features/projects` (بعداً `features/my-tasks`).
+- `progress-ring.tsx` → `ProgressRing`: حلقه‌ی پیشرفت کوچک **تک‌مقداری** (همان تکنیک SVG stroke-dasharray، بدون legend) — برای وقتی فقط یک درصد ساده باید کنار متن نشان داده شود، نه چند بخش. مصرف‌کننده: `features/home/WorkspaceList` (درصد پیشرفت هر پروژه).
 
 `ActivityHeatmap` از یک قرارداد رنگی پیروی می‌کند: سطح ۰ = طوسی خنثی (`bg-bg2`/`bg-bg3`، یعنی هیچ فعالیتی)، سطح‌های ۱ تا ۴ = شدت فزاینده‌ی رنگ `brand`.
 
