@@ -12,7 +12,8 @@ import type { CurrentUser, Notification, TaskFormProjectOption } from "@/lib/api
  * نه بالایش، قرار دارد؛ رجوع به `components/navigation/README.md`). چیدمانش از طرح Figma
  * «AlignUI — Header» گرفته شده، با آیکون‌های خودمان به‌جای آیکون‌های طرح؛ بخش «نام پروژه +
  * دکمه‌ی منو»ی طرح که به مفهومی در اپ ما وابسته نیست (اپ ما همیشه یک «پروژه‌ی جاری» ندارد)
- * عمداً پیاده نشده.
+ * عمداً پیاده نشده. برخلاف طرح Figma (که این خوشه‌ی آیکون‌ها را سمت شروع می‌گذاشت)، طبق
+ * بازخورد کاربر با `justify-end` سمت چپ صفحه نشانده شده — تنها انحراف عمدی از طرح در همین فایل.
  *
  * Server Component است (برخلاف بقیه‌ی اجزای ناوبری) چون فقط لینک/متن ایستا دارد؛ بخش‌های
  * تعاملی‌اش (`NotificationsPreviewDialog`, `NewTaskDialog`) خودشان Client Component جدا هستند.
@@ -29,7 +30,7 @@ export async function DesktopHeader({
   const locale = await getLocale()
 
   return (
-    <header className="hidden h-14 items-center gap-3 border-b border-border bg-background px-4 lg:flex">
+    <header className="hidden h-14 items-center justify-end gap-3 border-b border-border bg-background px-4 lg:flex">
       <Link href="/account" aria-label={t(locale, "nav.account")}>
         <Avatar>
           {currentUser.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />}

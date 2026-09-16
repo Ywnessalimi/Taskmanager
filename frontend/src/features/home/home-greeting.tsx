@@ -18,7 +18,7 @@ export function HomeGreeting({
 }) {
   return (
     <div className="flex flex-col gap-5 px-4 pt-5">
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex flex-col gap-1">
         <p className="text-sm text-text2">{t(locale, "home.title")}</p>
         <p className="text-xl font-medium text-foreground">
           {t(locale, "home.welcome")} {userName}

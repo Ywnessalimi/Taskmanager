@@ -9,6 +9,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
 import { DialogTrigger } from "@/components/ui/dialog"
@@ -196,9 +197,13 @@ export function TaskCreateForm({
                 <DropdownMenuRadioItem value="" closeOnClick>
                   {t("taskForm.noAssignee")}
                 </DropdownMenuRadioItem>
-                {selectedProject?.memberNames.map((name) => (
-                  <DropdownMenuRadioItem key={name} value={name} closeOnClick>
-                    {name}
+                {selectedProject?.members.map((member) => (
+                  <DropdownMenuRadioItem key={member.name} value={member.name} closeOnClick>
+                    <Avatar size="sm">
+                      {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
+                      <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
+                    </Avatar>
+                    {member.name}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>

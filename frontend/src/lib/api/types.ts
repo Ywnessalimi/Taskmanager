@@ -11,6 +11,8 @@ export type Member = {
   role: MemberRole
   /** سطح فعالیت روزانه (هر عدد بین ۰ تا ۴) برای ردیف فعالیت این عضو در صفحه‌ی سازمان */
   activity: number[]
+  /** آدرس عکس پروفایل (فعلاً SVG های دست‌ساز در public/avatars، نه عکس واقعی کاربر) */
+  avatarUrl?: string
 }
 
 export type ProjectRef = {
@@ -197,9 +199,15 @@ export type NewTaskInput = {
 }
 
 /** یک گزینه‌ی پروژه در فرم ساخت تسک، به‌همراه اعضایی که می‌توانند مسئول تسک شوند. */
+/** یک عضو قابل‌انتخاب در سلکت «مسئول» فرم ساخت تسک — رجوع به `TaskFormProjectOption`. */
+export type TaskFormMemberOption = {
+  name: string
+  avatarUrl?: string
+}
+
 export type TaskFormProjectOption = {
   id: string
   name: string
   organizationName: string
-  memberNames: string[]
+  members: TaskFormMemberOption[]
 }

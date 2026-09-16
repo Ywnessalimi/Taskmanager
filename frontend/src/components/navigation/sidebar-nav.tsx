@@ -62,7 +62,7 @@ export function SidebarNav({ organizations }: { organizations: Organization[] })
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-3 pt-2">
-        <WorkspaceList organizations={organizations} />
+        <WorkspaceList organizations={organizations} showProgress={false} />
       </div>
     </aside>
   )

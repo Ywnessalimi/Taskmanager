@@ -8,7 +8,7 @@ import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import type { Organization, ProjectRef } from "@/lib/api/types"
 
-function OrganizationRow({ org }: { org: Organization }) {
+function OrganizationRow({ org, showProgress }: { org: Organization; showProgress: boolean }) {
   const [open, setOpen] = useState(false)
   const [projects, setProjects] = useState<ProjectRef[]>(org.projects)
   const [adding, setAdding] = useState(false)
@@ -26,32 +26,36 @@ function OrganizationRow({ org }: { org: Organization }) {
 
   return (
     <div className="border-b border-border last:border-b-0">
-      <div className="flex items-center gap-2 py-2.5">
-        <Link href={`/home/organizations/${org.id}`} className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {org.name}
+      <div className="flex items-center justify-between gap-2 py-2.5">
+        <Link
+          href={`/home/organizations/${org.id}`}
+          className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-foreground"
+        >
+          <OrgLogo name={org.name} size={36} />
+          <span className="min-w-0 flex-1 truncate">{org.name}</span>
         </Link>
 
-        <OrgLogo name={org.name} size={36} />
+        <div className="flex shrink-0 items-center gap-1">
+          {open && (
+            <button
+              type="button"
+              onClick={() => setAdding((a) => !a)}
+              aria-label={`${t("home.addProjectIn")} ${org.name}`}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
+            >
+              <RemixIcon name="add-line" className="text-base" />
+            </button>
+          )}
 
-        {open && (
           <button
             type="button"
-            onClick={() => setAdding((a) => !a)}
-            aria-label={`${t("home.addProjectIn")} ${org.name}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-label={`${open ? t("home.collapse") : t("home.expand")} ${org.name}`}
             className="flex size-7 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
           >
-            <RemixIcon name="add-line" className="text-base" />
+            <RemixIcon name={open ? "arrow-up-s-line" : "arrow-down-s-line"} className="text-lg" />
           </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={`${open ? t("home.collapse") : t("home.expand")} ${org.name}`}
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
-        >
-          <RemixIcon name={open ? "arrow-up-s-line" : "arrow-down-s-line"} className="text-lg" />
-        </button>
+        </div>
       </div>
 
       {open && (
@@ -68,10 +72,12 @@ function OrganizationRow({ org }: { org: Organization }) {
                 </span>
                 <span className="truncate text-sm text-text2">{project.name}</span>
               </span>
-              <span className="flex shrink-0 items-center gap-1.5 text-xs text-text2">
-                {project.progress}% {t("home.progress")}
-                <ProgressRing percent={project.progress} />
-              </span>
+              {showProgress && (
+                <span className="flex shrink-0 items-center gap-1.5 text-xs text-text2">
+                  {project.progress}% {t("home.progress")}
+                  <ProgressRing percent={project.progress} />
+                </span>
+              )}
             </Link>
           ))}
           {projects.length === 0 && !adding && (
@@ -97,7 +103,14 @@ function OrganizationRow({ org }: { org: Organization }) {
   )
 }
 
-export function WorkspaceList({ organizations }: { organizations: Organization[] }) {
+export function WorkspaceList({
+  organizations,
+  showProgress = true,
+}: {
+  organizations: Organization[]
+  /** ساید‌بار دسکتاپ فضای کمی دارد و درصد پیشرفت آنجا لازم نیست — فقط در صفحه‌ی خانه نشان داده می‌شود. */
+  showProgress?: boolean
+}) {
   const t = useT()
 
   if (organizations.length === 0) {
@@ -107,7 +120,7 @@ export function WorkspaceList({ organizations }: { organizations: Organization[]
   return (
     <div className="flex flex-col">
       {organizations.map((org) => (
-        <OrganizationRow key={org.id} org={org} />
+        <OrganizationRow key={org.id} org={org} showProgress={showProgress} />
       ))}
     </div>
   )

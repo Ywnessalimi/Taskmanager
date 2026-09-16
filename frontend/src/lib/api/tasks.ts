@@ -13,7 +13,7 @@ export async function getTaskFormOptions(): Promise<TaskFormProjectOption[]> {
       id: project.id,
       name: project.name,
       organizationName: project.organizationName,
-      memberNames: organization?.members.map((member) => member.name) ?? [],
+      members: organization?.members.map((member) => ({ name: member.name, avatarUrl: member.avatarUrl })) ?? [],
     }
   })
 }

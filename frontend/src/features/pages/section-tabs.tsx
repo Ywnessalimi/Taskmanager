@@ -33,7 +33,7 @@ const PAGE_KINDS: {
 ]
 
 const TRIGGER_CLASS =
-  "flex-none px-2 text-text2 data-active:text-brand after:bg-brand hover:text-foreground"
+  "flex-none px-1 text-text2 data-active:text-brand after:bg-brand hover:text-foreground"
 
 /**
  * نوار تب اصلی صفحه (لیست / نمای‌کلی + صفحه‌های افزوده‌شده).
