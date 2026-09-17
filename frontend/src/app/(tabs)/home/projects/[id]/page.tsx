@@ -26,7 +26,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col bg-background">
       <PageHeader
         title={project.name}
         subtitle={project.organizationName}

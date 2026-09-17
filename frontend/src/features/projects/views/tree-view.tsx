@@ -1,18 +1,23 @@
 "use client"
 
 import { useState } from "react"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { PriorityDot, STATUS_LABEL } from "@/features/projects/task-display"
 import type { Task } from "@/lib/api/types"
 
 function TreeRow({ task, depth }: { task: Task; depth: number }) {
   const [open, setOpen] = useState(false)
+  const panel = useTaskPanel()
   const hasChildren = Boolean(task.subtasks && task.subtasks.length > 0)
+
+  /** ردیف فعلاً انتخاب‌شده در پنل — تا کاربر بداند پنل کنار دستش مال کدام تسک است. */
+  const selected = panel?.panel?.kind === "detail" && panel.panel.task.id === task.id
 
   return (
     <div>
       <div
-        className="flex items-center gap-2 py-2"
+        className={`flex items-center gap-2 ${selected ? "bg-bg2" : ""}`}
         style={{ paddingInlineStart: depth * 20 }}
       >
         {hasChildren ? (
@@ -22,15 +27,26 @@ function TreeRow({ task, depth }: { task: Task; depth: number }) {
             aria-label={open ? "بستن زیر-تسک‌ها" : "باز کردن زیر-تسک‌ها"}
             className="flex size-5 shrink-0 items-center justify-center text-icon2 hover:text-icon"
           >
-            <RemixIcon name={open ? "arrow-down-s-line" : "arrow-left-s-line"} className="text-base" />
+            <RemixIcon
+              name={open ? "arrow-down-s-line" : "arrow-left-s-line"}
+              className="text-base"
+            />
           </button>
         ) : (
           <span className="size-5 shrink-0" />
         )}
-        <PriorityDot priority={task.priority} />
-        <span className="w-12 shrink-0 text-xs text-text3">{task.displayId}</span>
-        <span className="min-w-0 flex-1 truncate text-sm text-foreground">{task.title}</span>
-        <span className="shrink-0 text-xs text-text2">{STATUS_LABEL[task.status]}</span>
+
+        {/* کلیک روی خود ردیف پنل جزئیات تسک را باز می‌کند (نه ناوبری به صفحه‌ی دیگر). */}
+        <button
+          type="button"
+          onClick={() => panel?.openTaskDetail(task)}
+          className="flex min-w-0 flex-1 items-center gap-2 py-2 text-start"
+        >
+          <PriorityDot priority={task.priority} />
+          <span className="w-12 shrink-0 text-xs text-text3">{task.displayId}</span>
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{task.title}</span>
+          <span className="shrink-0 text-xs text-text2">{STATUS_LABEL[task.status]}</span>
+        </button>
       </div>
 
       {hasChildren && open && (
@@ -44,6 +60,11 @@ function TreeRow({ task, depth }: { task: Task; depth: number }) {
   )
 }
 
+/**
+ * نمای درختی تسک‌ها. کلیک روی هر ردیف، پنل جزئیات همان تسک را در `SectionTabs` باز می‌کند
+ * (رجوع به `src/components/providers/task-panel-provider.tsx`)؛ اگر این نما جایی بیرون از
+ * `TaskPanelProvider` رندر شود، کلیک بی‌اثر می‌ماند و بقیه‌ی رفتارها سر جایشان می‌مانند.
+ */
 export function TreeView({ tasks }: { tasks: Task[] }) {
   if (tasks.length === 0) {
     return <p className="py-8 text-center text-sm text-text2">تسکی وجود ندارد.</p>

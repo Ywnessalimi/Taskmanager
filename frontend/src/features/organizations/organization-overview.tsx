@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { OrgLogo } from "@/components/layout/org-logo"
+import { SegmentedProgressBar } from "@/components/charts/segmented-progress-bar"
 import { SectionBox, SectionTitle } from "@/components/layout/section"
 import { Separator } from "@/components/ui/separator"
 import { RemixIcon } from "@/components/ui/remix-icon"
@@ -10,21 +11,23 @@ import { useT } from "@/components/providers/locale-provider"
 import { MembersDialog } from "@/features/organizations/members-dialog"
 import type { Organization, ProjectRef } from "@/lib/api/types"
 
+/**
+ * ترتیب عمدی (طبق بازخورد کاربر): آیکون دراپ‌داون و بعد نام پروژه در سمت شروع (راست در RTL)،
+ * و نوار پیشرفت در سمت پایان (چپ). چون کلاس‌ها منطقی‌اند، در حالت LTR خودبه‌خود آینه می‌شود.
+ */
 function ProjectRow({ project }: { project: ProjectRef }) {
   return (
     <Link
       href={`/home/projects/${project.id}`}
       className="flex items-center justify-between gap-3 py-1 hover:opacity-80"
     >
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="h-2 w-24 overflow-hidden rounded-full bg-bg2">
-          <div className="h-full rounded-full bg-brand" style={{ width: `${project.progress}%` }} />
-        </div>
-        <span className="text-sm text-foreground">{project.progress}%</span>
-      </div>
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate text-sm text-foreground">{project.name}</span>
         <RemixIcon name="arrow-down-s-line" className="shrink-0 text-base text-icon2" />
+        <span className="truncate text-sm text-foreground">{project.name}</span>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="text-sm text-foreground">{project.progress}%</span>
+        <SegmentedProgressBar percent={project.progress} />
       </div>
     </Link>
   )
@@ -40,6 +43,21 @@ export function OrganizationOverview({ organization }: { organization: Organizat
   const [projects, setProjects] = useState(organization.projects)
   const [addingProject, setAddingProject] = useState(false)
   const [draftProjectName, setDraftProjectName] = useState("")
+  const [files, setFiles] = useState<{ id: string; name: string; sizeLabel: string }[]>([])
+  /** شمارنده‌ی محلی شناسه‌ی فایل‌ها؛ عمداً Date.now نیست تا رندر خالص بماند. */
+  const nextFileId = useRef(1)
+
+  /**
+   * آپلود واقعی وجود ندارد: هر کلیک یک فایل نمادین به فهرست اضافه می‌کند تا رفتار
+   * «افزودن پیوست» دیده شود. با رفرش صفحه پاک می‌شود (مثل بقیه‌ی state های این اپ).
+   */
+  function addFile() {
+    const index = nextFileId.current++
+    setFiles((prev) => [
+      ...prev,
+      { id: `file-${index}`, name: `${t("org.attachmentName")} ${index}.pdf`, sizeLabel: "۱.۲ MB" },
+    ])
+  }
 
   function commitNewProject() {
     const name = draftProjectName.trim()
@@ -52,12 +70,13 @@ export function OrganizationOverview({ organization }: { organization: Organizat
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-2">
+      {/* لوگو در سمت شروع (راست در RTL) و نام کنارش — طبق بازخورد کاربر. */}
+      <div className="flex items-center gap-3">
+        <OrgLogo name={organization.name} />
+        <div className="flex min-w-0 flex-col gap-1">
           <p className="text-sm text-text2">{t("org.nameLabel")}</p>
           <p className="truncate text-lg font-medium text-foreground">{organization.name}</p>
         </div>
-        <OrgLogo name={organization.name} />
       </div>
 
       <p className="text-sm font-medium text-text3">
@@ -66,12 +85,37 @@ export function OrganizationOverview({ organization }: { organization: Organizat
 
       <MembersDialog members={organization.members} />
 
-      {/* دو ردیف دکوراتیو مطابق طرح — سازمان هنوز فیلد توضیحات/پیوست فایل در مدل داده ندارد،
-          مثل ردیف «الصاق فایل» غیرفعال در task-create-form.tsx و project-overview.tsx. */}
+      {/* ردیف توضیحات هنوز دکوراتیو است (سازمان فیلد توضیحات در مدل داده ندارد). */}
       <p className="text-base text-text3">{t("org.addDescription")}</p>
-      <div className="flex w-fit items-center gap-1.5 text-sm text-text2">
-        {t("org.addFile")}
-        <RemixIcon name="attachment-line" className="text-base" />
+
+      <div className="flex flex-col gap-2">
+        {files.map((file) => (
+          <div
+            key={file.id}
+            className="flex items-center gap-2 rounded-md border border-border px-3 py-2"
+          >
+            <RemixIcon name="file-line" className="shrink-0 text-base text-icon2" />
+            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{file.name}</span>
+            <span className="shrink-0 text-xs text-text2">{file.sizeLabel}</span>
+            <button
+              type="button"
+              onClick={() => setFiles((prev) => prev.filter((f) => f.id !== file.id))}
+              aria-label={`${t("org.removeFile")} ${file.name}`}
+              className="flex size-6 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
+            >
+              <RemixIcon name="close-line" className="text-sm" />
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addFile}
+          className="flex w-fit items-center gap-1.5 rounded-md py-1 text-sm text-text2 hover:text-foreground"
+        >
+          {t("org.addFile")}
+          <RemixIcon name="attachment-line" className="text-base" />
+        </button>
       </div>
 
       <Separator />

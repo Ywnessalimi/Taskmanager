@@ -1,4 +1,12 @@
-import type { CurrentUser, Notification, Organization, Project, ProjectRef } from "./types"
+import type {
+  CurrentUser,
+  Notification,
+  Organization,
+  Project,
+  ProjectHealth,
+  ProjectHealthTrend,
+  ProjectRef,
+} from "./types"
 
 /**
  * یک الگوی شبه‌تصادفی ثابت برای پر کردن نمودارهای فعالیت؛ فقط برای نمایش، بدون معنای واقعی.
@@ -13,7 +21,38 @@ function mockMemberActivity(seed: number): number[] {
   return mockActivity(seed, 30)
 }
 
-export const MOCK_PROJECTS: Project[] = [
+const HEALTH_METRICS: (keyof ProjectHealth)[] = ["active", "completed", "dueInPeriod", "overdue"]
+
+/**
+ * روند شبه‌تصادفی ۴ متریک سلامت پروژه برای نمودار خطی «سلامت پروژه» — مثل `mockActivity`
+ * فقط برای نمایش است، نه تاریخچه‌ی واقعی. از انتهای بازه (امروز، همان مقدار واقعی جاری در
+ * `current`) به عقب با گام‌های کوچک شبه‌تصادفی ساخته می‌شود تا همیشه دقیقاً به عدد فعلی برسد
+ * و هیچ‌وقت منفی نشود.
+ */
+function mockHealthTrend(seed: number, current: ProjectHealth, length = 29): ProjectHealthTrend {
+  const trend = {} as ProjectHealthTrend
+  HEALTH_METRICS.forEach((metric, metricIndex) => {
+    const values = new Array<number>(length)
+    values[length - 1] = current[metric]
+    for (let i = length - 2; i >= 0; i--) {
+      const step = ((seed + i * 11 + metricIndex * 17) % 5) - 2
+      values[i] = Math.max(0, values[i + 1] - step)
+    }
+    trend[metric] = values
+  })
+  return trend
+}
+
+const PROJ1_HEALTH: ProjectHealth = { active: 9, completed: 6, dueInPeriod: 3, overdue: 2 }
+const PROJ2_HEALTH: ProjectHealth = { active: 12, completed: 4, dueInPeriod: 5, overdue: 1 }
+const PROJ3_HEALTH: ProjectHealth = { active: 2, completed: 10, dueInPeriod: 1, overdue: 0 }
+
+/**
+ * فیلد `members` عمداً اینجا نیست: `getProject` آن را از اعضای سازمان مالک پروژه می‌سازد
+ * (رجوع به `src/lib/api/projects.ts`) تا فعالیت هر عضو یک منبع واحد (`Member.activity`
+ * در `MOCK_ORGANIZATIONS`) داشته باشد، نه یک آرایه‌ی جدا برای هر پروژه.
+ */
+export const MOCK_PROJECTS: Omit<Project, "members">[] = [
   {
     id: "proj-1",
     name: "بازطراحی وب‌سایت",
@@ -21,7 +60,9 @@ export const MOCK_PROJECTS: Project[] = [
     organizationName: "شرکت نوین‌ساز",
     startDate: "1404/04/01",
     endDate: "1404/07/15",
-    health: { active: 9, completed: 6, dueInPeriod: 3, overdue: 2 },
+    description: "بازطراحی کامل وب‌سایت شرکت با تمرکز بر تجربه‌ی کاربری و سرعت بارگذاری.",
+    health: PROJ1_HEALTH,
+    healthTrend: mockHealthTrend(3, PROJ1_HEALTH),
     statusDistribution: { todo: 5, inProgress: 7, completed: 6 },
     tasks: [
       {
@@ -56,6 +97,7 @@ export const MOCK_PROJECTS: Project[] = [
       { id: "t10", displayId: "#307", title: "تست پذیرش نهایی", assigneeName: "مریم کریمی", priority: "high", dueDate: "1404/07/10", status: "todo" },
     ],
     activity: mockActivity(3),
+    activityUpdatedAt: "08:28",
   },
   {
     id: "proj-2",
@@ -64,7 +106,9 @@ export const MOCK_PROJECTS: Project[] = [
     organizationName: "شرکت نوین‌ساز",
     startDate: "1404/03/01",
     endDate: "1404/09/01",
-    health: { active: 12, completed: 4, dueInPeriod: 5, overdue: 1 },
+    description: "توسعه‌ی اپلیکیشن موبایل iOS/Android برای مدیریت سفارش‌های مشتریان.",
+    health: PROJ2_HEALTH,
+    healthTrend: mockHealthTrend(5, PROJ2_HEALTH),
     statusDistribution: { todo: 8, inProgress: 6, completed: 4 },
     tasks: [
       { id: "t6", displayId: "#401", title: "طراحی جریان ثبت‌نام", assigneeName: "علی رضایی", priority: "high", dueDate: "1404/05/20", status: "todo" },
@@ -75,6 +119,7 @@ export const MOCK_PROJECTS: Project[] = [
       { id: "t14", displayId: "#406", title: "بازبینی دسترس‌پذیری فرم‌ها", assigneeName: "سارا احمدی", priority: "urgent", dueDate: "1404/05/06", status: "todo" },
     ],
     activity: mockActivity(5),
+    activityUpdatedAt: "10:15",
   },
   {
     id: "proj-3",
@@ -83,7 +128,8 @@ export const MOCK_PROJECTS: Project[] = [
     organizationName: "تیم طراحی آبی",
     startDate: "1404/01/10",
     endDate: "1404/03/01",
-    health: { active: 2, completed: 10, dueInPeriod: 1, overdue: 0 },
+    health: PROJ3_HEALTH,
+    healthTrend: mockHealthTrend(7, PROJ3_HEALTH),
     statusDistribution: { todo: 1, inProgress: 2, completed: 10 },
     tasks: [
       { id: "t8", displayId: "#501", title: "طراحی بنر شبکه‌های اجتماعی", assigneeName: "نگار ملکی", priority: "low", status: "completed" },
@@ -91,6 +137,7 @@ export const MOCK_PROJECTS: Project[] = [
       { id: "t16", displayId: "#503", title: "بازطراحی لندینگ کمپین", assigneeName: "سارا احمدی", priority: "high", dueDate: "1404/05/18", status: "in-progress" },
     ],
     activity: mockActivity(7),
+    activityUpdatedAt: "14:40",
   },
 ]
 

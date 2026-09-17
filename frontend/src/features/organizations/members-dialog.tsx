@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -66,6 +66,7 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
       >
         {members.slice(0, STACK_LIMIT).map((member) => (
           <Avatar key={member.id} size="sm" className="-ms-2 ring-2 ring-background first:ms-0">
+            {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
             <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
           </Avatar>
         ))}
@@ -105,6 +106,7 @@ export function MembersDialog({ members: initialMembers }: { members: Member[] }
           {members.map((member) => (
             <div key={member.id} className="flex items-center gap-2.5 border-b border-border py-2 last:border-b-0">
               <Avatar size="sm">
+                {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
                 <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">

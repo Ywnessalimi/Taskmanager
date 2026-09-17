@@ -199,3 +199,26 @@
   --icon-brand: var(--primary);
   --text-brand: var(--primary);
 }
+
+/* ============================================ */
+/* توکن‌های صفحه‌ی ورود/ثبت‌نام (طرح Figma AlignUI) */
+/* ============================================ */
+/*
+ * صفحه‌ی ورود/ثبت‌نام هویت بصری جدا از رنگ برند اپ (بنفش) دارد — همان آبی #0954ED طرح
+ * Figma. چون پس‌زمینه‌ی این صفحه همیشه یک عکس روشن است (نه سطح معمول اپ)، به تم تیره
+ * واکنشی ندارد؛ برای همین به‌جای override کردن توکن‌های عمومی بالا (که رنگ برند را در کل
+ * اپ عوض می‌کرد)، در کلاس scoped `.auth-theme` تعریف شده‌اند — رجوع به
+ * src/features/auth/README.md.
+ */
+.auth-theme {
+  --auth-bg: #ffffff;
+  --auth-bg-secondary: #fafafa;
+  --auth-bg-tertiary: #f5f5f5;
+  --auth-text-primary: #141a1a;
+  --auth-text-secondary: #515e5e;
+  --auth-text-tertiary: #79817f;
+  --auth-text-quaternary: #a0a7a7;
+  --auth-border-secondary: #d5d5d5;
+  --auth-brand: #0954ed;
+  --auth-text-on-brand: #ffffff;
+}

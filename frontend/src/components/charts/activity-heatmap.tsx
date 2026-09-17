@@ -1,4 +1,5 @@
-const LEVEL_CLASSES = ["bg-bg2", "bg-bg3", "bg-brand/40", "bg-brand/70", "bg-brand"]
+/** export شده چون `DeadlineCalendar` و `MemberActivityGrid` (نمای‌کلی پروژه) هم از همین طیف ۵سطحی استفاده می‌کنند. */
+export const LEVEL_CLASSES = ["bg-bg2", "bg-bg3", "bg-brand/40", "bg-brand/70", "bg-brand"]
 
 /**
  * نمودار فعالیت روزانه شبیه Contribution Graph گیت‌هاب.

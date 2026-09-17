@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -194,9 +195,14 @@ function AppearancePickerRow() {
   )
 }
 
-/** خروج یک اکشن برگشت‌ناپذیر است، پس قبل از اجرا تایید گرفته می‌شود. */
+/**
+ * خروج یک اکشن برگشت‌ناپذیر است، پس قبل از اجرا تایید گرفته می‌شود. چون هنوز Auth واقعی
+ * (و session ای برای پاک کردن) وجود ندارد، تاییدِ خروج فقط به `/login` هدایت می‌کند —
+ * رجوع به `src/features/auth/README.md`.
+ */
 function LogoutDialog() {
   const { t } = useLocale()
+  const router = useRouter()
 
   return (
     <Dialog>
@@ -213,7 +219,9 @@ function LogoutDialog() {
         </DialogHeader>
         <p className="text-sm text-text2">{t("account.logoutConfirmBody")}</p>
         <div className="flex justify-start gap-2">
-          <DialogClose render={<Button variant="destructive" />}>{t("account.logoutConfirm")}</DialogClose>
+          <DialogClose render={<Button variant="destructive" />} onClick={() => router.push("/login")}>
+            {t("account.logoutConfirm")}
+          </DialogClose>
           <DialogClose render={<Button variant="ghost" />}>{t("account.cancel")}</DialogClose>
         </div>
       </DialogContent>

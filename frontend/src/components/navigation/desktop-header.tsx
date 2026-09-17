@@ -1,11 +1,11 @@
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { NewTaskDialog } from "@/features/tasks/new-task-dialog"
+import { NewTaskButton } from "@/features/tasks/new-task-button"
 import { NotificationsPreviewDialog } from "@/features/notifications/notifications-preview-dialog"
 import { t } from "@/lib/i18n/dictionary"
 import { getLocale } from "@/lib/i18n/server"
-import type { CurrentUser, Notification, TaskFormProjectOption } from "@/lib/api/types"
+import type { CurrentUser, Notification } from "@/lib/api/types"
 
 /**
  * هدر بالای بخش اصلی صفحه در نسخه‌ی دسکتاپ — کاملاً مستقل از `SidebarNav` (که کنارش،
@@ -16,16 +16,14 @@ import type { CurrentUser, Notification, TaskFormProjectOption } from "@/lib/api
  * بازخورد کاربر با `justify-end` سمت چپ صفحه نشانده شده — تنها انحراف عمدی از طرح در همین فایل.
  *
  * Server Component است (برخلاف بقیه‌ی اجزای ناوبری) چون فقط لینک/متن ایستا دارد؛ بخش‌های
- * تعاملی‌اش (`NotificationsPreviewDialog`, `NewTaskDialog`) خودشان Client Component جدا هستند.
+ * تعاملی‌اش (`NotificationsPreviewDialog`, `NewTaskButton`) خودشان Client Component جدا هستند.
  */
 export async function DesktopHeader({
   currentUser,
   notifications,
-  taskFormProjects,
 }: {
   currentUser: CurrentUser
   notifications: Notification[]
-  taskFormProjects: TaskFormProjectOption[]
 }) {
   const locale = await getLocale()
 
@@ -46,7 +44,7 @@ export async function DesktopHeader({
 
       <div className="h-4.5 w-px bg-border" />
 
-      <NewTaskDialog projects={taskFormProjects} />
+      <NewTaskButton />
     </header>
   )
 }

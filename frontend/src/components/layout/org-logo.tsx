@@ -1,7 +1,7 @@
 /**
  * جای‌گزین لوگوی سازمان (بدون عکس واقعی) — مربعی هم‌راستا با اواتارهای دایره‌ای اعضا.
- * مصرف‌کننده‌ها: `features/organizations/OrganizationOverview` (۶۰px) و
- * `features/home/WorkspaceList` (۳۶px، کنار هر ردیف سازمان).
+ * تنها مصرف‌کننده‌اش `features/organizations/OrganizationOverview` (۶۰px) است؛ از ردیف‌های
+ * `WorkspaceList` طبق بازخورد کاربر حذف شد (آنجا فقط شورون + نام سازمان می‌ماند).
  */
 export function OrgLogo({ name, size = 60 }: { name: string; size?: number }) {
   return (

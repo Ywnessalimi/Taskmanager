@@ -15,7 +15,11 @@ export const TASK_VIEWS = [
 
 export type TaskViewId = (typeof TASK_VIEWS)[number]["id"]
 
-/** نوار سوییچ نما: آیکون + متن، با بوردر نازک زیر کل نوار. */
+/**
+ * نوار سوییچ نما — طبق طرح Figma «AlignUI» (node 13728:4542): متن و بعد آیکون (نه برعکس؛
+ * در RTL یعنی متن سمت شروع/راست و آیکون سمت پایان/چپ، همان‌طور که طرح نشان می‌دهد)، نمای
+ * فعال با بوردر + پس‌زمینه‌ی خاکستری کم‌رنگ مشخص می‌شود، بقیه فقط متن ساده‌ی کم‌رنگ‌اند.
+ */
 export function ViewSwitcher({
   view,
   onChange,
@@ -26,18 +30,20 @@ export function ViewSwitcher({
   const t = useT()
 
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-border pb-1.5">
+    <div className="flex flex-wrap items-center gap-1 border-b border-border pb-2">
       {TASK_VIEWS.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => onChange(item.id)}
-          className={`flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs ${
-            view === item.id ? "bg-background text-foreground" : "text-text2 hover:text-foreground"
+          className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-sm ${
+            view === item.id
+              ? "border-border bg-bg2 text-foreground"
+              : "border-transparent text-text2 hover:text-foreground"
           }`}
         >
-          <RemixIcon name={item.icon} className="text-sm" />
           {t(item.labelKey)}
+          <RemixIcon name={item.icon} className="text-base" />
         </button>
       ))}
     </div>

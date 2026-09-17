@@ -10,6 +10,8 @@ import {
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useT } from "@/components/providers/locale-provider"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { TaskPanel } from "@/features/tasks/task-panel"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import { ChatPage } from "./chat-page"
 import { DocumentPage } from "./document-page"
@@ -41,6 +43,10 @@ const TRIGGER_CLASS =
  * پس‌زمینه‌ی روشن (`bg-background`)، یک بوردر کم‌رنگ زیر کل نوار، و تب فعال به رنگ برند —
  * تنها جای استفاده از رنگ برند در این نوار، همان تب انتخاب‌شده است (طبق docs/DESIGN.md).
  * دکمه‌ی «+» انتهای نوار یک منو باز می‌کند که با آن می‌شود صفحه‌ی «سند» یا «چت» اضافه کرد.
+ *
+ * وقتی پنل تسک باز است (`TaskPanelProvider`)، این کامپوننت یک ردیف flex می‌شود: `TaskPanel`
+ * در سمت شروع (راست در RTL) و خودِ تب‌ها کنارش جمع می‌شوند — پنل عمداً مودال روی کل صفحه
+ * نیست. زیر breakpoint `lg` جا برای دو ستون نیست، پس آنجا فقط پنل نشان داده می‌شود.
  */
 export function SectionTabs({
   listContent,
@@ -56,6 +62,7 @@ export function SectionTabs({
   /** شمارنده‌ی محلی برای شناسه‌ی صفحه‌ها؛ عمداً Date.now نیست تا رندر خالص بماند. */
   const nextId = useRef(1)
   const t = useT()
+  const panelOpen = Boolean(useTaskPanel()?.panel)
 
   function addPage(kind: CustomPageKind) {
     const meta = PAGE_KINDS.find((item) => item.kind === kind)!
@@ -71,10 +78,17 @@ export function SectionTabs({
   }
 
   return (
-    <Tabs value={value} onValueChange={(next) => setValue(next as string)}>
+    <div className="flex min-h-0 flex-1 items-stretch">
+      <TaskPanel />
+
+      <Tabs
+        value={value}
+        onValueChange={(next) => setValue(next as string)}
+        className={panelOpen ? "hidden min-w-0 flex-1 lg:flex" : "min-w-0 flex-1"}
+      >
       <TabsList
         variant="line"
-        className="group-data-horizontal/tabs:h-16 w-full justify-start gap-1 rounded-none border-b border-border bg-background px-4"
+        className="group-data-horizontal/tabs:h-8 w-full justify-start gap-1 rounded-none border-b border-border bg-background px-4"
       >
         <TabsTrigger value="list" className={TRIGGER_CLASS}>
           {t("tabs.list")}
@@ -118,15 +132,16 @@ export function SectionTabs({
         {overviewContent}
       </TabsContent>
 
-      {pages.map((page) => (
-        <TabsContent key={page.id} value={page.id} className="p-4">
-          {page.kind === "document" ? (
-            <DocumentPage title={page.title} />
-          ) : (
-            <ChatPage currentUserName={currentUserName} />
-          )}
-        </TabsContent>
-      ))}
-    </Tabs>
+        {pages.map((page) => (
+          <TabsContent key={page.id} value={page.id} className="p-4">
+            {page.kind === "document" ? (
+              <DocumentPage title={page.title} />
+            ) : (
+              <ChatPage currentUserName={currentUserName} />
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
   )
 }

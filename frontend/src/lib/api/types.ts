@@ -29,6 +29,13 @@ export type ProjectHealth = {
   overdue: number
 }
 
+/**
+ * روند روزانه‌ی هر متریک سلامت برای نمودار خطی «سلامت پروژه» — مثل `Project.activity`
+ * صرفاً شکل بصری Mock است (رجوع به `mockHealthTrend` در `mock-data.ts`)، نه تاریخچه‌ی
+ * واقعی ذخیره‌شده؛ آخرین مقدار هر آرایه همیشه با همان متریک در `ProjectHealth` یکی است.
+ */
+export type ProjectHealthTrend = Record<keyof ProjectHealth, number[]>
+
 export type StatusDistribution = {
   todo: number
   inProgress: number
@@ -61,11 +68,18 @@ export type Project = {
   organizationName: string
   startDate: string
   endDate: string
+  /** توضیحات پروژه — اختیاری، مثل `Task.description`؛ وقتی خالی است هدر نمای‌کلی جای‌گزین «افزودن توضیحات» را نشان می‌دهد. */
+  description?: string
   health: ProjectHealth
+  healthTrend: ProjectHealthTrend
   statusDistribution: StatusDistribution
   tasks: Task[]
   /** سطح فعالیت روزانه برای ActivityHeatmap (هر عدد بین ۰ تا ۴) */
   activity: number[]
+  /** اعضای پروژه — از اعضای سازمان مالک پروژه مشتق می‌شود (رجوع به `getProject`)، نه فیلد مستقل Mock */
+  members: Member[]
+  /** ساعت آخرین به‌روزرسانی نمودار «فعالیت اعضا» به‌صورت ۲۴ساعته "HH:MM" — فعلاً Mock ثابت */
+  activityUpdatedAt: string
 }
 
 export type Organization = {
@@ -185,6 +199,18 @@ export type MyTasksOverview = {
   health: ProjectHealth
   /** سطح فعالیت روزانه‌ی خود کاربر برای ActivityHeatmap (Portfolio Activity) */
   activity: number[]
+}
+
+/** ورودی ویرایش یک تسک موجود (پنل جزئیات تسک). فقط فیلدهای قابل‌ویرایش فرم. */
+export type TaskUpdateInput = {
+  id: string
+  title: string
+  assigneeName?: string
+  dueDate?: string
+  priority: TaskPriority
+  status: TaskStatus
+  tags: string[]
+  description?: string
 }
 
 /** ورودی ساخت تسک جدید (فرم `features/tasks/TaskCreateForm`). */

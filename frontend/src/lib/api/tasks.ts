@@ -1,5 +1,5 @@
 import { MOCK_ORGANIZATIONS, MOCK_PROJECTS } from "./mock-data"
-import type { NewTaskInput, TaskFormProjectOption } from "./types"
+import type { NewTaskInput, TaskFormProjectOption, TaskUpdateInput } from "./types"
 
 /**
  * گزینه‌های سلکت‌های فرم ساخت تسک: هر پروژه به‌همراه اعضای سازمانی که به آن پروژه دسترسی
@@ -25,4 +25,13 @@ export async function getTaskFormOptions(): Promise<TaskFormProjectOption[]> {
  */
 export async function createTask(input: NewTaskInput): Promise<void> {
   console.info("createTask (هنوز ذخیره نمی‌شود):", input)
+}
+
+/**
+ * ویرایش تسک — مثل `createTask` فعلاً جایی ذخیره نمی‌شود؛ پنل جزئیات تسک تغییرها را در
+ * state خودش نگه می‌دارد و با بستن پنل از بین می‌روند. با آمدن بک‌اند به PATCH /api/tasks/<id>/
+ * وصل می‌شود.
+ */
+export async function updateTask(input: TaskUpdateInput): Promise<void> {
+  console.info("updateTask (هنوز ذخیره نمی‌شود):", input)
 }

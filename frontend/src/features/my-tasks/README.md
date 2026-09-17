@@ -6,14 +6,16 @@
 
 صفحه دو بخش دارد (با `SectionTabs` مشترک، دقیقاً مثل صفحه‌ی پروژه): **لیست** و **نمای‌کلی** — به‌علاوه‌ی صفحه‌هایی که کاربر با دکمه‌ی «+» اضافه می‌کند (رجوع به `features/pages/README.md`).
 
-- `my-task-list.tsx` → `MyTaskList` (Client): همان ۵ نمای پروژه (درختی/برد/جدول/خط زمانی/تقویم) که مستقیماً از `features/projects/views/` ری‌یوز می‌شوند، با سوییچر مشترک `features/projects/ViewSwitcher`. چون تسک‌های این صفحه از **چند پروژه** می‌آیند، یک ردیف فیلتر پروژه بالای سوییچر نما اضافه شده («همه‌ی پروژه‌ها» + یک دکمه برای هر پروژه).
+- `my-task-list.tsx` → `MyTaskList` (Client): همان ۵ نمای پروژه (درختی/برد/جدول/خط زمانی/تقویم) که مستقیماً از `features/projects/views/` ری‌یوز می‌شوند، با سوییچر مشترک `features/projects/ViewSwitcher`. چون تسک‌های این صفحه از **چند پروژه** می‌آیند، فیلتر پروژه لازم است — اما به‌جای رندر محلی، از `my-tasks-filter-provider.tsx` خوانده می‌شود.
+- `my-tasks-filter-provider.tsx` → `MyTasksFilterProvider`/`useMyTasksFilter` (Client): state فیلتر پروژه (`projectId` + لیست پروژه‌ها از روی `tasks`) را بین `MyTasksProjectSwitcher` (کنار عنوان صفحه، داخل `AppHeader`) و `MyTaskList` (پایین‌تر، داخل `SectionTabs`) مشترک می‌کند — همان الگوی `components/providers/task-panel-provider.tsx`.
+- `my-tasks-project-switcher.tsx` → `MyTasksProjectSwitcher` (Client): دراپ‌داون بدون استایل خاص (فقط متن پروژه‌ی انتخاب‌شده + آیکون) که به‌جای عنوان صفحه در `AppHeader` قرار می‌گیرد؛ با `useMyTasksFilter` به فیلتر بالا وصل است.
 - `my-tasks-overview.tsx` → `MyTasksOverview` (Server): پروفایل کاربر (اواتار، نام، ایمیل، توضیحات، فایل‌های پیوست)، «نیازمند رسیدگی»، «پراکندگی وضعیت تسک‌ها» (`StatusDonutChart`)، «سلامت پروژه‌ها» (`StatTile`) و «فعالیت من» (`ActivityHeatmap`).
 
 ## وابستگی‌ها
 
 - داده: `src/lib/api/my-tasks.ts` (`getMyTasks`, `getMyTasksOverview`) و `src/lib/api/users.ts` (`getCurrentUser`)؛ تایپ‌های `MyTask` / `MyTasksOverview` در `src/lib/api/types.ts`.
-- کامپوننت‌ها: `features/projects/views/*` (هر ۵ نما)، `features/projects/task-display.tsx` (`PriorityDot`)، `components/charts/{status-donut-chart, activity-heatmap}`، `components/layout/{section, stat-tile}`.
-- مصرف‌کننده: `src/app/(tabs)/my-tasks/page.tsx`.
+- کامپوننت‌ها: `features/projects/views/*` (هر ۵ نما)، `features/projects/task-display.tsx` (`PriorityDot`)، `components/charts/{status-donut-chart, activity-heatmap}`، `components/layout/{section, stat-tile}`، `components/layout/app-header.tsx` (پراپ `action`).
+- مصرف‌کننده: `src/app/(tabs)/my-tasks/page.tsx` (کل صفحه را در `MyTasksFilterProvider` می‌پیچد و `MyTasksProjectSwitcher` را به‌عنوان `action` به `AppHeader` می‌دهد).
 
 ## ارتباط با بقیه‌ی بخش‌ها
 

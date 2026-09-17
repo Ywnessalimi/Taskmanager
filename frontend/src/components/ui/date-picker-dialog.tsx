@@ -13,11 +13,12 @@ import { useLocale } from "@/components/providers/locale-provider"
 import * as jalali from "@/lib/jalali"
 import { MOCK_TODAY } from "@/lib/api/mock-data"
 
-const GREGORIAN_MONTHS = [
+/** export شده چون `DeadlineCalendar` (نمای‌کلی پروژه) هم به همین تقویم میلادی برای انگلیسی نیاز دارد. */
+export const GREGORIAN_MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ]
-const GREGORIAN_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+export const GREGORIAN_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 type Cursor = { year: number; month: number }
 type Cell = { day: number; value: string }
@@ -95,7 +96,10 @@ export function DatePickerDialog({
   return (
     <Dialog>
       {trigger}
-      <DialogContent className="sm:max-w-[280px]">
+      {/* stopPropagation: چون این محتوا با Portal رندر می‌شود، کلیک روی سلول‌های روز از درخت React
+          (نه DOM) به بالا حباب می‌کند — اگر تریگر داخل یک ردیف/کارت کلیک‌پذیر باشد (مثل کارت‌های
+          Board)، بدون این خط انتخاب تاریخ باعث فعال شدن کلیک همان کارت هم می‌شد. */}
+      <DialogContent className="sm:max-w-[280px]" onClick={(event) => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{t("taskForm.addDate")}</DialogTitle>
         </DialogHeader>

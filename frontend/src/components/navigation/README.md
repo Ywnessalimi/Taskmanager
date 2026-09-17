@@ -12,8 +12,8 @@
   - اواتار کاربر واردشده → لینک مستقیم به `/account`.
   - آیکون زنگوله‌ی اعلان‌ها → `features/notifications/NotificationsPreviewDialog` (کلیک، نه لینک؛ رجوع به `features/notifications/README.md`).
   - آیکون جستجوی دکوراتیو (بدون عملکرد، مثل بقیه‌ی افوردنس‌های غیرفعال اپ).
-  - جداکننده‌ی عمودی، بعد `features/tasks/NewTaskDialog` (دکمه‌ی «تسک جدید»؛ قبلاً در `SidebarNav` بود) — روی دسکتاپ به‌جای ناوبری به `/tasks/new`، همان فرم را در یک پنل کناری (`Dialog` با `variant="side"`، رجوع به `components/ui/dialog.tsx`) باز می‌کند.
-  داده‌ی کاربر/اعلان‌ها به‌عنوان prop از `(tabs)/layout.tsx` می‌آید. مصرف‌کننده: `src/app/(tabs)/layout.tsx` (بالای `{children}`، داخل همان ستون `max-w-[1200px]`).
+  - جداکننده‌ی عمودی، بعد `features/tasks/NewTaskButton` (دکمه‌ی «تسک جدید»؛ قبلاً در `SidebarNav` بود) — روی دسکتاپ به‌جای ناوبری به `/tasks/new`، پنل تسک را داخل `SectionTabs` باز می‌کند (`components/providers/task-panel-provider.tsx`)، نه یک مودال روی کل صفحه.
+  داده‌ی کاربر/اعلان‌ها به‌عنوان prop از `(tabs)/layout.tsx` می‌آید. مصرف‌کننده: `src/app/(tabs)/layout.tsx` (بالای `{children}`، تمام‌عرض و بدون عرض حداکثر).
 - `page-header.tsx` → `PageHeader`: هدر مشترک صفحات جزئیات (سازمان، پروژه، …) — دکمه‌ی بازگشت (فلش رو‌به‌راست چون RTL، با `router.back()`)، عنوان/زیرعنوان، و منوی سه‌نقطه‌ی اختیاری (`menu`: آرایه‌ای از گروه‌ها که با جداکننده از هم جدا می‌شوند). مصرف‌کننده‌ها: `src/app/(tabs)/home/organizations/[id]/page.tsx` و `.../projects/[id]/page.tsx`.
 
 - `add-task-fab.tsx` → `AddTaskFab`: دکمه‌ی گرد شناور به رنگ برند با آیکون «+» که به `/tasks/new` می‌رود. مصرف‌کننده‌ها: `src/app/(tabs)/home/page.tsx` و `src/app/(tabs)/my-tasks/page.tsx`. جای‌گذاری با کلاس‌های منطقی (`start-4`) انجام شده نه `right-4`، چون اپ RTL است و `start` همان سمت راست می‌شود؛ `bottom-18` هم دکمه را بالای نوار تب‌های `h-14` نگه می‌دارد. تنها المان پررنگ برند در این صفحه‌هاست (طبق docs/DESIGN.md).
