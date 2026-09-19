@@ -1,6 +1,6 @@
-import { PageHeader } from "@/components/navigation/page-header"
 import { SectionTabs } from "@/features/pages/section-tabs"
 import { ProjectOverview } from "@/features/projects/project-overview"
+import { ProjectPageHeader } from "@/features/projects/project-page-header"
 import { ProjectTaskList } from "@/features/projects/project-task-list"
 import { t } from "@/lib/i18n/dictionary"
 import { getLocale } from "@/lib/i18n/server"
@@ -27,7 +27,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      <PageHeader
+      <ProjectPageHeader
         title={project.name}
         subtitle={project.organizationName}
         menu={[

@@ -25,6 +25,7 @@
   - نشان درصد همیشه با رنگ *خودِ همان متریک* رنگ می‌شود (نه رنگ‌های ناهم‌خوان طرح — مثلاً «انجام‌شده» در فایل طرح یک نشان قرمز داشت که به‌نظر اشتباه کپی از «عقب‌افتاده» بود)؛ فقط جهت فلش (بالا/پایین) از علامت تغییر می‌آید.
   - عنوان «Project Health» و خط جداکننده‌ی زیرش — برخلاف بقیه‌ی بخش‌های همین صفحه — **داخل خودِ کارت** (با بوردر مشترک) است، نه یک `SectionTitle` بیرونیِ جدا؛ چون خودِ طرح Figma همین ساختار را دارد.
   - چون هیچ تاریخچه‌ی واقعی سلامت پروژه ذخیره نمی‌شود، روند نمودار از `Project.healthTrend` (شبه‌تصادفیِ Mock، رجوع به `mockHealthTrend` در `lib/api/mock-data.ts`) می‌آید — دقیقاً مثل الگوی `Project.activity`/`mockActivity`؛ آخرین نقطه‌ی هر سری همیشه با عدد واقعی `ProjectHealth` یکی است.
+- `project-page-header.tsx` → کامپوننت `ProjectPageHeader` (Client): پوسته‌ی نازک روی `PageHeader` مشترک، فقط برای صفحه‌ی پروژه. زیر breakpoint `lg`، وقتی پنل تسک (`features/tasks/TaskPanel`) باز است، `SectionTabs` تب‌های لیست/نمای‌کلی را پنهان و پنل را تمام‌عرض می‌کند (یعنی کاربر روی موبایل عملاً وارد یک «صفحه»ی دیگر شده) — این کامپوننت در همان حالت خودِ `PageHeader` (که همیشه بالای صفحه می‌ماند) را با `hidden lg:block` پنهان می‌کند تا کاربر دو هدر روی هم نبیند. از `lg` به بالا پنل کنار لیست می‌نشیند نه رویش، پس آنجا `lg:block` همیشه هدر را نشان می‌دهد — یعنی نسخه‌ی دسکتاپ عمداً هیچ تغییری نمی‌کند.
 
 ## وابستگی‌ها
 
@@ -32,7 +33,7 @@
 - کامپوننت‌های مشترک: `src/components/charts/{activity-heatmap,status-donut-chart,line-trend-chart,member-activity-grid}.tsx`، `src/components/layout/{section,stat-tile}.tsx` (`OverviewCard` در `section.tsx`)، `src/components/ui/date-picker-dialog.tsx` (`GREGORIAN_MONTHS`/`GREGORIAN_WEEKDAYS` export شده برای `DeadlineCalendar`)، `src/lib/jalali.ts` (همه‌ی محاسبه‌های تاریخ Timeline/Calendar و محور x نمودار سلامت پروژه در فارسی).
 - وابستگی بین‌فیچری: `ProjectOverviewHeader` مستقیماً `features/organizations/members-dialog.tsx` (`MembersDialog`) را reuse می‌کند — همان دیالوگ مدیریت اعضای سازمان، بدون کپی یا نسخه‌ی جدا.
 - کتابخانه‌ی خارجی: `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` فقط در `views/board-view.tsx` — تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه؛ دلیل اضافه‌شدنش Drag & Drop لمسی/ماوس واقعی (و انیمیشن جابه‌جایی چند-کانتینری `sortable`) است که پیاده‌سازی دستی‌اش شکننده می‌شود.
-- مصرف‌کننده: `src/app/(tabs)/home/projects/[id]/page.tsx` — سوییچ List/Overview با `SectionTabs` (رجوع به `../pages/README.md`)، که دکمه‌ی «+» و صفحه‌های سند/چت را هم می‌آورد.
+- مصرف‌کننده: `src/app/(tabs)/home/projects/[id]/page.tsx` — سوییچ List/Overview با `SectionTabs` (رجوع به `../pages/README.md`)، که دکمه‌ی «+» و صفحه‌های سند/چت را هم می‌آورد. هدر صفحه دیگر مستقیم `PageHeader` نیست، `ProjectPageHeader` است (بالا) — چون باید از وضعیت باز/بسته‌ی پنل تسک (`useTaskPanel`) باخبر باشد. صفحه هم‌چون قبل `bg-background` (سفید) دارد.
 
 ## ارتباط با بقیه‌ی بخش‌ها
 

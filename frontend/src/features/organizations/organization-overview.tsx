@@ -43,6 +43,8 @@ export function OrganizationOverview({ organization }: { organization: Organizat
   const [projects, setProjects] = useState(organization.projects)
   const [addingProject, setAddingProject] = useState(false)
   const [draftProjectName, setDraftProjectName] = useState("")
+  const [description, setDescription] = useState("")
+  const [editingDescription, setEditingDescription] = useState(false)
   const [files, setFiles] = useState<{ id: string; name: string; sizeLabel: string }[]>([])
   /** شمارنده‌ی محلی شناسه‌ی فایل‌ها؛ عمداً Date.now نیست تا رندر خالص بماند. */
   const nextFileId = useRef(1)
@@ -85,8 +87,35 @@ export function OrganizationOverview({ organization }: { organization: Organizat
 
       <MembersDialog members={organization.members} />
 
-      {/* ردیف توضیحات هنوز دکوراتیو است (سازمان فیلد توضیحات در مدل داده ندارد). */}
-      <p className="text-base text-text3">{t("org.addDescription")}</p>
+      {/*
+        سازمان فیلد توضیحات در مدل داده ندارد (رجوع به types.ts) — این یک state کاملاً محلی
+        است، مثل «افزودن فایل» بالا؛ با کلیک وارد حالت ویرایش می‌شود و با blur/Enter دوباره
+        به‌صورت متن ساده (قابل‌کلیک برای ویرایش دوباره) نمایش داده می‌شود. با رفرش صفحه پاک
+        می‌شود، مثل بقیه‌ی state های این اپ.
+      */}
+      {editingDescription ? (
+        <textarea
+          autoFocus
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onBlur={() => setEditingDescription(false)}
+          placeholder={t("org.addDescription")}
+          className="w-full resize-none rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditingDescription(true)}
+          className={
+            description
+              ? "text-start text-sm text-text2 hover:text-foreground"
+              : "w-fit text-base text-text3 hover:text-text2"
+          }
+        >
+          {description || t("org.addDescription")}
+        </button>
+      )}
 
       <div className="flex flex-col gap-2">
         {files.map((file) => (

@@ -37,6 +37,8 @@ export function TaskCreateForm({
           projectId: values.projectId,
           assigneeName: values.assigneeName || undefined,
           dueDate: values.dueDate || undefined,
+          startDate: values.startDate || undefined,
+          repeat: values.repeat,
           priority: values.priority,
           tags: values.tags,
           description: values.description || undefined,

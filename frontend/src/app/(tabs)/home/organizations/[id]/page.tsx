@@ -21,7 +21,7 @@ export default async function OrganizationOverviewPage({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col bg-background">
       <PageHeader
         title={organization.name}
         subtitle={`${organization.taskCount} ${t(locale, "org.taskCountSuffix")}`}

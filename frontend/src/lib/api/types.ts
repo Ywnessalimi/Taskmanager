@@ -45,6 +45,18 @@ export type StatusDistribution = {
 export type TaskPriority = "none" | "low" | "medium" | "high" | "urgent"
 export type TaskStatus = "todo" | "in-progress" | "completed"
 
+/** الگوی تکرار تسک — روی «تاریخ» تسک تنظیم می‌شود (رجوع به `DateEditDialog`). */
+export type RepeatOption = "none" | "daily" | "weekly" | "monthly"
+
+/** یک ردیف از لاگ رویدادهای یک تسک — رجوع به یادداشت «TaskActivityEntry» در PRODUCT_OVERVIEW.md. */
+export type TaskActivityEntry = {
+  id: string
+  actorName: string
+  /** متن آماده‌ی رویداد (نه کلید ترجمه) — چون فعلاً کاملاً Mock است. */
+  message: string
+  date: string
+}
+
 export type Task = {
   id: string
   displayId: string
@@ -52,6 +64,10 @@ export type Task = {
   assigneeName?: string
   priority: TaskPriority
   dueDate?: string
+  /** تاریخ شروع تسک — کنار `dueDate` در `DateEditDialog` تنظیم می‌شود. */
+  startDate?: string
+  /** الگوی تکرار تسک؛ نبودش یعنی «هیچ». */
+  repeat?: RepeatOption
   status: TaskStatus
   /** برچسب‌های تسک (Tag) — فعلاً فقط در فرم ساخت تسک ست می‌شود و هیچ نمایی آن را نشان نمی‌دهد */
   tags?: string[]
@@ -59,6 +75,14 @@ export type Task = {
   description?: string
   /** زیر-تسک‌ها (Sublist) — فقط برای نمای Tree استفاده می‌شود، حداکثر یک سطح در مدل فعلی */
   subtasks?: Task[]
+  /** نام اعضایی که این تسک را دنبال می‌کنند — مثل `assigneeName` با نام مچ می‌شود، نه id. */
+  followers?: string[]
+  /** آیا کاربر جاری این تسک را «مورد علاقه» علامت زده است. */
+  isFavorite?: boolean
+  /** مجموع دقیقه‌های صرف‌شده روی تسک (از تایمر). */
+  timeSpentMinutes?: number
+  /** فید متنی رویدادهای این تسک، جدیدترین اول — رجوع به `TaskActivityEntry`. */
+  activityLog?: TaskActivityEntry[]
 }
 
 export type Project = {
@@ -207,10 +231,15 @@ export type TaskUpdateInput = {
   title: string
   assigneeName?: string
   dueDate?: string
+  startDate?: string
+  repeat?: RepeatOption
   priority: TaskPriority
   status: TaskStatus
   tags: string[]
   description?: string
+  followers: string[]
+  isFavorite: boolean
+  timeSpentMinutes: number
 }
 
 /** ورودی ساخت تسک جدید (فرم `features/tasks/TaskCreateForm`). */
@@ -219,6 +248,8 @@ export type NewTaskInput = {
   projectId: string
   assigneeName?: string
   dueDate?: string
+  startDate?: string
+  repeat?: RepeatOption
   priority: TaskPriority
   tags: string[]
   description?: string

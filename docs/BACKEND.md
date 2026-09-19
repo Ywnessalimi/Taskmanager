@@ -69,6 +69,8 @@ backend/
 - **TaskAttachment**: `task (FK)`, `file`, `uploaded_by (FK)`, `uploaded_at`
 - **TimeEntry** (Start Timer): `task (FK)`, `user (FK)`, `started_at`, `stopped_at`
 
+> **یادداشت فاز فعلی:** فیلدهای دنبال‌کننده (`Follower`)، علاقه‌مندی (`Favorite`)، تکرار (`repeat` روی `Task`) و لاگ اختصاصی هر تسک (`TaskActivityEntry` — رجوع به یادداشت مربوطه در [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)) فعلاً فقط در Mock فرانت‌اند (`frontend/src/lib/api/types.ts`/`mock-data.ts`) وجود دارند و هنوز مدل Django ندارند — خارج از دامنه‌ی فاز فعلی (فقط فرانت‌اند). وقتی بک‌اند واقعی برای این بخش‌ها ساخته شد، باید اینجا مدل‌سازی شوند (مثلاً `TaskFollower` به‌عنوان جدول واسط Task×User، `favorited_by` چند-به-چند یا یک `Favorite` جدا، `repeat` به‌عنوان یک choice field روی `Task`، و `TaskActivityEntry` جدا از `ActivityLog` تجمیعی زیر).
+
 ### apps.notifications
 
 - **Notification**: `recipient (FK → User)`, `verb` (متن رخداد)، `related_task (FK, nullable)`, `related_project (FK, nullable)`, `related_organization (FK, nullable)`, `status` (choices: unread/read)، `requires_approval (bool)`, `created_at`

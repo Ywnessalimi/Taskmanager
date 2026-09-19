@@ -68,7 +68,7 @@ app/
 | نوار تب اصلی صفحه + صفحه‌های افزودنی (سند/چت) | `features/pages/{SectionTabs, DocumentPage, ChatPage}` — ساخته شد |
 | مدیریت ستون‌های Board | `features/projects/ColumnManager` — هنوز ساخته نشده، ستون‌ها فعلاً ثابت‌اند |
 | افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` — هنوز ساخته نشده |
-| کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Attachment، Comment، Priority، Sublist) | `features/tasks/TaskDetail` — هنوز ساخته نشده (هیچ صفحه‌ی جزئیات تسکی وجود ندارد) |
+| کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Priority، Sublist) + دنبال‌کننده/علاقه‌مندی/زمان صرف‌شده/لاگ فعالیت/تاریخ+تکرار | `features/tasks/TaskForm` (حالت ویرایش) به‌همراه زیرکامپوننت‌های `task-detail-header`, `followers-dialog`, `time-tracking`, `activity-log`, `date-edit-dialog`, `tag-picker-dialog` — رجوع به [features/tasks/README.md](../frontend/src/features/tasks/README.md). Attachment/Comment هنوز ساخته نشده. |
 | Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — ساخته شد (به‌همراه `MyTaskList` برای بخش لیست) |
 | فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` — ساخته شد |
 | تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — ساخته شد (پروفایل، تنظیمات حساب، سوییچ‌های اعلان، خروج با تایید) |
@@ -123,7 +123,7 @@ app/
 | `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
 | `separator` | جداکننده‌ی بین بخش‌های `OrganizationOverview` (هدر/خلاصه‌ی پروژه‌ها/آخرین فعالیت‌ها) |
 | `direction` | `DirectionProvider`/`useDirection` برای پشتیبانی RTL |
-| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان)؛ `DialogContent` دو واریانت دارد — `variant="center"` (پیش‌فرض، مودال وسط‌چین معمولی) و `variant="side"` (پنل تمام‌ارتفاع چسبیده به سمت راست صفحه، تقریباً ۳۰٪ عرض — فعلاً بدون مصرف‌کننده: پنل تسک از مودال به `TaskPanel` داخل `SectionTabs` منتقل شد) |
+| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان)؛ `DialogContent` سه واریانت دارد — `variant="center"` (پیش‌فرض، مودال وسط‌چین معمولی)، `variant="side"` (پنل تمام‌ارتفاع چسبیده به سمت راست صفحه، تقریباً ۳۰٪ عرض — فعلاً بدون مصرف‌کننده: پنل تسک از مودال به `TaskPanel` داخل `SectionTabs` منتقل شد)، و `variant="fullscreen"` (موبایل: تمام صفحه بدون گوشه‌ی گرد؛ از `sm:` به بعد یک مودال متمرکز معمولی — برای زیربخش‌هایی از جزئیات تسک که «صفحه»ی مجزا نیستند، مثل `FollowersDialog`/`TimerDialog`/`ActivityLogDialog`/`DateEditDialog`/`TagPickerDialog` در `features/tasks/`) |
 | `dropdown-menu` | منوی سه‌نقطه‌ی `PageHeader` و منوی سه‌نقطه‌ی هر ردیف عضو در `MembersDialog` |
 | `popover` | `NotificationsPreviewDialog` — برخلاف `dialog`، **غیرمودال** است: بدون پس‌زمینه‌ی تیره، دقیقاً کنار همان آیکونی که کلیک شده باز می‌شود، با سایه‌ی کوچک (نه backdrop) از بقیه‌ی صفحه متمایز می‌شود، و با کلیک روی هر نقطه‌ی دیگر خودش بسته می‌شود |
 | `switch` | تاگل «فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند» در `MembersDialog` |

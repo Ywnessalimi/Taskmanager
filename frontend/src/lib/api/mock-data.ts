@@ -71,8 +71,19 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
         title: "طراحی صفحه‌ی اصلی",
         assigneeName: "سارا احمدی",
         priority: "high",
+        startDate: "1404/05/01",
         dueDate: "1404/05/10",
+        repeat: "weekly",
         status: "in-progress",
+        tags: ["طراحی", "فوری"],
+        followers: ["سارا احمدی", "علی رضایی"],
+        isFavorite: true,
+        timeSpentMinutes: 125,
+        activityLog: [
+          { id: "t1-log-3", actorName: "سارا احمدی", message: "سارا احمدی روی این تسک کار می‌کند", date: "1404/05/12" },
+          { id: "t1-log-2", actorName: "علی رضایی", message: "علی رضایی این تسک را دنبال کرد", date: "1404/05/09" },
+          { id: "t1-log-1", actorName: "سارا احمدی", message: "سارا احمدی این تسک را ساخت", date: "1404/05/01" },
+        ],
         subtasks: [
           { id: "t1-1", displayId: "#301-1", title: "وایرفریم موبایل", assigneeName: "سارا احمدی", priority: "medium", status: "completed" },
           { id: "t1-2", displayId: "#301-2", title: "طراحی هایفای دسکتاپ", assigneeName: "سارا احمدی", priority: "medium", dueDate: "1404/05/09", status: "in-progress" },
@@ -287,3 +298,6 @@ export const MOCK_TODAY = "1404/05/12"
 
 /** فعالیت روزانه‌ی خود کاربر واردشده (Portfolio Activity در تب «تسک‌های من»). */
 export const MOCK_MY_ACTIVITY = mockActivity(2)
+
+/** برچسب‌های ازقبل‌ساخته‌شده — `TagPickerDialog` این‌ها را به‌همراه برچسب‌های خودِ تسک جستجو می‌کند. */
+export const MOCK_TAGS = ["طراحی", "بک‌اند", "فوری", "بازبینی", "مستندسازی"]

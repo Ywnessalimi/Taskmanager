@@ -55,6 +55,13 @@ const dialogContentVariants = cva(
         center:
           "top-1/2 start-1/2 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-sm",
         side: "inset-y-0 start-0 flex h-full w-[30%] min-w-80 max-w-md flex-col overflow-hidden border-e border-border data-open:fade-in-0 data-closed:fade-out-0",
+        /** `fullscreen`: در موبایل تمام صفحه (بدون گوشه‌ی گرد) — معادل «صفحه‌ی مجزا» برای
+         * زیربخش‌هایی از جزئیات تسک (دنبال‌کنندگان/تایمر/لاگ/تاریخ/تگ) که خودشان route جدا
+         * ندارند. از `sm:` به بعد یک مودال متمرکز معمولی می‌شود، چون فضای دسکتاپ برای تمام‌صفحه
+         * لازم نیست. خودش هم مثل `side` بدون پدینگ/اسکرول ثابت است — محتوا (`DialogHeader` +
+         * ناحیه‌ی اسکرول‌شونده‌ی خودش) این‌ها را مدیریت می‌کند. */
+        fullscreen:
+          "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:top-1/2 sm:start-1/2 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:rtl:translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-border",
       },
     },
     defaultVariants: {
