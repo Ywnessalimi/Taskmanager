@@ -20,12 +20,16 @@ export function ProjectPageHeader({
   title,
   subtitle,
   projectId,
+  isAdmin,
 }: {
   title: string
   subtitle?: string
   projectId: string
+  /** فقط ادمین‌های همان سازمان اجازه‌ی حذف پروژه را دارند — رجوع به `page.tsx` (تطبیق نام کاربر جاری با نقشش در `project.members`). */
+  isAdmin: boolean
 }) {
-  const panelOpen = Boolean(useTaskPanel()?.panel)
+  const panel = useTaskPanel()
+  const panelOpen = Boolean(panel?.panel)
   const router = useRouter()
   const t = useT()
 
@@ -36,9 +40,11 @@ export function ProjectPageHeader({
         subtitle={subtitle}
         menu={[
           [
-            { label: t("project.addTask"), icon: "task-line" },
-            { label: t("project.addMilestone"), icon: "flag-line" },
-            { label: t("project.addSection"), icon: "layout-column-line" },
+            {
+              label: t("project.addTask"),
+              icon: "task-line",
+              onClick: () => panel?.openNewTask(),
+            },
           ],
           [
             {
@@ -47,7 +53,9 @@ export function ProjectPageHeader({
               onClick: () => router.push(`/home/projects/${projectId}/settings`),
             },
           ],
-          [{ label: t("project.delete"), icon: "delete-bin-line", destructive: true }],
+          ...(isAdmin
+            ? [[{ label: t("project.delete"), icon: "delete-bin-line", destructive: true }]]
+            : []),
         ]}
       />
     </div>

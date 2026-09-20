@@ -62,6 +62,13 @@ const dialogContentVariants = cva(
          * ناحیه‌ی اسکرول‌شونده‌ی خودش) این‌ها را مدیریت می‌کند. */
         fullscreen:
           "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:top-1/2 sm:start-1/2 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:rtl:translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-border",
+        /** `floatingPanel`: مثل `fullscreen` تمام‌صفحه در موبایل است، اما از `sm:` به بعد به‌جای
+         * مودال متمرکز، یک پنل شناور با فاصله‌ی ۸ پیکسل از بالا/پایین می‌شود و همیشه فیزیکی
+         * به سمت راست صفحه می‌چسبد (نه `end` منطقی، چون این پنل — مثل `AIAssistantDialog` —
+         * صرف‌نظر از جهت زبان همیشه راست است)، با ارتفاع کامل بین آن دو فاصله (بدون تنظیم
+         * height صریح: مرورگر خودش وقتی هم `top` هم `bottom` ست شده باشد ارتفاع را پر می‌کند). */
+        floatingPanel:
+          "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-2 sm:right-2 sm:bottom-2 sm:h-auto sm:w-full sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-xl",
       },
     },
     defaultVariants: {

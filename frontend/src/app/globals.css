@@ -85,6 +85,25 @@
   --radius: 0.375rem;
 }
 
+/*
+ * جابه‌جایی آرام گرادینت دکمه‌ی شناور دستیار هوش مصنوعی (`AIAssistantFab`) — فقط
+ * background-position را با یک چرخه‌ی کند/نرم عوض می‌کند، نه رنگ‌ها را.
+ */
+@keyframes ai-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-ai-gradient {
+  background-size: 220% 220%;
+  animation: ai-gradient-shift 8s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

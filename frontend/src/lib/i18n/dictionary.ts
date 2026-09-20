@@ -14,6 +14,14 @@ export function localeDir(locale: Locale): "rtl" | "ltr" {
  * می‌کند دقیقاً همان کلیدها را کامل داشته باشد — رجوع به docs/FRONTEND.md بخش «زبان و ترجمه».
  */
 const fa = {
+  "aiAssistant.aria": "دستیار هوش مصنوعی",
+  "aiAssistant.title": "دستیار",
+  "aiAssistant.greeting": "چگونه می‌توانم کمکتان کنم؟",
+  "aiAssistant.placeholder": "پیامی بنویسید...",
+  "aiAssistant.send": "ارسال پیام",
+  "aiAssistant.typing": "در حال نوشتن...",
+  "aiAssistant.mockReply": "فعلاً به یک هوش مصنوعی واقعی وصل نیستم، ولی به‌زودی می‌توانم در کارها کمکتان کنم.",
+
   "nav.home": "خانه",
   "nav.myTasks": "تسک‌های من",
   "nav.notifications": "اعلان‌ها",
@@ -152,8 +160,6 @@ const fa = {
   "project.activityUpdatedAt": "آخرین به‌روزرسانی در",
   "project.noMembers": "این پروژه هنوز عضوی ندارد.",
   "project.addTask": "افزودن تسک",
-  "project.addMilestone": "افزودن مایل‌استون",
-  "project.addSection": "افزودن بخش",
   "project.settings": "تنظیمات پروژه",
   "project.delete": "حذف پروژه",
   "project.notFound": "پروژه‌ای با این شناسه پیدا نشد.",
@@ -209,7 +215,7 @@ const fa = {
   "view.tree": "درختی",
   "view.board": "برد",
   "view.table": "جدول",
-  "view.timeline": "خط زمانی",
+  "view.timeline": "گانت چارت",
   "view.calendar": "تقویم",
 
   "tabs.list": "لیست",
@@ -290,6 +296,14 @@ const fa = {
 } as const
 
 const en: Record<keyof typeof fa, string> = {
+  "aiAssistant.aria": "AI Assistant",
+  "aiAssistant.title": "Assistant",
+  "aiAssistant.greeting": "How can I help you?",
+  "aiAssistant.placeholder": "Type a message...",
+  "aiAssistant.send": "Send message",
+  "aiAssistant.typing": "Typing...",
+  "aiAssistant.mockReply": "I'm not connected to a real AI yet, but I'll be able to help with your work soon.",
+
   "nav.home": "Home",
   "nav.myTasks": "My Tasks",
   "nav.notifications": "Notifications",
@@ -428,8 +442,6 @@ const en: Record<keyof typeof fa, string> = {
   "project.activityUpdatedAt": "Last updated at",
   "project.noMembers": "This project has no members yet.",
   "project.addTask": "Add Task",
-  "project.addMilestone": "Add Milestone",
-  "project.addSection": "Add Section",
   "project.settings": "Project Settings",
   "project.delete": "Delete Project",
   "project.notFound": "No project found with this ID.",
@@ -485,7 +497,7 @@ const en: Record<keyof typeof fa, string> = {
   "view.tree": "Tree",
   "view.board": "Board",
   "view.table": "Table",
-  "view.timeline": "Timeline",
+  "view.timeline": "Gantt Chart",
   "view.calendar": "Calendar",
 
   "tabs.list": "List",

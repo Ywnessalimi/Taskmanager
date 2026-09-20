@@ -2,17 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { RemixIcon } from "@/components/ui/remix-icon"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import type { Task } from "@/lib/api/types"
 import {
-  addDays,
-  daysInMonth,
   formatDate,
   fromOrdinal,
   MONTH_NAMES,
   parseDate,
-  startOfWeek,
   toOrdinal,
+  weekdayIndex,
   type JalaliDate,
 } from "@/lib/jalali"
 
@@ -24,73 +23,70 @@ const SCALES: { id: Scale; label: string }[] = [
   { id: "month", label: "ماهانه" },
 ]
 
-/** عرض هر ستون تقویم بر حسب پیکسل، به‌ازای هر مقیاس. */
-const COLUMN_WIDTH: Record<Scale, number> = { day: 44, week: 72, month: 104 }
+/** حرف اول هر روز هفته، هم‌ترتیب با `WEEKDAY_NAMES` — فقط برای ردیف دوم هدر مقیاس روزانه. */
+const WEEKDAY_SHORT = ["ش", "ی", "د", "س", "چ", "پ", "ج"]
+
+/** طبق تقویم ایران، پنج‌شنبه (ایندکس ۵) و جمعه (ایندکس ۶) تعطیل‌اند. */
+function isWeekend(index: number): boolean {
+  return index === 5 || index === 6
+}
+
+/**
+ * پس‌زمینه‌ی هاشور‌خورده‌ی روزهای تعطیل — فقط خطوط مورب کم‌رنگ، نه یک رنگ توپر. دوره‌ی تناوب
+ * عمداً ۹ پیکسل است (نه هر عددی) چون ارتفاع هر ردیف (هدر روز و ردیف‌های تسک) ۳۶ پیکسل
+ * است و ۳۶ دقیقاً مضرب ۹ است — همین باعث می‌شود خطوط مورب دقیقاً در مرز هر سلول ادامه پیدا
+ * کنند، نه اینکه هر سلول از صفر شروع کند و در مرزها جابه‌جا/بریده به‌نظر برسد.
+ */
+const WEEKEND_HATCH_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "repeating-linear-gradient(45deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 9px)",
+}
+
+/**
+ * عرض هر ستون روز بر حسب پیکسل، به‌ازای هر مقیاس — مقیاس فقط زوم است (چند روز در یک
+ * عرض دیده می‌شود)، نه اندازه‌ی خودِ ستون؛ برخلاف قبل، ستون‌ها همیشه روزانه‌اند
+ * (رجوع به یادداشت بالای `buildColumns`).
+ */
+const COLUMN_WIDTH: Record<Scale, number> = { day: 160, week: 140, month: 120 }
 
 /** حاشیه‌ی قبل/بعد از بازه‌ی تسک‌ها (بر حسب روز) تا تقویم تنگ به‌نظر نرسد. */
 const PADDING_DAYS: Record<Scale, number> = { day: 7, week: 21, month: 90 }
 
 const ROW_HEIGHT = "h-9"
 const SIDEBAR_WIDTH = "w-44"
+/** ارتفاع ردیف دوم هدر (روزها) — کمی بزرگ‌تر از حالت قبل تا عدد روز خواناتر باشد؛ ردیف فاصله‌گذارِ ساید‌بار هم باید همین ارتفاع را داشته باشد. */
+const DAY_ROW_HEIGHT = "h-9"
 
 type Column = {
   key: string
   label: string
-  /** برچسب گروه بالای ستون (ماه برای روز/هفته، سال برای ماه) */
+  /** برچسب گروه بالای ستون — همیشه نام ماه/سال، صرف‌نظر از مقیاس. */
   group: string
   startOrdinal: number
   endOrdinal: number
+  weekday: number
 }
 
-/** ستون‌های تقویم را بین دو تاریخ می‌سازد؛ هر ستون یک روز، یک هفته یا یک ماه است. */
-function buildColumns(from: JalaliDate, to: JalaliDate, scale: Scale): Column[] {
+/**
+ * ستون‌های تقویم را بین دو تاریخ می‌سازد — همیشه یک ستون به‌ازای هر روز (برخلاف قبل که در
+ * مقیاس هفتگی/ماهانه چند روز را در یک ستون بزرگ‌تر ادغام می‌کرد). با این تغییر خطوط عمودی
+ * جداکننده‌ی روزها همیشه تا پایین جدول ادامه دارند و مقیاس فقط عرض هر روز (زوم) را عوض
+ * می‌کند؛ ردیف بالایی هدر همیشه فقط بر اساس ماه گروه‌بندی می‌شود (نه هفته) تا خوانا بماند.
+ */
+function buildColumns(from: JalaliDate, to: JalaliDate): Column[] {
   const columns: Column[] = []
   const lastOrdinal = toOrdinal(to)
 
-  if (scale === "day") {
-    for (let ordinal = toOrdinal(from); ordinal <= lastOrdinal; ordinal++) {
-      const date = fromOrdinal(ordinal)
-      columns.push({
-        key: formatDate(date),
-        label: String(date.day),
-        group: `${MONTH_NAMES[date.month - 1]} ${date.year}`,
-        startOrdinal: ordinal,
-        endOrdinal: ordinal,
-      })
-    }
-    return columns
-  }
-
-  if (scale === "week") {
-    let cursor = startOfWeek(from)
-    while (toOrdinal(cursor) <= lastOrdinal) {
-      const start = toOrdinal(cursor)
-      columns.push({
-        key: formatDate(cursor),
-        label: `${cursor.day} ${MONTH_NAMES[cursor.month - 1].slice(0, 3)}`,
-        group: `${MONTH_NAMES[cursor.month - 1]} ${cursor.year}`,
-        startOrdinal: start,
-        endOrdinal: start + 6,
-      })
-      cursor = addDays(cursor, 7)
-    }
-    return columns
-  }
-
-  let cursor: JalaliDate = { year: from.year, month: from.month, day: 1 }
-  while (toOrdinal(cursor) <= lastOrdinal) {
-    const start = toOrdinal(cursor)
+  for (let ordinal = toOrdinal(from); ordinal <= lastOrdinal; ordinal++) {
+    const date = fromOrdinal(ordinal)
     columns.push({
-      key: `${cursor.year}-${cursor.month}`,
-      label: MONTH_NAMES[cursor.month - 1],
-      group: String(cursor.year),
-      startOrdinal: start,
-      endOrdinal: start + daysInMonth(cursor.month) - 1,
+      key: formatDate(date),
+      label: String(date.day),
+      group: `${MONTH_NAMES[date.month - 1]} ${date.year}`,
+      startOrdinal: ordinal,
+      endOrdinal: ordinal,
+      weekday: weekdayIndex(date),
     })
-    cursor =
-      cursor.month === 12
-        ? { year: cursor.year + 1, month: 1, day: 1 }
-        : { year: cursor.year, month: cursor.month + 1, day: 1 }
   }
   return columns
 }
@@ -106,40 +102,95 @@ function groupColumns(columns: Column[]): { label: string; span: number }[] {
   return groups
 }
 
+/** آیا صفحه در عرض دسکتاپ است (همان breakpoint `lg` بقیه‌ی اپ) — فقط آنجا ساخت/تغییرِاندازه‌ی بازه با کلیک/کشیدن فعال است. */
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches
+  )
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)")
+    const listener = () => setIsDesktop(query.matches)
+    query.addEventListener("change", listener)
+    // برخی ابزارهای شبیه‌ساز viewport رویداد `change` را روی MediaQueryList شلیک نمی‌کنند؛
+    // `resize` خودِ پنجره یک fallback مطمئن‌تر است.
+    window.addEventListener("resize", listener)
+    return () => {
+      query.removeEventListener("change", listener)
+      window.removeEventListener("resize", listener)
+    }
+  }, [])
+  return isDesktop
+}
+
+type Range = { startOrdinal: number; endOrdinal: number }
+
+/** بازه‌ی نمایش یک تسک روی گانت — از `startDate`/`dueDate` می‌آید (هرکدام نبود، از آن‌یکی به‌عنوان روز تک‌روزه استفاده می‌شود). */
+function taskRange(task: Task): Range | null {
+  const start = task.startDate ? parseDate(task.startDate) : null
+  const due = task.dueDate ? parseDate(task.dueDate) : null
+  if (start && due) {
+    const a = toOrdinal(start)
+    const b = toOrdinal(due)
+    return { startOrdinal: Math.min(a, b), endOrdinal: Math.max(a, b) }
+  }
+  if (due) return { startOrdinal: toOrdinal(due), endOrdinal: toOrdinal(due) }
+  if (start) return { startOrdinal: toOrdinal(start), endOrdinal: toOrdinal(start) }
+  return null
+}
+
 /**
- * نمای «خط زمانی»: ساید‌بار جمع‌شونده‌ی تسک‌ها در سمت راست + تقویم افقی قابل اسکرول.
+ * نمای «گانت چارت»: ساید‌بار جمع‌شونده‌ی تسک‌ها در سمت راست + تقویم افقی قابل اسکرول.
+ * الهام‌گرفته از طرح Figma «CuGantt» (هدر دوردیفه‌ی مینیمال + ستون‌های تعطیل هاشورخورده)،
+ * با تطبیق روی مدل داده و استایل خودمان.
  *
- * ناحیه‌ی تقویم عمداً `dir="ltr"` است (تاریخ از چپ به راست جلو می‌رود، مثل هر نمودار گانتی)
- * و همین باعث می‌شود `scrollLeft` رفتار استاندارد و قابل‌پیش‌بینی داشته باشد؛ ساید‌بار بیرون
- * از این ناحیه و در سمت راست صفحه (چون کل اپ RTL است) می‌ماند. هدر تاریخ داخل همان کانتینر
- * اسکرول است، پس هم‌زمان با تقویم حرکت می‌کند.
+ * ناحیه‌ی تقویم همچنان `dir="ltr"` است تا `scrollLeft` رفتار استاندارد و قابل‌پیش‌بینی داشته
+ * باشد، اما خودِ آرایه‌ی `columns` نزولی (از جدید به قدیم) ساخته می‌شود — چون در نسخه‌ی فارسی
+ * باید تاریخ قدیم سمت راست و جدید سمت چپ باشد، نه برعکس مثل نمودارهای گانت انگلیسی. با نزولی
+ * ساختن خودِ آرایه (نه فقط چرخاندن نمایش)، تمام محاسبات ایندکس/اسکرول/موقعیت باکس بدون نیاز
+ * به منطق جداگانه برای دو جهت درست کار می‌کنند. ساید‌بار بیرون از این ناحیه و در سمت راست
+ * صفحه (چون کل اپ RTL است) می‌ماند. هدر تاریخ داخل همان کانتینر اسکرول است، پس هم‌زمان با
+ * تقویم حرکت می‌کند. ارتفاع کل کامپوننت عمداً محدود نمی‌شود — با رشدِ فهرست تسک‌ها، خودِ صفحه
+ * اسکرول می‌شود، نه یک باکس داخلی.
+ *
+ * **ساخت/تغییرِاندازه‌ی بازه (فقط دسکتاپ، `useIsDesktop`)**: کلیک روی یک سلول خالیِ ردیفِ
+ * تسکی که هنوز بازه ندارد، یک تسک تک‌روزه (start=due=همان روز) می‌سازد. بعد از ساخته‌شدن،
+ * هاور روی باکس دو دستگیره‌ی نازک در لبه‌ی چپ/راست نشان می‌دهد؛ کشیدن هرکدام با
+ * Pointer Events خام (نه dnd-kit، چون این یک تغییرِ اندازه‌ی پیوسته‌ی افقی است، نه
+ * جابه‌جایی/ترتیب گسسته) `startDate`/`dueDate` را عوض می‌کند. مثل بقیه‌ی این فاز، فقط در
+ * state محلی همین کامپوننت اعمال می‌شود.
  */
-export function TimelineView({ tasks, today }: { tasks: Task[]; today: string }) {
+export function TimelineView({ tasks: initialTasks, today }: { tasks: Task[]; today: string }) {
+  const panel = useTaskPanel()
+  const [taskList, setTaskList] = useState(initialTasks)
   const [scale, setScale] = useState<Scale>("week")
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [drag, setDrag] = useState<{ taskId: string; side: "start" | "end"; ordinal: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const isDesktop = useIsDesktop()
 
   const todayDate = useMemo(() => parseDate(today), [today])
 
+  function updateTaskDates(taskId: string, patch: Partial<Pick<Task, "startDate" | "dueDate">>) {
+    setTaskList((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)))
+  }
+
   const rows = useMemo(
-    () => tasks.map((task) => ({ task, date: task.dueDate ? parseDate(task.dueDate) : null })),
-    [tasks]
+    () => taskList.map((task) => ({ task, range: taskRange(task) })),
+    [taskList]
   )
 
   const columns = useMemo(() => {
-    const ordinals = rows
-      .map((row) => row.date)
-      .filter((date): date is JalaliDate => date !== null)
-      .map(toOrdinal)
+    const ordinals = rows.flatMap((row) => (row.range ? [row.range.startOrdinal, row.range.endOrdinal] : []))
     if (todayDate) ordinals.push(toOrdinal(todayDate))
     if (ordinals.length === 0) return []
 
     const padding = PADDING_DAYS[scale]
+    // نزولی: قدیم سمت راست، جدید سمت چپ (رجوع به یادداشت بالای کامپوننت).
     return buildColumns(
       fromOrdinal(Math.min(...ordinals) - padding),
-      fromOrdinal(Math.max(...ordinals) + padding),
-      scale
-    )
+      fromOrdinal(Math.max(...ordinals) + padding)
+    ).reverse()
   }, [rows, todayDate, scale])
 
   const groups = useMemo(() => groupColumns(columns), [columns])
@@ -152,6 +203,65 @@ export function TimelineView({ tasks, today }: { tasks: Task[]; today: string })
       (column) => ordinal >= column.startOrdinal && ordinal <= column.endOrdinal
     )
   }, [columns, todayDate])
+
+  /** آرایه‌ی `columns` نزولی است (جدید در ایندکس ۰)، پس این تابع هنگام کلمپ کردن خارج از بازه، جهت واقعی آرایه را چک می‌کند نه این‌که فرض کند همیشه صعودی است. */
+  function ordinalToIndex(ordinal: number): number {
+    const index = columns.findIndex((column) => ordinal >= column.startOrdinal && ordinal <= column.endOrdinal)
+    if (index !== -1) return index
+    if (columns.length === 0) return 0
+    const first = columns[0].startOrdinal
+    const last = columns[columns.length - 1].startOrdinal
+    const ascending = first <= last
+    const beforeFirst = ascending ? ordinal < first : ordinal > first
+    return beforeFirst ? 0 : columns.length - 1
+  }
+
+  function columnAtClientX(taskId: string, clientX: number): Column | null {
+    const rowEl = rowRefs.current[taskId]
+    if (!rowEl || columns.length === 0) return null
+    const rect = rowEl.getBoundingClientRect()
+    const index = Math.min(columns.length - 1, Math.max(0, Math.floor((clientX - rect.left) / width)))
+    return columns[index] ?? null
+  }
+
+  function beginResize(taskId: string, side: "start" | "end") {
+    return (event: React.PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+
+      function onMove(moveEvent: PointerEvent) {
+        const column = columnAtClientX(taskId, moveEvent.clientX)
+        if (!column) return
+        setDrag({ taskId, side, ordinal: side === "start" ? column.startOrdinal : column.endOrdinal })
+      }
+
+      function onUp(upEvent: PointerEvent) {
+        window.removeEventListener("pointermove", onMove)
+        const column = columnAtClientX(taskId, upEvent.clientX)
+        const ordinal = column ? (side === "start" ? column.startOrdinal : column.endOrdinal) : null
+        if (ordinal !== null) {
+          const range = taskRange(taskList.find((task) => task.id === taskId)!)
+          if (range) {
+            const startOrdinal = side === "start" ? Math.min(ordinal, range.endOrdinal) : range.startOrdinal
+            const endOrdinal = side === "end" ? Math.max(ordinal, range.startOrdinal) : range.endOrdinal
+            updateTaskDates(taskId, {
+              startDate: formatDate(fromOrdinal(startOrdinal)),
+              dueDate: formatDate(fromOrdinal(endOrdinal)),
+            })
+          }
+        }
+        setDrag(null)
+      }
+
+      window.addEventListener("pointermove", onMove)
+      window.addEventListener("pointerup", onUp, { once: true })
+    }
+  }
+
+  function createRange(taskId: string, column: Column) {
+    const date = formatDate(fromOrdinal(column.startOrdinal))
+    updateTaskDates(taskId, { startDate: date, dueDate: date })
+  }
 
   function todayOffset(container: HTMLDivElement) {
     return Math.max(0, todayIndex * width - container.clientWidth / 2 + width / 2)
@@ -217,21 +327,14 @@ export function TimelineView({ tasks, today }: { tasks: Task[]; today: string })
         </button>
       </div>
 
-      <div className="flex items-stretch rounded-md border border-border bg-background">
+      <div className="flex items-stretch rounded-md bg-background">
         {sidebarOpen && (
-          <div className={`${SIDEBAR_WIDTH} shrink-0 border-e border-border`}>
-            <div
-              className={`flex ${ROW_HEIGHT} items-center border-b border-border bg-bg2 px-2.5 text-xs text-text2`}
-            >
-              تسک
-            </div>
-            {/* ارتفاع این ردیف باید دقیقاً با ردیف دوم هدر تقویم (h-7) یکی بماند */}
-            <div className="h-7 border-b border-border bg-bg2" />
+          <div className={`${SIDEBAR_WIDTH} shrink-0`}>
+            <div className={`flex ${ROW_HEIGHT} items-center px-2.5 text-xs text-text3`}>تسک</div>
+            {/* ارتفاع این ردیف باید دقیقاً با ردیف دوم هدر تقویم (DAY_ROW_HEIGHT) یکی بماند */}
+            <div className={DAY_ROW_HEIGHT} />
             {rows.map(({ task }) => (
-              <div
-                key={task.id}
-                className={`flex ${ROW_HEIGHT} items-center gap-2 border-b border-border px-2.5 last:border-b-0`}
-              >
+              <div key={task.id} className={`flex ${ROW_HEIGHT} items-center gap-2 px-2.5`}>
                 <PriorityDot priority={task.priority} />
                 <span className="min-w-0 flex-1 truncate text-xs text-foreground">{task.title}</span>
               </div>
@@ -241,63 +344,94 @@ export function TimelineView({ tasks, today }: { tasks: Task[]; today: string })
 
         <div ref={scrollRef} dir="ltr" className="min-w-0 flex-1 overflow-x-auto">
           <div style={{ width: columns.length * width }}>
-            <div className={`flex ${ROW_HEIGHT} border-b border-border bg-bg2`}>
+            <div className={`flex ${ROW_HEIGHT} border-b border-border`}>
               {groups.map((group, index) => (
                 <div
                   key={`${group.label}-${index}`}
                   style={{ width: group.span * width }}
-                  className="flex items-center justify-center border-r border-border text-xs text-text2 last:border-r-0"
+                  className="flex shrink-0 items-center justify-center border-e border-border/60 text-[11px] font-medium text-text3 last:border-e-0"
                 >
                   {group.label}
                 </div>
               ))}
             </div>
 
-            <div className="flex h-7 border-b border-border bg-bg2">
+            <div className={`flex ${DAY_ROW_HEIGHT} border-b border-border`}>
               {columns.map((column, index) => (
                 <div
                   key={column.key}
-                  style={{ width }}
-                  className={`flex items-center justify-center border-r border-border text-[11px] last:border-r-0 ${
+                  style={{ width, ...(isWeekend(column.weekday) ? WEEKEND_HATCH_STYLE : {}) }}
+                  className={`flex shrink-0 flex-col items-center justify-center border-e border-border/60 leading-tight last:border-e-0 ${
                     index === todayIndex ? "text-brand" : "text-text3"
                   }`}
                 >
-                  {column.label}
+                  <span className="text-[10px] opacity-70">{WEEKDAY_SHORT[column.weekday]}</span>
+                  <span className={`text-sm ${index === todayIndex ? "font-semibold" : "font-medium"}`}>
+                    {column.label}
+                  </span>
                 </div>
               ))}
             </div>
 
-            {rows.map(({ task, date }) => {
-              const ordinal = date ? toOrdinal(date) : null
-              const columnIndex =
-                ordinal === null
-                  ? -1
-                  : columns.findIndex(
-                      (column) => ordinal >= column.startOrdinal && ordinal <= column.endOrdinal
-                    )
+            {rows.map(({ task, range: committedRange }) => {
+              let range = committedRange
+              if (drag && drag.taskId === task.id && committedRange) {
+                range =
+                  drag.side === "start"
+                    ? { startOrdinal: Math.min(drag.ordinal, committedRange.endOrdinal), endOrdinal: committedRange.endOrdinal }
+                    : { startOrdinal: committedRange.startOrdinal, endOrdinal: Math.max(drag.ordinal, committedRange.startOrdinal) }
+              }
+
+              const startIndex = range ? ordinalToIndex(range.startOrdinal) : -1
+              const endIndex = range ? ordinalToIndex(range.endOrdinal) : -1
+              // چون `columns` نزولی است (جدید=ایندکس کوچک‌تر)، ایندکسِ تاریخ شروع (قدیم‌تر) از تاریخ پایان بزرگ‌تر است؛ برای موقعیت‌دهی باکس باید min/max گرفت، نه فرض ترتیب صعودی.
+              const loIndex = Math.min(startIndex, endIndex)
+              const hiIndex = Math.max(startIndex, endIndex)
 
               return (
                 <div
                   key={task.id}
-                  className={`relative flex ${ROW_HEIGHT} border-b border-border last:border-b-0`}
+                  ref={(el) => {
+                    rowRefs.current[task.id] = el
+                  }}
+                  className={`group/row relative flex ${ROW_HEIGHT}`}
                 >
                   {columns.map((column, index) => (
                     <div
                       key={column.key}
-                      style={{ width }}
-                      className={`h-full border-r border-border last:border-r-0 ${
+                      style={{ width, ...(isWeekend(column.weekday) ? WEEKEND_HATCH_STYLE : {}) }}
+                      onClick={
+                        isDesktop && !committedRange ? () => createRange(task.id, column) : undefined
+                      }
+                      className={`h-full shrink-0 border-e border-border/60 transition-colors last:border-e-0 group-hover/row:bg-bg2 ${
                         index === todayIndex ? "bg-bg2" : ""
-                      }`}
+                      } ${isDesktop && !committedRange ? "cursor-pointer" : ""}`}
                     />
                   ))}
 
-                  {columnIndex >= 0 && (
+                  {startIndex >= 0 && endIndex >= 0 && (
                     <div
-                      style={{ left: columnIndex * width + 2, width: width - 4 }}
-                      className="absolute top-1/2 flex h-5 -translate-y-1/2 items-center justify-center rounded-full bg-brand px-1.5"
-                      title={`${task.title} — ${task.dueDate}`}
+                      style={{ left: loIndex * width + 2, width: (hiIndex - loIndex + 1) * width - 4 }}
+                      onClick={() => panel?.openTaskDetail(task)}
+                      className="absolute top-1/2 flex h-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-brand px-1.5 ring-brand/40 transition-all group-hover/row:shadow-md group-hover/row:ring-2"
+                      title={`${task.title} — ${task.dueDate ?? task.startDate}`}
                     >
                       <span className="truncate text-[10px] text-text-on-brand">{task.title}</span>
+                      {isDesktop && (
+                        <>
+                          {/* در چیدمانِ نزولی، لبه‌ی فیزیکی چپ = تاریخِ جدیدتر (پایان) و لبه‌ی راست = تاریخِ قدیمی‌تر (شروع). */}
+                          <span
+                            onPointerDown={beginResize(task.id, "end")}
+                            onClick={(event) => event.stopPropagation()}
+                            className="absolute inset-y-0 left-0 w-2 -translate-x-1/2 cursor-ew-resize rounded-full bg-text-on-brand/0 opacity-0 transition-opacity group-hover/row:bg-text-on-brand/70 group-hover/row:opacity-100"
+                          />
+                          <span
+                            onPointerDown={beginResize(task.id, "start")}
+                            onClick={(event) => event.stopPropagation()}
+                            className="absolute inset-y-0 right-0 w-2 translate-x-1/2 cursor-ew-resize rounded-full bg-text-on-brand/0 opacity-0 transition-opacity group-hover/row:bg-text-on-brand/70 group-hover/row:opacity-100"
+                          />
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -307,7 +441,7 @@ export function TimelineView({ tasks, today }: { tasks: Task[]; today: string })
         </div>
       </div>
 
-      {rows.some(({ date }) => date === null) && (
+      {rows.some(({ range }) => range === null) && (
         <p className="text-xs text-text3">
           تسک‌های بدون تاریخ سررسید در تقویم نشانه‌ای ندارند و فقط در فهرست کنار آن دیده می‌شوند.
         </p>

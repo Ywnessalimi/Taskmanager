@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from "react"
 import { RemixIcon } from "@/components/ui/remix-icon"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import type { Task } from "@/lib/api/types"
 import { daysInMonth, MONTH_NAMES, parseDate, type JalaliDate } from "@/lib/jalali"
 
+/** حداکثر تعداد تسکِ نمایش‌داده‌شده داخل هر خانه‌ی روز، قبل از تبدیل بقیه به «+N». */
+const MAX_VISIBLE_PER_DAY = 3
+
 /** بدون تراز واقعی روز هفته (نیازمند محاسبه‌ی تقویم جلالی واقعی) — فقط شبکه‌ی روزهای ماه. */
 export function CalendarView({ tasks }: { tasks: Task[] }) {
+  const panel = useTaskPanel()
   const datedTasks = useMemo(
     () =>
       tasks
@@ -63,18 +68,34 @@ export function CalendarView({ tasks }: { tasks: Task[] }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-border bg-border">
         {days.map((day) => {
           const dayTasks = tasksInMonth.filter(({ date }) => date.day === day)
+          const visible = dayTasks.slice(0, MAX_VISIBLE_PER_DAY)
+          const hiddenCount = dayTasks.length - visible.length
+
           return (
-            <div key={day} className="flex min-h-12 flex-col items-center gap-1 rounded-md py-1.5 text-xs text-text2">
-              <span>{day}</span>
-              {dayTasks.length > 0 && (
-                <span
-                  className="size-1.5 rounded-full bg-brand"
-                  title={dayTasks.map(({ task }) => task.title).join("، ")}
-                />
-              )}
+            <div key={day} className="flex aspect-square flex-col gap-0.5 overflow-hidden bg-background p-1">
+              <span className="shrink-0 text-[11px] text-text2">{day}</span>
+              <div className="flex min-h-0 flex-1 flex-col gap-0.5">
+                {visible.map(({ task }) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => panel?.openTaskDetail(task)}
+                    title={task.title}
+                    className="flex min-w-0 items-center gap-1 rounded-sm bg-bg2 px-1 py-px text-start hover:bg-bg3"
+                  >
+                    <PriorityDot priority={task.priority} />
+                    <span className="min-w-0 flex-1 truncate text-[9px] leading-tight text-foreground">
+                      {task.title}
+                    </span>
+                  </button>
+                ))}
+                {hiddenCount > 0 && (
+                  <span className="px-1 text-[9px] leading-tight text-text3">+{hiddenCount}</span>
+                )}
+              </div>
             </div>
           )
         })}

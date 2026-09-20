@@ -1,3 +1,4 @@
+import { AIAssistantFab } from "@/components/navigation/ai-assistant-fab"
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar"
 import { DesktopHeader } from "@/components/navigation/desktop-header"
 import { SidebarNav } from "@/components/navigation/sidebar-nav"
@@ -36,6 +37,7 @@ export default async function TabsLayout({ children }: { children: React.ReactNo
         </main>
         <BottomTabBar />
       </div>
+      <AIAssistantFab />
     </TaskPanelProvider>
   )
 }

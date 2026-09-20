@@ -52,8 +52,24 @@ const DEFAULT_COLUMNS: BoardColumn[] = STATUS_COLUMNS.map((column) => ({
 
 const STATUS_COLUMN_IDS = new Set<string>(STATUS_COLUMNS.map((column) => column.id))
 
-/** پالت انتخاب رنگ بورد سفارشی — تزئینی است، نه معنایی، پس مستقیم hex (نه توکن‌های success/warning/error). */
-const COLUMN_COLOR_OPTIONS = ["#b473f4", "#57a8dc", "#379d65", "#e0a83e", "#dc575a", "#ec4899"]
+/**
+ * پالت انتخاب رنگ ستون — تزئینی است، نه معنایی، پس مستقیم hex (نه توکن‌های success/warning/error).
+ * ۱۲ رنگ در دو ردیف (۸+۴)، مثل انتخابگر رنگ رویداد گوگل‌کلندر — رجوع به `ColorPickerGrid`.
+ */
+const COLUMN_COLOR_OPTIONS = [
+  "#5f6368",
+  "#8f8f8f",
+  "#6155e0",
+  "#3b6fd4",
+  "#57a8dc",
+  "#379d65",
+  "#e0a83e",
+  "#e0793e",
+  "#dc575a",
+  "#d1477a",
+  "#b473f4",
+  "#8a6650",
+]
 
 function buildInitialOrder(tasks: Task[]): Record<string, string[]> {
   const order: Record<string, string[]> = {}
@@ -72,22 +88,22 @@ function findContainer(order: Record<string, string[]>, id: string): string | un
 }
 
 /** پروژه‌ی یک تسک برای نگاشتن به لیست اعضا: `MyTask` (تب «تسک‌های من») خودش `projectId` دارد، بقیه از prop صفحه‌ی پروژه. */
-function resolveProjectId(task: Task, fallback?: string): string | undefined {
+export function resolveProjectId(task: Task, fallback?: string): string | undefined {
   return (task as Partial<MyTask>).projectId ?? fallback
 }
 
-const stop = (event: React.SyntheticEvent) => event.stopPropagation()
+export const stop = (event: React.SyntheticEvent) => event.stopPropagation()
 
-const fieldIconTriggerClass =
+export const fieldIconTriggerClass =
   "flex size-6 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
 
-const pillTriggerClass = "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
+export const pillTriggerClass = "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
 
-function pillStyle(color: string): React.CSSProperties {
+export function pillStyle(color: string): React.CSSProperties {
   return { color, backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)` }
 }
 
-function FieldIcon({ name, active }: { name: string; active?: boolean }) {
+export function FieldIcon({ name, active }: { name: string; active?: boolean }) {
   return (
     <span className="flex size-6 shrink-0 items-center justify-center">
       <RemixIcon name={name} className={`text-base ${active ? "text-icon" : "text-icon2"}`} />
@@ -96,7 +112,7 @@ function FieldIcon({ name, active }: { name: string; active?: boolean }) {
 }
 
 /** کلیک روی پیل/آیکون تاریخ مستقیماً همان `DatePickerDialog` مودال را برای ویرایش سررسید باز می‌کند. */
-function DateField({ value, onChange }: { value?: string; onChange: (value: string) => void }) {
+export function DateField({ value, onChange }: { value?: string; onChange: (value: string) => void }) {
   return (
     <DatePickerDialog
       value={value ?? ""}
@@ -148,7 +164,7 @@ function PriorityField({ value, onChange }: { value: TaskPriority; onChange: (va
 }
 
 /** کلیک روی پیل/آیکون مسئول مودال چندانتخابی مسئولان را باز می‌کند — لیست اعضا از `TaskPanelProvider` (همان گزینه‌های فرم تسک) می‌آید. */
-function AssigneeField({ task, projectId, onChange }: { task: Task; projectId?: string; onChange: (names: string[]) => void }) {
+export function AssigneeField({ task, projectId, onChange }: { task: Task; projectId?: string; onChange: (names: string[]) => void }) {
   const panel = useTaskPanel()
   const resolvedProjectId = resolveProjectId(task, projectId)
   const members = panel?.projects.find((project) => project.id === resolvedProjectId)?.members ?? []
@@ -290,6 +306,9 @@ function Column({
   isDragOver,
   onAddTask,
   onUpdateTask,
+  onColorChange,
+  customColors,
+  onAddCustomColor,
 }: {
   column: BoardColumn
   taskIds: string[]
@@ -298,6 +317,9 @@ function Column({
   isDragOver: boolean
   onAddTask: () => void
   onUpdateTask: (taskId: string, patch: Partial<Task>) => void
+  onColorChange: (color: string) => void
+  customColors: string[]
+  onAddCustomColor: (color: string) => void
 }) {
   const { setNodeRef } = useDroppable({ id: column.id })
 
@@ -309,7 +331,21 @@ function Column({
       }`}
     >
       <div className="flex items-center gap-2 px-4 pt-4 pb-1">
-        <span className="h-4 w-2 shrink-0 rounded-full" style={{ backgroundColor: column.color }} />
+        <Popover>
+          <PopoverTrigger
+            aria-label="تغییر رنگ ستون"
+            className="flex h-4 w-2 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: column.color }}
+          />
+          <PopoverContent align="start" className="w-56 p-3">
+            <ColorPickerGrid
+              value={column.color}
+              onChange={onColorChange}
+              customColors={customColors}
+              onAddCustomColor={onAddCustomColor}
+            />
+          </PopoverContent>
+        </Popover>
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{column.label}</span>
         <span className="flex shrink-0 items-center justify-center rounded-full bg-background px-2 py-0.5 text-xs font-semibold text-foreground">
           {taskIds.length}
@@ -345,8 +381,78 @@ function Column({
   )
 }
 
-/** پاپ‌آور «بورد جدید»: اسم + یک رنگ از پالت ثابت — همیشه انتهای ردیف ستون‌ها (سمت چپ در RTL). */
-function AddColumnTile({ onCreate }: { onCreate: (label: string, color: string) => void }) {
+/**
+ * جدول انتخاب رنگ — مثل انتخابگر رنگ رویداد گوگل‌کلندر (عنوان «رنگ» + گرید دو‌ردیفه‌ی پالت
+ * ثابت + «افزودن رنگ» که یک `<input type="color">` مخفی را باز می‌کند)، بدون قابلیت
+ * «تنظیمات پیشرفته» چون اینجا لازم نیست. هم در پاپ‌آور «بورد جدید» و هم در پاپ‌آور تغییر
+ * رنگِ ستون‌های موجود استفاده می‌شود — رنگ‌های سفارشیِ افزوده‌شده (`customColors`) بین هر دو
+ * مشترک است تا در همان نشست دوباره قابل‌انتخاب بمانند.
+ */
+function ColorPickerGrid({
+  value,
+  onChange,
+  customColors,
+  onAddCustomColor,
+}: {
+  value: string
+  onChange: (color: string) => void
+  customColors: string[]
+  onAddCustomColor: (color: string) => void
+}) {
+  const colorInputRef = useRef<HTMLInputElement>(null)
+  const allColors = [...COLUMN_COLOR_OPTIONS, ...customColors]
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs text-text2">رنگ</span>
+      <div className="grid grid-cols-8 gap-2">
+        {allColors.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            aria-label={`رنگ ${option}`}
+            className={`size-6 shrink-0 rounded-full ${
+              value === option ? "ring-2 ring-offset-2 ring-offset-popover ring-foreground" : ""
+            }`}
+            style={{ backgroundColor: option }}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => colorInputRef.current?.click()}
+        className="flex w-fit items-center gap-1.5 rounded-md py-1 text-sm text-text2 hover:text-foreground"
+      >
+        <RemixIcon name="add-line" className="text-base" />
+        افزودن رنگ
+      </button>
+      <input
+        ref={colorInputRef}
+        type="color"
+        value={value}
+        onChange={(event) => {
+          onAddCustomColor(event.target.value)
+          onChange(event.target.value)
+        }}
+        className="sr-only"
+        aria-hidden
+        tabIndex={-1}
+      />
+    </div>
+  )
+}
+
+/** پاپ‌آور «بورد جدید»: اسم + `ColorPickerGrid` — همیشه انتهای ردیف ستون‌ها (سمت چپ در RTL). */
+function AddColumnTile({
+  onCreate,
+  customColors,
+  onAddCustomColor,
+}: {
+  onCreate: (label: string, color: string) => void
+  customColors: string[]
+  onAddCustomColor: (color: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [color, setColor] = useState(COLUMN_COLOR_OPTIONS[0])
@@ -376,20 +482,12 @@ function AddColumnTile({ onCreate }: { onCreate: (label: string, color: string) 
             autoFocus
             className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
           />
-          <div className="flex flex-wrap gap-2">
-            {COLUMN_COLOR_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setColor(option)}
-                aria-label={`رنگ ${option}`}
-                className={`size-6 shrink-0 rounded-full ${
-                  color === option ? "ring-2 ring-offset-2 ring-foreground" : ""
-                }`}
-                style={{ backgroundColor: option }}
-              />
-            ))}
-          </div>
+          <ColorPickerGrid
+            value={color}
+            onChange={setColor}
+            customColors={customColors}
+            onAddCustomColor={onAddCustomColor}
+          />
           <Button type="submit" size="sm" disabled={!name.trim()}>
             ساخت بورد
           </Button>
@@ -420,6 +518,7 @@ function AddColumnTile({ onCreate }: { onCreate: (label: string, color: string) 
 export function BoardView({ tasks: initialTasks, projectId }: { tasks: Task[]; projectId?: string }) {
   const [tasks, setTasks] = useState(initialTasks)
   const [columns, setColumns] = useState<BoardColumn[]>(DEFAULT_COLUMNS)
+  const [customColors, setCustomColors] = useState<string[]>([])
   const [order, setOrder] = useState<Record<string, string[]>>(() => buildInitialOrder(initialTasks))
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
@@ -436,6 +535,14 @@ export function BoardView({ tasks: initialTasks, projectId }: { tasks: Task[]; p
 
   function updateTask(taskId: string, patch: Partial<Task>) {
     setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)))
+  }
+
+  function updateColumnColor(columnId: string, color: string) {
+    setColumns((prev) => prev.map((column) => (column.id === columnId ? { ...column, color } : column)))
+  }
+
+  function addCustomColor(color: string) {
+    setCustomColors((prev) => (prev.includes(color) ? prev : [...prev, color]))
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -521,9 +628,12 @@ export function BoardView({ tasks: initialTasks, projectId }: { tasks: Task[]; p
             isDragOver={dragOverColumnId === column.id}
             onAddTask={() => panel?.openNewTask()}
             onUpdateTask={updateTask}
+            onColorChange={(color) => updateColumnColor(column.id, color)}
+            customColors={customColors}
+            onAddCustomColor={addCustomColor}
           />
         ))}
-        <AddColumnTile onCreate={createColumn} />
+        <AddColumnTile onCreate={createColumn} customColors={customColors} onAddCustomColor={addCustomColor} />
       </div>
 
       <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} projectId={projectId} /> : null}</DragOverlay>

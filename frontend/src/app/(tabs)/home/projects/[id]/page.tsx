@@ -25,12 +25,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     )
   }
 
+  const isAdmin = project.members.some((member) => member.name === user.name && member.role === "admin")
+
   return (
     <div className="flex flex-1 flex-col bg-background">
       <ProjectPageHeader
         title={project.name}
         subtitle={project.organizationName}
         projectId={project.id}
+        isAdmin={isAdmin}
       />
 
       <SectionTabs

@@ -17,7 +17,7 @@ export function ProjectTaskList({ project, today }: { project: Project; today: s
     <div className="-mt-4 flex flex-col gap-3">
       <ViewSwitcher view={view} onChange={setView} />
 
-      {view === "tree" && <TreeView tasks={project.tasks} />}
+      {view === "tree" && <TreeView tasks={project.tasks} projectId={project.id} />}
       {view === "board" && <BoardView tasks={project.tasks} projectId={project.id} />}
       {view === "table" && <TableView tasks={project.tasks} />}
       {view === "timeline" && (

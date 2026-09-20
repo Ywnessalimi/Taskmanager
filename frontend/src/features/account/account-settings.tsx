@@ -89,10 +89,7 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
         </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-medium text-foreground">{user.name}</p>
-          <p dir="ltr" className="truncate text-start text-xs text-text2">
-            {user.email}
-          </p>
-          {user.bio && <p className="mt-1 text-xs text-text2">{user.bio}</p>}
+          {user.bio && <p className="truncate text-xs text-text2">{user.bio}</p>}
         </div>
         <ProfileDialog user={user} onSave={(patch) => setUser((prev) => ({ ...prev, ...patch }))} />
       </section>
