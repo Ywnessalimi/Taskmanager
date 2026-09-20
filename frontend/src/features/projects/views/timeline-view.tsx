@@ -413,7 +413,7 @@ export function TimelineView({ tasks: initialTasks, today }: { tasks: Task[]; to
                     <div
                       style={{ left: loIndex * width + 2, width: (hiIndex - loIndex + 1) * width - 4 }}
                       onClick={() => panel?.openTaskDetail(task)}
-                      className="absolute top-1/2 flex h-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-brand px-1.5 ring-brand/40 transition-all group-hover/row:shadow-md group-hover/row:ring-2"
+                      className="absolute top-1/2 flex h-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-brand px-1.5 transition-[filter] group-hover/row:brightness-90"
                       title={`${task.title} — ${task.dueDate ?? task.startDate}`}
                     >
                       <span className="truncate text-[10px] text-text-on-brand">{task.title}</span>

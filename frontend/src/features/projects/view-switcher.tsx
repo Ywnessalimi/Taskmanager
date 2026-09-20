@@ -16,9 +16,9 @@ export const TASK_VIEWS = [
 export type TaskViewId = (typeof TASK_VIEWS)[number]["id"]
 
 /**
- * نوار سوییچ نما — طبق طرح Figma «AlignUI» (node 13728:4542): متن و بعد آیکون (نه برعکس؛
- * در RTL یعنی متن سمت شروع/راست و آیکون سمت پایان/چپ، همان‌طور که طرح نشان می‌دهد)، نمای
- * فعال با بوردر + پس‌زمینه‌ی خاکستری کم‌رنگ مشخص می‌شود، بقیه فقط متن ساده‌ی کم‌رنگ‌اند.
+ * نوار سوییچ نما — طبق بازخورد کاربر: آیکون سمت راست و متن سمت چپ (یعنی در DOM آیکون قبل
+ * از متن می‌آید، چون در RTL اولین فرزند سمت راست می‌نشیند). نمای فعال با بوردر + پس‌زمینه‌ی
+ * خاکستری کم‌رنگ مشخص می‌شود، بقیه فقط متن ساده‌ی کم‌رنگ‌اند.
  */
 export function ViewSwitcher({
   view,
@@ -42,8 +42,8 @@ export function ViewSwitcher({
               : "border-transparent text-text2 hover:text-foreground"
           }`}
         >
-          {t(item.labelKey)}
           <RemixIcon name={item.icon} className="text-base" />
+          {t(item.labelKey)}
         </button>
       ))}
     </div>

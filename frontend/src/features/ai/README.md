@@ -1,16 +1,16 @@
 # features/ai
 
-دستیار هوش مصنوعی — دکمه‌ی شناور سراسری + مودال چت.
+AI assistant — global floating button + chat modal.
 
-## چه‌کار می‌کند
+## What it does
 
-- `ai-assistant-dialog.tsx` → `AIAssistantDialog`: محتوای مودال (`DialogContent variant="floatingPanel"`، تریگرش در `components/navigation/ai-assistant-fab.tsx` است). طرح از Figma «هوش مصنوعی کالامارکت» گرفته شده: هدر با عنوان «دستیار»+آیکون در سمت شروع (راست در RTL) و دکمه‌ی بستن در سمت پایان، حالت خالی با عکس آیکون (`public/images/ai/assistant-icon.png`) و متن خوش‌آمد، و نوار پایین با دکمه‌ای در سمت شروع که بین میکروفون (خالی) و ارسال (وقتی متنی تایپ شده، با همان گرادینت `AI_GRADIENT`) عوض می‌شود، کنار `textarea`.
-  - **چت واقعاً کار می‌کند** ولی به هیچ سرویس هوش مصنوعی وصل نیست: بعد از هر پیام کاربر، بعد از یک تاخیر کوتاه، یک پاسخ ثابت (`aiAssistant.mockReply`) اضافه می‌شود — فقط در state محلی همین کامپوننت، بدون پایداری، مثل بقیه‌ی این فاز.
-  - `AI_GRADIENT` (ثابت export‌شده) همان گرادینت دکمه‌ی شناور را برای آیکون هدر و دکمه‌ی ارسال (وقتی کاربر تایپ می‌کند) هم استفاده می‌کند تا یکدست بمانند.
-- `dialog.tsx` (`components/ui/`) → واریانت `floatingPanel`: تمام‌صفحه در موبایل (مثل `fullscreen`)، اما از `sm:` به بعد به‌جای مودال متمرکز، یک پنل شناور با ۸ پیکسل فاصله از بالا/پایین می‌شود که **همیشه فیزیکی به سمت راست صفحه می‌چسبد** (نه `end` منطقی) — چون این پنل صرف‌نظر از جهت زبان باید همان‌جا بماند.
-- `components/navigation/ai-assistant-fab.tsx` → `AIAssistantFab`: دکمه‌ی گرد شناور با گرادینت + سایه‌ی طرح، و یک انیمیشن بسیار آرام/نرم که فقط موقعیت گرادینت را جابه‌جا می‌کند (`animate-ai-gradient`، تعریف‌شده در `app/globals.css`) — نه رنگ‌ها را عوض می‌کند و نه اندازه را. در `(tabs)/layout.tsx` سراسری mount شده (برخلاف `AddTaskFab` که فقط در خانه/تسک‌های من است)، همیشه دیده می‌شود (نه فقط زیر `lg`)، و در سمت مقابل `AddTaskFab` (`end`، یعنی چپ در RTL) می‌نشیند تا با آن تداخل نکند.
+- `ai-assistant-dialog.tsx` → `AIAssistantDialog`: the modal content (`DialogContent variant="floatingPanel"`; its trigger lives in `components/navigation/ai-assistant-fab.tsx`). The design comes from the Figma "KalaMarket AI assistant" file: a header with the "Assistant" title + icon at the start side (right in RTL) and a close button at the end side, an empty state with an icon image (`public/images/ai/assistant-icon.png`) and a welcome message, and a bottom bar with a button at the start side that switches between microphone (empty) and send (once text is typed, using the same `AI_GRADIENT`), next to a `textarea`.
+  - **Chat actually works**, but it isn't wired to any real AI service: after each user message, following a short delay, a fixed reply (`aiAssistant.mockReply`) is appended — only in this component's local state, with no persistence, like the rest of this phase.
+  - `AI_GRADIENT` (an exported constant) reuses the same gradient as the floating button for the header icon and the send button (while the user is typing) to keep them visually consistent.
+- `dialog.tsx` (`components/ui/`) → the `floatingPanel` variant: fullscreen on mobile (like `fullscreen`), but from `sm:` onward, instead of a centered modal, it becomes a floating panel with an 8px gap from the top/bottom that **always sticks to the physical right side of the screen** (not the logical `end`) — because this panel must stay there regardless of the language direction.
+- `components/navigation/ai-assistant-fab.tsx` → `AIAssistantFab`: a round floating button with the design's gradient + shadow, and a very slow/smooth animation that only shifts the gradient's position (`animate-ai-gradient`, defined in `app/globals.css`) — it changes neither the colors nor the size. It's mounted globally in `(tabs)/layout.tsx` (unlike `AddTaskFab`, which only lives on Home/My Tasks), is always visible (not just below `lg`), and sits on the opposite side from `AddTaskFab` (`end`, i.e. left in RTL) so the two don't collide.
 
-## وابستگی‌ها
+## Dependencies
 
-- `components/ui/dialog.tsx` (واریانت `fullscreen`، همان الگوی `FollowersDialog`/`TagPickerDialog` در `features/tasks/`).
-- ترجمه‌ها: کلیدهای `aiAssistant.*` در `src/lib/i18n/dictionary.ts`.
+- `components/ui/dialog.tsx` (the `fullscreen` variant, the same pattern as `FollowersDialog`/`TagPickerDialog` in `features/tasks/`).
+- Translations: the `aiAssistant.*` keys in `src/lib/i18n/dictionary.ts`.
