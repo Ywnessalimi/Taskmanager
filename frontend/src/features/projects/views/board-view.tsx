@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
@@ -29,6 +29,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { AssigneePickerDialog } from "@/features/tasks/assignee-picker-dialog"
 import { PRIORITY_COLOR, PRIORITY_LABEL, PriorityDot, STATUS_COLUMNS } from "@/features/projects/task-display"
 import type { MyTask, Task, TaskPriority } from "@/lib/api/types"
 
@@ -132,10 +133,10 @@ function PriorityField({ value, onChange }: { value: TaskPriority; onChange: (va
           <RemixIcon name="arrow-up-double-line" className="text-base" />
         </DropdownMenuTrigger>
       )}
-      <DropdownMenuContent align="end" onClick={stop}>
+      <DropdownMenuContent align="end" onClick={stop} className="w-44 min-w-44">
         <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as TaskPriority)}>
           {PRIORITIES.map((priority) => (
-            <DropdownMenuRadioItem key={priority} value={priority} closeOnClick>
+            <DropdownMenuRadioItem key={priority} value={priority} closeOnClick className="whitespace-nowrap">
               <PriorityDot priority={priority} />
               {PRIORITY_LABEL[priority]}
             </DropdownMenuRadioItem>
@@ -146,47 +147,57 @@ function PriorityField({ value, onChange }: { value: TaskPriority; onChange: (va
   )
 }
 
-/** کلیک روی پیل/آیکون مسئول یک دراپ‌داون انتخاب عضو باز می‌کند — لیست اعضا از `TaskPanelProvider` (همان گزینه‌های فرم تسک) می‌آید. */
-function AssigneeField({ task, projectId, onChange }: { task: Task; projectId?: string; onChange: (name: string) => void }) {
+/** کلیک روی پیل/آیکون مسئول مودال چندانتخابی مسئولان را باز می‌کند — لیست اعضا از `TaskPanelProvider` (همان گزینه‌های فرم تسک) می‌آید. */
+function AssigneeField({ task, projectId, onChange }: { task: Task; projectId?: string; onChange: (names: string[]) => void }) {
   const panel = useTaskPanel()
   const resolvedProjectId = resolveProjectId(task, projectId)
   const members = panel?.projects.find((project) => project.id === resolvedProjectId)?.members ?? []
+  const assigneeNames = task.assigneeNames ?? []
 
   return (
-    <DropdownMenu>
-      {task.assigneeName ? (
-        <DropdownMenuTrigger
-          onPointerDown={stop}
-          onClick={stop}
-          className="flex w-fit shrink-0 items-center gap-1 rounded-full bg-bg2 py-0.5 ps-1 pe-2 text-[11px] font-semibold text-text2 hover:bg-bg3"
-        >
-          {task.assigneeName}
-          <Avatar size="sm">
-            <AvatarFallback className="text-[10px]">{task.assigneeName.slice(0, 1)}</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-      ) : (
-        <DropdownMenuTrigger onPointerDown={stop} onClick={stop} className={fieldIconTriggerClass} aria-label="تعیین مسئول">
-          <RemixIcon name="user-add-line" className="text-base" />
-        </DropdownMenuTrigger>
-      )}
-      <DropdownMenuContent align="end" onClick={stop}>
-        <DropdownMenuRadioGroup value={task.assigneeName ?? ""} onValueChange={(next) => onChange(next as string)}>
-          <DropdownMenuRadioItem value="" closeOnClick>
-            بدون مسئول
-          </DropdownMenuRadioItem>
-          {members.map((member) => (
-            <DropdownMenuRadioItem key={member.name} value={member.name} closeOnClick>
-              <Avatar size="sm">
-                {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
-                <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
-              </Avatar>
-              {member.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <AssigneePickerDialog
+      members={members}
+      assigneeNames={assigneeNames}
+      onChange={onChange}
+      trigger={
+        assigneeNames.length > 1 ? (
+          <DialogTrigger onPointerDown={stop} onClick={stop} className="flex w-fit shrink-0 items-center" aria-label="مسئولان">
+            <AvatarGroup>
+              {assigneeNames.slice(0, 3).map((name) => {
+                const member = members.find((m) => m.name === name)
+                return (
+                  <Avatar key={name} size="sm">
+                    {member?.avatarUrl && <AvatarImage src={member.avatarUrl} alt={name} />}
+                    <AvatarFallback className="text-[10px]">{name.slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                )
+              })}
+              {assigneeNames.length > 3 && (
+                <AvatarGroupCount className="size-6 text-[10px]">+{assigneeNames.length - 3}</AvatarGroupCount>
+              )}
+            </AvatarGroup>
+          </DialogTrigger>
+        ) : assigneeNames.length === 1 ? (
+          <DialogTrigger
+            onPointerDown={stop}
+            onClick={stop}
+            className="flex w-fit shrink-0 items-center gap-1 rounded-full bg-bg2 py-0.5 ps-1 pe-2 text-[11px] font-semibold text-text2 hover:bg-bg3"
+          >
+            <Avatar size="sm">
+              {members.find((m) => m.name === assigneeNames[0])?.avatarUrl && (
+                <AvatarImage src={members.find((m) => m.name === assigneeNames[0])!.avatarUrl} alt={assigneeNames[0]} />
+              )}
+              <AvatarFallback className="text-[10px]">{assigneeNames[0].slice(0, 1)}</AvatarFallback>
+            </Avatar>
+            {assigneeNames[0]}
+          </DialogTrigger>
+        ) : (
+          <DialogTrigger onPointerDown={stop} onClick={stop} className={fieldIconTriggerClass} aria-label="تعیین مسئول">
+            <RemixIcon name="user-add-line" className="text-base" />
+          </DialogTrigger>
+        )
+      }
+    />
   )
 }
 
@@ -204,20 +215,20 @@ function TaskCardBody({
     <>
       <p className="py-1 text-sm font-medium text-foreground">{task.title}</p>
 
-      {task.assigneeName && (
+      {task.assigneeNames && task.assigneeNames.length > 0 && (
         <AssigneeField
           task={task}
           projectId={projectId}
-          onChange={(name) => onUpdate({ assigneeName: name || undefined })}
+          onChange={(names) => onUpdate({ assigneeNames: names.length > 0 ? names : undefined })}
         />
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {!task.assigneeName && (
+        {(!task.assigneeNames || task.assigneeNames.length === 0) && (
           <AssigneeField
             task={task}
             projectId={projectId}
-            onChange={(name) => onUpdate({ assigneeName: name || undefined })}
+            onChange={(names) => onUpdate({ assigneeNames: names.length > 0 ? names : undefined })}
           />
         )}
         <FieldIcon name="file-text-line" active={Boolean(task.description)} />
@@ -298,11 +309,11 @@ function Column({
       }`}
     >
       <div className="flex items-center gap-2 px-4 pt-4 pb-1">
+        <span className="h-4 w-2 shrink-0 rounded-full" style={{ backgroundColor: column.color }} />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{column.label}</span>
         <span className="flex shrink-0 items-center justify-center rounded-full bg-background px-2 py-0.5 text-xs font-semibold text-foreground">
           {taskIds.length}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{column.label}</span>
-        <span className="h-4 w-2 shrink-0 rounded-full" style={{ backgroundColor: column.color }} />
       </div>
 
       <SortableContext id={column.id} items={taskIds} strategy={verticalListSortingStrategy}>

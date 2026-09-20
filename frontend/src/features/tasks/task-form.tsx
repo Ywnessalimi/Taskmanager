@@ -8,13 +8,14 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import { TaskDetailHeader } from "@/features/tasks/task-detail-header"
+import { AssigneePickerDialog } from "@/features/tasks/assignee-picker-dialog"
 import { DateEditDialog } from "@/features/tasks/date-edit-dialog"
 import { TagPickerDialog } from "@/features/tasks/tag-picker-dialog"
 import { StartTimerPill, TimeSpentBox, useTaskTimer } from "@/features/tasks/time-tracking"
@@ -46,7 +47,7 @@ const PILL_CLASS =
 export type TaskFormValues = {
   title: string
   projectId: string
-  assigneeName: string
+  assigneeNames: string[]
   dueDate: string
   startDate: string
   repeat: RepeatOption
@@ -98,7 +99,7 @@ export function TaskForm({
 
   const [title, setTitle] = useState(task?.title ?? "")
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "")
-  const [assigneeName, setAssigneeName] = useState(task?.assigneeName ?? "")
+  const [assigneeNames, setAssigneeNames] = useState<string[]>(task?.assigneeNames ?? [])
   const [dueDate, setDueDate] = useState(task?.dueDate ?? "")
   const [startDate, setStartDate] = useState(task?.startDate ?? "")
   const [repeat, setRepeat] = useState<RepeatOption>(task?.repeat ?? "none")
@@ -119,7 +120,7 @@ export function TaskForm({
     return {
       title: title.trim(),
       projectId,
-      assigneeName,
+      assigneeNames,
       dueDate: dueDate.trim(),
       startDate: startDate.trim(),
       repeat,
@@ -165,7 +166,7 @@ export function TaskForm({
     isEdit,
     title,
     projectId,
-    assigneeName,
+    assigneeNames,
     dueDate,
     startDate,
     repeat,
@@ -215,13 +216,13 @@ export function TaskForm({
                 <RemixIcon name="arrow-down-s-line" className="text-lg" />
                 <PriorityDot priority={priority} label={t(PRIORITY_KEY[priority])} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-44 min-w-44">
                 <DropdownMenuRadioGroup
                   value={priority}
                   onValueChange={(value) => setPriority(value as TaskPriority)}
                 >
                   {PRIORITIES.map((value) => (
-                    <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+                    <DropdownMenuRadioItem key={value} value={value} closeOnClick className="whitespace-nowrap">
                       <PriorityDot priority={value} label={t(PRIORITY_KEY[value])} />
                       {t(PRIORITY_KEY[value])}
                     </DropdownMenuRadioItem>
@@ -243,7 +244,7 @@ export function TaskForm({
                 value={projectId}
                 onValueChange={(value) => {
                   setProjectId(value as string)
-                  setAssigneeName("")
+                  setAssigneeNames([])
                 }}
               >
                 {projects.map((project) => (
@@ -304,31 +305,51 @@ export function TaskForm({
 
           {isEdit && <StartTimerPill timer={timer} />}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger className={PILL_CLASS}>
-              <RemixIcon name="user-line" className="text-base" />
-              {assigneeName || t("taskForm.assign")}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuRadioGroup
-                value={assigneeName}
-                onValueChange={(value) => setAssigneeName(value as string)}
-              >
-                <DropdownMenuRadioItem value="" closeOnClick>
-                  {t("taskForm.noAssignee")}
-                </DropdownMenuRadioItem>
-                {selectedProject?.members.map((member) => (
-                  <DropdownMenuRadioItem key={member.name} value={member.name} closeOnClick>
+          <AssigneePickerDialog
+            members={selectedProject?.members ?? []}
+            assigneeNames={assigneeNames}
+            onChange={setAssigneeNames}
+            trigger={
+              <DialogTrigger className={assigneeNames.length > 1 ? "flex items-center rounded-md p-2 hover:bg-bg2" : PILL_CLASS}>
+                {assigneeNames.length > 1 ? (
+                  <AvatarGroup>
+                    {assigneeNames.slice(0, 3).map((name) => {
+                      const member = selectedProject?.members.find((m) => m.name === name)
+                      return (
+                        <Avatar key={name} size="sm">
+                          {member?.avatarUrl && <AvatarImage src={member.avatarUrl} alt={name} />}
+                          <AvatarFallback className="text-[10px]">{name.slice(0, 1)}</AvatarFallback>
+                        </Avatar>
+                      )
+                    })}
+                    {assigneeNames.length > 3 && (
+                      <AvatarGroupCount className="size-6 text-[10px]">
+                        +{assigneeNames.length - 3}
+                      </AvatarGroupCount>
+                    )}
+                  </AvatarGroup>
+                ) : assigneeNames.length === 1 ? (
+                  <>
                     <Avatar size="sm">
-                      {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
-                      <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
+                      {selectedProject?.members.find((m) => m.name === assigneeNames[0])?.avatarUrl && (
+                        <AvatarImage
+                          src={selectedProject!.members.find((m) => m.name === assigneeNames[0])!.avatarUrl}
+                          alt={assigneeNames[0]}
+                        />
+                      )}
+                      <AvatarFallback className="text-[10px]">{assigneeNames[0].slice(0, 1)}</AvatarFallback>
                     </Avatar>
-                    {member.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    {assigneeNames[0]}
+                  </>
+                ) : (
+                  <>
+                    <RemixIcon name="user-line" className="text-base" />
+                    {t("taskForm.assign")}
+                  </>
+                )}
+              </DialogTrigger>
+            }
+          />
         </div>
 
         <textarea

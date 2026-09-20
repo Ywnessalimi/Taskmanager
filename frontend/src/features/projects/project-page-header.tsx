@@ -1,7 +1,9 @@
 "use client"
 
-import { PageHeader, type PageHeaderMenuItem } from "@/components/navigation/page-header"
+import { useRouter } from "next/navigation"
+import { PageHeader } from "@/components/navigation/page-header"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { useT } from "@/components/providers/locale-provider"
 
 /**
  * پوسته‌ی نازک روی `PageHeader` مخصوص صفحه‌ی پروژه — تنها مصرف‌کننده‌اش
@@ -17,17 +19,37 @@ import { useTaskPanel } from "@/components/providers/task-panel-provider"
 export function ProjectPageHeader({
   title,
   subtitle,
-  menu,
+  projectId,
 }: {
   title: string
   subtitle?: string
-  menu?: PageHeaderMenuItem[][]
+  projectId: string
 }) {
   const panelOpen = Boolean(useTaskPanel()?.panel)
+  const router = useRouter()
+  const t = useT()
 
   return (
     <div className={panelOpen ? "hidden lg:block" : undefined}>
-      <PageHeader title={title} subtitle={subtitle} menu={menu} />
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        menu={[
+          [
+            { label: t("project.addTask"), icon: "task-line" },
+            { label: t("project.addMilestone"), icon: "flag-line" },
+            { label: t("project.addSection"), icon: "layout-column-line" },
+          ],
+          [
+            {
+              label: t("project.settings"),
+              icon: "settings-3-line",
+              onClick: () => router.push(`/home/projects/${projectId}/settings`),
+            },
+          ],
+          [{ label: t("project.delete"), icon: "delete-bin-line", destructive: true }],
+        ]}
+      />
     </div>
   )
 }

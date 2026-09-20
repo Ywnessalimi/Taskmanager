@@ -61,7 +61,8 @@ export type Task = {
   id: string
   displayId: string
   title: string
-  assigneeName?: string
+  /** نام‌های مسئولان تسک — یک تسک می‌تواند چند مسئول همزمان داشته باشد. */
+  assigneeNames?: string[]
   priority: TaskPriority
   dueDate?: string
   /** تاریخ شروع تسک — کنار `dueDate` در `DateEditDialog` تنظیم می‌شود. */
@@ -75,7 +76,7 @@ export type Task = {
   description?: string
   /** زیر-تسک‌ها (Sublist) — فقط برای نمای Tree استفاده می‌شود، حداکثر یک سطح در مدل فعلی */
   subtasks?: Task[]
-  /** نام اعضایی که این تسک را دنبال می‌کنند — مثل `assigneeName` با نام مچ می‌شود، نه id. */
+  /** نام اعضایی که این تسک را دنبال می‌کنند — مثل `assigneeNames` با نام مچ می‌شود، نه id. */
   followers?: string[]
   /** آیا کاربر جاری این تسک را «مورد علاقه» علامت زده است. */
   isFavorite?: boolean
@@ -229,7 +230,7 @@ export type MyTasksOverview = {
 export type TaskUpdateInput = {
   id: string
   title: string
-  assigneeName?: string
+  assigneeNames?: string[]
   dueDate?: string
   startDate?: string
   repeat?: RepeatOption
@@ -246,7 +247,7 @@ export type TaskUpdateInput = {
 export type NewTaskInput = {
   title: string
   projectId: string
-  assigneeName?: string
+  assigneeNames?: string[]
   dueDate?: string
   startDate?: string
   repeat?: RepeatOption

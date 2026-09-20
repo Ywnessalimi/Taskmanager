@@ -37,7 +37,7 @@ export function TaskDetailForm({
         await updateTask({
           id: task.id,
           title: values.title,
-          assigneeName: values.assigneeName || undefined,
+          assigneeNames: values.assigneeNames.length > 0 ? values.assigneeNames : undefined,
           dueDate: values.dueDate || undefined,
           startDate: values.startDate || undefined,
           repeat: values.repeat,

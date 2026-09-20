@@ -30,15 +30,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <ProjectPageHeader
         title={project.name}
         subtitle={project.organizationName}
-        menu={[
-          [
-            { label: t(locale, "project.addTask"), icon: "task-line" },
-            { label: t(locale, "project.addMilestone"), icon: "flag-line" },
-            { label: t(locale, "project.addSection"), icon: "layout-column-line" },
-          ],
-          [{ label: t(locale, "project.settings"), icon: "settings-3-line" }],
-          [{ label: t(locale, "project.delete"), icon: "delete-bin-line", destructive: true }],
-        ]}
+        projectId={project.id}
       />
 
       <SectionTabs

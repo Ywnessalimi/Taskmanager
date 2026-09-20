@@ -63,7 +63,7 @@ export function PageHeader({
           >
             <RemixIcon name="more-line" className="text-lg" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-48 min-w-48">
             {menu.map((group, groupIndex) => (
               <div key={groupIndex}>
                 {groupIndex > 0 && <DropdownMenuSeparator />}
@@ -72,6 +72,7 @@ export function PageHeader({
                     key={item.label}
                     variant={item.destructive ? "destructive" : "default"}
                     onClick={item.onClick}
+                    className="whitespace-nowrap"
                   >
                     <RemixIcon name={item.icon} className="text-base" />
                     {item.label}

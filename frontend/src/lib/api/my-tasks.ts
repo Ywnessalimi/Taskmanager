@@ -10,7 +10,7 @@ import type { MyTask, MyTasksOverview, Task } from "./types"
 
 /** آیا این تسک (یا یکی از زیرتسک‌هایش) به کاربر تخصیص داده شده؟ */
 function isMine(task: Task, userName: string): boolean {
-  return task.assigneeName === userName
+  return Boolean(task.assigneeNames?.includes(userName))
 }
 
 /** تسک را با نگه‌داشتن فقط زیرتسک‌های خودِ کاربر برمی‌گرداند. */

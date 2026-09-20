@@ -74,13 +74,13 @@ export function TaskDetailHeader({
           >
             <PriorityDot priority={priority} />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-44 min-w-44">
             <DropdownMenuRadioGroup
               value={priority}
               onValueChange={(value) => onPriorityChange(value as TaskPriority)}
             >
               {PRIORITIES.map((value) => (
-                <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+                <DropdownMenuRadioItem key={value} value={value} closeOnClick className="whitespace-nowrap">
                   <PriorityDot priority={value} label={t(PRIORITY_KEY[value])} />
                   {t(PRIORITY_KEY[value])}
                 </DropdownMenuRadioItem>

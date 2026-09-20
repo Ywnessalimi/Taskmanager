@@ -34,7 +34,7 @@ export function TableView({ tasks }: { tasks: Task[] }) {
               </td>
               <td className={`${CELL} text-xs text-text3`}>{task.displayId}</td>
               <td className={`${CELL} text-foreground`}>{task.title}</td>
-              <td className={`${CELL} text-xs text-text2`}>{task.assigneeName ?? "—"}</td>
+              <td className={`${CELL} text-xs text-text2`}>{task.assigneeNames?.join("، ") || "—"}</td>
               <td className={`${CELL} text-xs text-text2`}>{task.dueDate ?? "—"}</td>
               <td className={`${CELL} text-xs text-text2`} title={PRIORITY_LABEL[task.priority]}>
                 {STATUS_LABEL[task.status]}
