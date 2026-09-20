@@ -1,15 +1,15 @@
-# مستندات پروژه (Documentation Index)
+# Project Documentation (Documentation Index)
 
-این پوشه منبع اصلی حقیقت (Source of Truth) درباره‌ی محصول، طراحی، فرانت‌اند و بک‌اند پروژه است. قبل از هرگونه تغییر در کد، سند مرتبط باید خوانده و در صورت نیاز به‌روزرسانی شود (رجوع کنید به قوانین [AGENTS.md](../AGENTS.md)).
+This folder is the source of truth for the project's product, design, frontend, and backend. Before changing any code, read the relevant document and update it if needed (see the rules in [AGENTS.md](../AGENTS.md)).
 
-## ترتیب پیشنهادی مطالعه
+## Suggested reading order
 
-1. **[PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)** — چشم‌انداز محصول، واژه‌نامه، مدل داده‌ی مفهومی، معماری اطلاعات (۴ تب اصلی) و شرح کامل صفحات. نقطه‌ی شروع هر تصمیم دیگر.
-2. **[DESIGN.md](./DESIGN.md)** — زبان بصری: رنگ، تایپوگرافی، اندازه‌ی المان‌ها، الگوی دکمه‌ها و نماها.
-3. **[FRONTEND.md](./FRONTEND.md)** — معماری فرانت‌اند با Next.js: مسیرها، کامپوننت‌ها، لایه‌ی داده.
-4. **[BACKEND.md](./BACKEND.md)** — معماری بک‌اند با Django + SQLite: اپ‌ها، مدل داده، API، مسیر مهاجرت.
-5. **[DEPLOYMENT.md](./DEPLOYMENT.md)** — اجرای نسخه‌ی نمایشی روی سرور: خروجی standalone، سرویس systemd، پورت و فایروال.
+1. **[PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)** — product vision, glossary, conceptual data model, information architecture (the 4 main tabs), and a full description of the pages. The starting point for every other decision.
+2. **[DESIGN.md](./DESIGN.md)** — the visual language: color, typography, element sizing, and button/view patterns.
+3. **[FRONTEND.md](./FRONTEND.md)** — the frontend architecture with Next.js: routes, components, the data layer.
+4. **[BACKEND.md](./BACKEND.md)** — the backend architecture with Django + SQLite: apps, data model, API, migration path.
+5. **[DEPLOYMENT.md](./DEPLOYMENT.md)** — running the demo build on a server: standalone output, systemd service, port, and firewall.
 
-## وضعیت فعلی پروژه
+## Current project status
 
-فاز اول: فقط فرانت‌اند (Next.js) به‌طور کامل ساخته می‌شود؛ بک‌اند (Django + SQLite) ساده و مبتدی است اما با ساختاری که مهاجرت بعدی به سیستم حرفه‌ای‌تر را آسان نگه می‌دارد. جزئیات در بخش پایانی [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md#۴-نقشه‌ی-راه-فاز-اول-phase-1-scope).
+Phase 1: only the frontend (Next.js) is being fully built; the backend (Django + SQLite) is simple and basic, but structured so a later migration to a more professional system stays easy. Details are in the closing section of [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md#۴-نقشه‌ی-راه-فاز-اول-phase-1-scope).
