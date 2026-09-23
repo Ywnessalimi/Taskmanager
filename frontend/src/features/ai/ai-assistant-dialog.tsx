@@ -11,17 +11,6 @@ export const AI_GRADIENT = "linear-gradient(145deg, #5A8AF1 9.48%, #D591E9 46.32
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string }
 
-function AIIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <span
-      className={`flex shrink-0 items-center justify-center text-white ${className ?? ""}`}
-      style={{ backgroundImage: AI_GRADIENT, ...style }}
-    >
-      <RemixIcon name="sparkling-2-fill" />
-    </span>
-  )
-}
-
 /**
  * محتوای مودال «دستیار» — تریگرش `AIAssistantFab` است. واریانت `floatingPanel` در
  * `dialog.tsx`: تمام‌صفحه در موبایل، و از `sm:` به بعد یک پنل شناور همیشه چسبیده به سمت
@@ -65,8 +54,8 @@ export function AIAssistantDialog() {
     <DialogContent variant="floatingPanel" showCloseButton={false} className="gap-0 p-0">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
         <div className="flex items-center gap-1.5">
+          <Image src="/images/ai/assistant-icon.png" alt="" width={20} height={20} className="size-5 shrink-0" />
           <span className="text-sm font-medium text-foreground">{t("aiAssistant.title")}</span>
-          <AIIcon className="size-5 rounded-full text-[11px]" />
         </div>
         <DialogClose
           aria-label={t("taskDetail.close")}

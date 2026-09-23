@@ -9,7 +9,7 @@
  *   ۲. نام‌مستعارهای اضافه‌ی این پروژه (--bg2, --text2, --icon, --brand, ...) که روی همان
  *      توکن‌های استاندارد سوارند و در سراسر کامپوننت‌ها استفاده شده‌اند — رجوع به
  *      docs/FRONTEND.md بخش ۵.
- * رنگ برند/Primary این پروژه بنفش (#B473F4) است و در هر دو تم روشن/تیره ثابت می‌ماند.
+ * رنگ برند/Primary این پروژه آبی (#165DFB) است و در هر دو تم روشن/تیره ثابت می‌ماند.
  *
  * سه حالت ظاهر: پیش‌فرض `:root` روشن است؛ وقتی کاربر «ظاهر» را روی «سیستم» گذاشته
  * (یعنی هیچ `data-theme` روی `<html>` نیست)، `@media (prefers-color-scheme: dark)` تصمیم
@@ -26,7 +26,7 @@
   --card-foreground: #444436;
   --popover: #ffffff;
   --popover-foreground: #444436;
-  --primary: #b473f4;
+  --primary: #165dfb;
   --primary-foreground: #ffffff;
   --secondary: #e9e9e2;
   --secondary-foreground: #444436;
@@ -38,20 +38,20 @@
   --destructive-foreground: #ffffff;
   --border: #edece2;
   --input: #edece2;
-  --ring: #b473f4;
-  --chart-1: #b473f4;
+  --ring: #165dfb;
+  --chart-1: #165dfb;
   --chart-2: #53a871;
   --chart-3: #d8b448;
   --chart-4: #6870ff;
   --chart-5: #ff5555;
   --sidebar: #ffffff;
   --sidebar-foreground: #444436;
-  --sidebar-primary: #b473f4;
+  --sidebar-primary: #165dfb;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f8f8f6;
-  --sidebar-accent-foreground: #b473f4;
+  --sidebar-accent-foreground: #165dfb;
   --sidebar-border: #edece2;
-  --sidebar-ring: #b473f4;
+  --sidebar-ring: #165dfb;
 
   /* --- نام‌مستعارهای اضافه‌ی این پروژه (تم روشن) --- */
   --bg: var(--background);
@@ -88,7 +88,7 @@
     --card-foreground: #efefef;
     --popover: #222221;
     --popover-foreground: #efefef;
-    --primary: #b473f4;
+    --primary: #165dfb;
     --primary-foreground: #ffffff;
     --secondary: #2c2c2b;
     --secondary-foreground: #efefef;
@@ -100,20 +100,20 @@
     --destructive-foreground: #ffffff;
     --border: #292925;
     --input: #292925;
-    --ring: #b473f4;
-    --chart-1: #b473f4;
+    --ring: #165dfb;
+    --chart-1: #165dfb;
     --chart-2: #349155;
     --chart-3: #f5d167;
     --chart-4: #6870ff;
     --chart-5: #ff5555;
     --sidebar: #222221;
     --sidebar-foreground: #efefef;
-    --sidebar-primary: #b473f4;
+    --sidebar-primary: #165dfb;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #1f1f1e;
-    --sidebar-accent-foreground: #b473f4;
+    --sidebar-accent-foreground: #165dfb;
     --sidebar-border: #292925;
-    --sidebar-ring: #b473f4;
+    --sidebar-ring: #165dfb;
 
     /* --- نام‌مستعارهای اضافه‌ی این پروژه (تم تیره) --- */
     --bg: var(--background);
@@ -149,7 +149,7 @@
   --card-foreground: #efefef;
   --popover: #222221;
   --popover-foreground: #efefef;
-  --primary: #b473f4;
+  --primary: #165dfb;
   --primary-foreground: #ffffff;
   --secondary: #2c2c2b;
   --secondary-foreground: #efefef;
@@ -161,20 +161,20 @@
   --destructive-foreground: #ffffff;
   --border: #292925;
   --input: #292925;
-  --ring: #b473f4;
-  --chart-1: #b473f4;
+  --ring: #165dfb;
+  --chart-1: #165dfb;
   --chart-2: #349155;
   --chart-3: #f5d167;
   --chart-4: #6870ff;
   --chart-5: #ff5555;
   --sidebar: #222221;
   --sidebar-foreground: #efefef;
-  --sidebar-primary: #b473f4;
+  --sidebar-primary: #165dfb;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1f1f1e;
-  --sidebar-accent-foreground: #b473f4;
+  --sidebar-accent-foreground: #165dfb;
   --sidebar-border: #292925;
-  --sidebar-ring: #b473f4;
+  --sidebar-ring: #165dfb;
 
   --bg: var(--background);
   --bg2: var(--muted);

@@ -9,7 +9,7 @@
 export function AppHeader({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
     <header className="flex h-13 items-center gap-2 border-b border-border bg-background px-4">
-      <h1 className="min-w-0 flex-1 truncate text-base font-medium text-foreground">{title}</h1>
+      <h1 className="min-w-0 shrink truncate text-base font-medium text-foreground">{title}</h1>
       {action}
     </header>
   )
