@@ -52,6 +52,7 @@ const dialogContentVariants = cva(
        * پایین ثابت است؛ اگر اینجا هم اسکرول/پدینگ می‌گذاشتیم، آن نوار پایین دیگر واقعاً به
        * «پایین پنل» نمی‌چسبید (فقط به‌انتهای محتوایی که اسکرول شده). */
       variant: {
+        createMenu: "bottom-22 start-2.5 flex w-[129px] flex-col items-start gap-2 bg-transparent ring-0 data-open:fade-in-0 data-closed:fade-out-0",
         center:
           "top-1/2 start-1/2 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-sm",
         side: "inset-y-0 start-0 flex h-full w-[30%] min-w-80 max-w-md flex-col overflow-hidden border-e border-border data-open:fade-in-0 data-closed:fade-out-0",
@@ -69,6 +70,9 @@ const dialogContentVariants = cva(
          * height صریح: مرورگر خودش وقتی هم `top` هم `bottom` ست شده باشد ارتفاع را پر می‌کند). */
         floatingPanel:
           "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-2 sm:right-2 sm:bottom-2 sm:h-auto sm:w-full sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-xl",
+        /** فضای ساخت تسک: راست فیزیکی با فاصلهٔ ۱۶px؛ جزئیات و فعالیت‌ها اسکرول مستقل دارند. */
+        taskWorkspace:
+          "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-4 sm:right-4 sm:bottom-4 sm:h-auto sm:w-[calc(100%-2rem)] sm:max-w-[1072px] sm:rounded-2xl sm:border sm:border-[var(--task-workspace-border)]",
       },
     },
     defaultVariants: {
@@ -81,15 +85,17 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayClassName,
   variant = "center",
   ...props
 }: DialogPrimitive.Popup.Props &
   VariantProps<typeof dialogContentVariants> & {
     showCloseButton?: boolean
+    overlayClassName?: string
   }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(dialogContentVariants({ variant }), className)}

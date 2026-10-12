@@ -57,6 +57,8 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
     id: "proj-1",
     name: "بازطراحی وب‌سایت",
     organizationId: "org-1",
+    divisionId: "division-1",
+    divisionName: "معاونت توسعه",
     organizationName: "شرکت نوین‌ساز",
     startDate: "1404/04/01",
     endDate: "1404/07/15",
@@ -114,6 +116,8 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
     id: "proj-2",
     name: "اپلیکیشن موبایل",
     organizationId: "org-1",
+    divisionId: "division-3",
+    divisionName: "معاونت محصول",
     organizationName: "شرکت نوین‌ساز",
     startDate: "1404/03/01",
     endDate: "1404/09/01",
@@ -136,6 +140,8 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
     id: "proj-3",
     name: "کمپین تبلیغاتی بهار",
     organizationId: "org-2",
+    divisionId: "division-2",
+    divisionName: "معاونت بازاریابی",
     organizationName: "تیم طراحی آبی",
     startDate: "1404/01/10",
     endDate: "1404/03/01",
@@ -153,8 +159,8 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
 ]
 
 /** درصد پیشرفت هر پروژه از روی سهم تسک‌های completed، برای ردیف پروژه در صفحه‌ی سازمان. */
-function projectRefs(organizationId: string): ProjectRef[] {
-  return MOCK_PROJECTS.filter((p) => p.organizationId === organizationId).map((p) => {
+function projectRefs(organizationId: string, divisionId?: string): ProjectRef[] {
+  return MOCK_PROJECTS.filter((p) => p.organizationId === organizationId && (!divisionId || p.divisionId === divisionId)).map((p) => {
     const { todo, inProgress, completed } = p.statusDistribution
     const total = todo + inProgress + completed
     return { id: p.id, name: p.name, progress: total > 0 ? Math.round((completed / total) * 100) : 0 }
@@ -178,6 +184,10 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
         avatarUrl: "/avatars/u4.svg",
       },
     ],
+    divisions: [
+      { id: "division-1", organizationId: "org-1", name: "معاونت توسعه", projects: projectRefs("org-1", "division-1") },
+      { id: "division-3", organizationId: "org-1", name: "معاونت محصول", projects: projectRefs("org-1", "division-3") },
+    ],
     projects: projectRefs("org-1"),
     taskCount: 30,
   },
@@ -189,6 +199,7 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
       { id: "u5", name: "نگار ملکی", role: "admin", activity: mockMemberActivity(4), avatarUrl: "/avatars/u5.svg" },
       { id: "u6", name: "امیر صادقی", role: "member", activity: mockMemberActivity(6), avatarUrl: "/avatars/u6.svg" },
     ],
+    divisions: [{ id: "division-2", organizationId: "org-2", name: "معاونت بازاریابی", projects: projectRefs("org-2") }],
     projects: projectRefs("org-2"),
     taskCount: 13,
   },

@@ -19,6 +19,27 @@
  */
 
 :root {
+  /* KalaMarket: ناوبری و محیط پروژه (فریم‌های 1710:27094/27362). */
+  --mini-bar-bg: #1d1e1f;
+  --mini-bar-border: #545454;
+  --mini-bar-muted: #acb7b8;
+  --project-brand: #0954ed;
+  --project-surface: #fafafa;
+  --project-filter-bg: #e5e6ff;
+  --project-filter-fg: #5f42de;
+  --project-column-blue: #f1f7ff;
+  --project-column-green: #eff7f4;
+  --project-column-red: #faf3f3;
+  --project-status-blue: #0082f2;
+  --project-status-green: #3bc4a8;
+  --project-status-red: #dc575a;
+  --task-workspace-bg: #f9f9f9;
+  --task-workspace-border: #eaeded;
+  --task-workspace-text: #141a1a;
+  --task-workspace-muted: #79817f;
+  --task-workspace-secondary: #626262;
+  --task-workspace-soft: #eeeeee;
+  --task-workspace-icon-filter: none;
   /* --- توکن‌های استاندارد shadcn (تم روشن) --- */
   --background: #ffffff;
   --foreground: #444436;
@@ -81,6 +102,13 @@
 /* تم تیره — وقتی سیستم تیره است و کاربر صریحاً «روشن» را انتخاب نکرده */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --task-workspace-bg: var(--bg2);
+    --task-workspace-border: var(--border);
+    --task-workspace-text: var(--foreground);
+    --task-workspace-muted: var(--text2);
+    --task-workspace-secondary: var(--text2);
+    --task-workspace-soft: var(--bg3);
+    --task-workspace-icon-filter: invert(1);
     /* --- توکن‌های استاندارد shadcn (تم تیره) --- */
     --background: #222221;
     --foreground: #efefef;
@@ -143,6 +171,13 @@
 
 /* تم تیره — وقتی کاربر صریحاً «تیره» را انتخاب کرده، صرف‌نظر از تنظیم سیستم */
 :root[data-theme="dark"] {
+  --task-workspace-bg: var(--bg2);
+  --task-workspace-border: var(--border);
+  --task-workspace-text: var(--foreground);
+  --task-workspace-muted: var(--text2);
+  --task-workspace-secondary: var(--text2);
+  --task-workspace-soft: var(--bg3);
+  --task-workspace-icon-filter: invert(1);
   --background: #222221;
   --foreground: #efefef;
   --card: #222221;

@@ -24,6 +24,12 @@
 
 ## ۳. ساختار مسیرها (Routing)
 
+**به‌روزرسانی ناوبری:** `/projects` ورودی محیط مستقل پروژه‌ها و فهرست همهٔ پروژه‌هاست؛ مسیرهای فعلی `/home/projects/[id]` تا زمان انتقال تدریجی همچنان صفحهٔ پروژهٔ انتخاب‌شده‌اند. مینی‌بار مشترک در `components/navigation` در موبایل پایین و در دسکتاپ سمت شروع (`start`) نمایش داده می‌شود؛ RTL/LTR با `dir` ریشه جابه‌جایی راست/چپ را انجام می‌دهد. فعلاً فقط پروژه‌ها و AI فعال‌اند. در نمای پروژه، Board با طرح جدید هماهنگ می‌شود و نماهای دیگر همان پیاده‌سازی قبلی را حفظ می‌کنند.
+
+صفحهٔ پروژه از `features/projects/project-section-tabs.tsx` برای یک نوار یکپارچه مطابق Figma node `1710:27099` استفاده می‌کند: Dashboard (محتوای Overview)، Board، List (Tree)، Table، Calendar، Gantt و «افزودن» صفحهٔ سفارشی. `SectionTabs` عمومی همچنان در «تسک‌های من» به کار می‌رود. SVGهای نوار پروژه در `public/images/figma/project-tabs/` ذخیره می‌شوند؛ محتوا و رفتار نماهای غیربرد تغییر نمی‌کند. `DesktopHeader` در همهٔ مسیرها طرح node `1710:27098` را نشان می‌دهد؛ عنوان از مسیر می‌آید و در صفحهٔ پروژه، نام پروژه از گزینه‌های واکشی‌شده در layout پیدا می‌شود و منوی انتخاب پروژه دارد. خوشهٔ سمت پایان به ترتیب «جدید»، جداکننده، جست‌وجو، اعلان و آواتار است. SVGهای این هدر در `public/images/figma/project-header/` ذخیره شده‌اند. نشان ستون Board از node `1710:27237` پیروی می‌کند؛ آیکون Figma آن در `public/images/figma/board/` قرار دارد و رنگ/آیکون ستون در state محلی Board نگه داشته می‌شود.
+
+رنگ‌های طرح جدید در `src/styles/colors.css` با پیشوندهای `--mini-bar-*` و `--project-*` تعریف شده‌اند؛ هیچ مؤلفهٔ محیط پروژه رنگ خام طرح را تکرار نمی‌کند. دارایی عکس مینی‌بار در `public/images/figma/minibar-profile.png` قرار دارد.
+
 ناوبری اصلی حول ۴ تب پایین صفحه است (مطابق [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md#۳-معماری-اطلاعات-۴-تب-اصلی)):
 
 ```
@@ -51,21 +57,23 @@ app/
 
 ## ۴. نگاشت مفاهیم محصول به کامپوننت‌ها
 
+جریان جدید هدر: `features/tasks/new-task-button.tsx` منوی Figma `1722:28239` را باز می‌کند و `features/tasks/new-task-dialog.tsx` مودال ساخت `1722:29819` را در Portal رندر می‌کند. این مودال از `TaskPanel` مستقل است؛ پنل جزئیات و ورودی‌های قبلی ساخت تسک همچنان مصرف‌کنندگان خود را دارند. گزینه‌های پروژه از layout و کاربر جاری از `DesktopHeader` می‌آیند. SVGهای دو طرح در `public/images/figma/new-task/` ذخیره می‌شوند. `DialogContent` واریانت `taskWorkspace` برای قاب ۱۶px و عرض حداکثر ۱۰۷۲px دارد.
+
 | مفهوم محصول | کامپوننت/ماژول فرانت پیشنهادی |
 |---|---|
 | Bottom Tab Bar | `components/navigation/BottomTabBar` |
 | ناوبری کناری دسکتاپ (`lg` به بالا) | `components/navigation/SidebarNav` — ساخته شد (رجوع به [DESIGN.md](./DESIGN.md#۸۱-نسخهی-دسکتاپ-نسخهی-اولیه)) |
 | هدر مستقل بالای محتوای دسکتاپ (اواتار، اعلان‌ها، جستجو، تسک جدید) | `components/navigation/DesktopHeader` — ساخته شد، طرح Figma «Header»؛ جدا از SidebarNav |
 | دکمه‌ی شناور «تسک جدید» (FAB) | `components/navigation/AddTaskFab` — ساخته شد (در `home` و `my-tasks`) |
-| فرم ساخت تسک جدید | `features/tasks/{TaskForm, TaskCreateForm}` — ساخته شد (`app/tasks/new/page.tsx` و پنل کناری) |
+| فرم ساخت تسک جدید | `features/tasks/{TaskForm, TaskCreateForm}` — ساخته شد (`app/tasks/new/page.tsx` و مودال مشترک) |
 | پنل جزئیات/ویرایش تسک | `features/tasks/{TaskPanel, TaskDetailForm}` + `components/providers/TaskPanelProvider` — ساخته شد (از `TreeView` باز می‌شود) |
 | پروفایل عمومی کاربر | `features/users/UserProfile` — ساخته شد (`app/users/[id]/page.tsx`) |
 | هدر خوش‌آمدگویی + تعداد تسک‌های در حال انجام در خانه | `features/home/HomeGreeting` — ساخته شد، طرح Figma «Home» |
 | لیست Workspace در خانه (با درصد پیشرفت هر پروژه) | `features/home/WorkspaceList` |
 | Organization Overview (هدر، اعضا، خلاصه‌ی پروژه‌ها، آخرین فعالیت‌ها) | `features/organizations/OrganizationOverview` — بازطراحی‌شده مطابق طرح Figma «Home/OrganizationPage» |
 | Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
-| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}` + سوییچر مشترک `features/projects/ViewSwitcher` — ساخته شد؛ محل واقعی زیر `features/projects/` است نه `features/tasks/` (چون از اول در همین‌جا توسعه داده شد) |
-| نوار تب اصلی صفحه + صفحه‌های افزودنی (سند/چت) | `features/pages/{SectionTabs, DocumentPage, ChatPage}` — ساخته شد |
+| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}`؛ صفحهٔ پروژه با `ProjectSectionTabs` و «تسک‌های من» با `ViewSwitcher` بین آن‌ها جابه‌جا می‌شوند |
+| نوار تب و صفحه‌های افزودنی (سند/چت) | `features/projects/ProjectSectionTabs` برای پروژه؛ `features/pages/{SectionTabs, DocumentPage, ChatPage}` برای «تسک‌های من» و محتوای سند/چت |
 | مدیریت ستون‌های Board | `features/projects/ColumnManager` — هنوز ساخته نشده، ستون‌ها فعلاً ثابت‌اند |
 | افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` — هنوز ساخته نشده |
 | کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Priority، Sublist) + دنبال‌کننده/علاقه‌مندی/زمان صرف‌شده/لاگ فعالیت/تاریخ+تکرار | `features/tasks/TaskForm` (حالت ویرایش) به‌همراه زیرکامپوننت‌های `task-detail-header`, `followers-dialog`, `time-tracking`, `activity-log`, `date-edit-dialog`, `tag-picker-dialog` — رجوع به [features/tasks/README.md](../frontend/src/features/tasks/README.md). Attachment/Comment هنوز ساخته نشده. |
@@ -118,12 +126,12 @@ app/
 | کامپوننت | دلیل نصب اولیه |
 |---|---|
 | `button` | دکمه‌ی Ghost/Primary در سراسر اپ (سایز پیش‌فرض ۳۲px، `lg` معادل ۳۶px — مطابق [DESIGN.md](./DESIGN.md#۵-الگوی-دکمهها)) |
-| `tabs` | سوییچ List/Overview در صفحه‌ی پروژه (`src/app/(tabs)/home/projects/[id]/page.tsx`) استفاده شده؛ فیلتر All/Unread/Read/Approval در اعلان‌ها هنوز نه |
+| `tabs` | نوار یکپارچهٔ Dashboard/Board/List/Table/Calendar/Gantt پروژه در `ProjectSectionTabs` و لیست/نمای‌کلی «تسک‌های من»؛ فیلتر All/Unread/Read/Approval در اعلان‌ها هنوز نه |
 | `avatar` | نمایش اعضا در `OrganizationOverview` استفاده شده (فعلاً فقط `AvatarFallback` با حرف اول اسم، بدون عکس واقعی) |
 | `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
 | `separator` | جداکننده‌ی بین بخش‌های `OrganizationOverview` (هدر/خلاصه‌ی پروژه‌ها/آخرین فعالیت‌ها) |
 | `direction` | `DirectionProvider`/`useDirection` برای پشتیبانی RTL |
-| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان)؛ `DialogContent` سه واریانت دارد — `variant="center"` (پیش‌فرض، مودال وسط‌چین معمولی)، `variant="side"` (پنل تمام‌ارتفاع چسبیده به سمت راست صفحه، تقریباً ۳۰٪ عرض — فعلاً بدون مصرف‌کننده: پنل تسک از مودال به `TaskPanel` داخل `SectionTabs` منتقل شد)، و `variant="fullscreen"` (موبایل: تمام صفحه بدون گوشه‌ی گرد؛ از `sm:` به بعد یک مودال متمرکز معمولی — برای زیربخش‌هایی از جزئیات تسک که «صفحه»ی مجزا نیستند، مثل `FollowersDialog`/`TimerDialog`/`ActivityLogDialog`/`DateEditDialog`/`TagPickerDialog` در `features/tasks/`) |
+| `dialog` | `MembersDialog` (مودال مدیریت اعضای سازمان)؛ `DialogContent` سه واریانت دارد — `variant="center"` (پیش‌فرض، مودال وسط‌چین معمولی)، `variant="side"` (پنل تمام‌ارتفاع چسبیده به سمت راست صفحه، تقریباً ۳۰٪ عرض — فعلاً بدون مصرف‌کننده: TaskPanel اکنون از taskWorkspace استفاده می‌کند)، و `variant="fullscreen"` (موبایل: تمام صفحه بدون گوشه‌ی گرد؛ از `sm:` به بعد یک مودال متمرکز معمولی — برای زیربخش‌هایی از جزئیات تسک که «صفحه»ی مجزا نیستند، مثل `FollowersDialog`/`TimerDialog`/`ActivityLogDialog`/`DateEditDialog`/`TagPickerDialog` در `features/tasks/`) |
 | `dropdown-menu` | منوی سه‌نقطه‌ی `PageHeader` و منوی سه‌نقطه‌ی هر ردیف عضو در `MembersDialog` |
 | `popover` | `NotificationsPreviewDialog` — برخلاف `dialog`، **غیرمودال** است: بدون پس‌زمینه‌ی تیره، دقیقاً کنار همان آیکونی که کلیک شده باز می‌شود، با سایه‌ی کوچک (نه backdrop) از بقیه‌ی صفحه متمایز می‌شود، و با کلیک روی هر نقطه‌ی دیگر خودش بسته می‌شود |
 | `switch` | تاگل «فقط ادمین‌ها می‌توانند عضو جدید اضافه کنند» در `MembersDialog` |
@@ -185,18 +193,19 @@ src/features/organizations/
   members-dialog.tsx         → MembersDialog: مودال مدیریت اعضا (تاگل دسترسی دعوت، افزودن عضو، تغییر نقش/حذف — همه محلی)
 src/features/projects/
   task-display.tsx        → ثابت‌ها/کامپوننت مشترک نماها: PRIORITY_LABEL/COLOR، STATUS_LABEL، STATUS_COLUMNS، PriorityDot
-  project-task-list.tsx    → ProjectTaskList (Client): سوییچر ۵ نما — همه‌ی ۵ تا واقعاً پیاده شده‌اند (زیر)
+  project-section-tabs.tsx → نوار یکپارچهٔ پروژه با Dashboard، نماها، و افزودن صفحه
+  project-task-list.tsx    → ProjectTaskList (Client): محتوای نمای انتخاب‌شده از ۵ نما (زیر)
   views/table-view.tsx      → TableView: جدول واقعی با هدر ستون و بوردر بین همه‌ی سلول‌ها
   views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks)
   views/board-view.tsx       → BoardView: کانبان با Drag & Drop واقعی (@dnd-kit) بین ۳ ستون ثابت (وضعیت تسک)
-  view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: نوار سوییچ ۵ نما (آیکون + متن، با بوردر زیرین) — مشترک بین ProjectTaskList و MyTaskList
+  view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: نوار سوییچ ۵ نما برای MyTaskList
   views/timeline-view.tsx    → TimelineView: ساید‌بار جمع‌شونده‌ی تسک‌ها + تقویم افقی اسکرول‌شونده (مقیاس روزانه/هفتگی/ماهانه، دکمه‌ی «امروز»)
   views/calendar-view.tsx    → CalendarView: تقویم ماهانه با پیمایش بین ماه‌های دارای تسک
   project-overview.tsx      → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
                                پراکندگی وضعیت تسک‌ها (SectionBox + StatusDonutChart)، تقویم سررسیدها (SectionBox، Placeholder ساده)،
                                فعالیت اعضا (SectionBox + ActivityHeatmap)
 src/features/pages/
-  section-tabs.tsx      → SectionTabs (Client): نوار تب اصلی (لیست/نمای‌کلی + صفحه‌های افزوده‌شده + دکمه‌ی +)
+  section-tabs.tsx      → SectionTabs (Client): نوار تب «تسک‌های من» (لیست/نمای‌کلی + صفحه‌های افزوده‌شده + دکمه‌ی +)
   document-page.tsx      → DocumentPage: صفحه‌ی خالی نوشتن متن
   chat-page.tsx          → ChatPage: صفحه‌ی چت (state محلی، بدون بلادرنگ)
 src/features/tasks/
@@ -217,7 +226,7 @@ src/features/notifications/
 src/app/(tabs)/
   home/page.tsx                     → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
   home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
-  home/projects/[id]/page.tsx       → getProject(id) + PageHeader + Tabs شادکن (لیست/نمای‌کلی) → ProjectTaskList / ProjectOverview
+  home/projects/[id]/page.tsx       → getProject(id) + ProjectPageHeader + ProjectSectionTabs → Dashboard / ۵ نمای تسک / سند و چت
   notifications/page.tsx            → getNotifications() + NotificationList
   account/page.tsx                  → getCurrentUser() + AccountSettings
   my-tasks/page.tsx                 → getCurrentUser() + getMyTasks/Range/Overview + Tabs (لیست/نمای‌کلی)
@@ -241,9 +250,9 @@ src/components/providers/
 
 نکات مهم برای ادامه‌ی کار:
 
-- **پنل تسک عمداً مودال نیست**: `TaskPanel` داخل ردیف flexِ `SectionTabs` رندر می‌شود و باکس لیست/نمای‌کلی را کنار خودش جمع می‌کند (سمت شروع/راست در RTL). چون باز‌کننده‌هایش (`NewTaskButton` در هدرِ layout و ردیف‌های `TreeView` داخل صفحه) با خودِ پنل در شاخه‌های مختلف درخت‌اند، وضعیتش از `TaskPanelProvider` (Context، در `app/(tabs)/layout.tsx`) می‌آید. زیر `lg` جا برای دو ستون نیست، پس آنجا پنل تمام‌عرض می‌شود و تب‌ها پنهان می‌شوند.
+- **جزئیات تسک مودال است**: `TaskPanel` در پروژه و تسک‌های من میزبان Dialog مشترک NewTaskDialog است؛ وضعیت از TaskPanelProvider می‌آید و محتوای صفحه جمع یا پنهان نمی‌شود.
 - **`my-tasks` و صفحه‌ی پروژه پس‌زمینه‌ی سفید دارند** (نه `bg2` عمومی بدنه) — طبق بازخورد کاربر؛ برای اینکه سفید تا پایین صفحه کشیده شود، `main` و کانتینر `mx-auto` در layout یک ستون flex کشیده‌اند و خودِ صفحه `flex-1 bg-background` می‌گیرد.
-- **هدرها بیرون از کانتینر `p-4` صفحه رندر می‌شوند**: `AppHeader` و `PageHeader` تمام‌عرض و سفیدند، پس ساختار هر صفحه به شکل «هدر + یک `div` با `p-4` برای محتوا» است، نه یک کانتینر `p-4` دور همه‌چیز. در صفحه‌ی پروژه و تسک‌های من، `SectionTabs` هم بیرون از پدینگ می‌نشیند (نوار تب تمام‌عرض، پدینگ داخل پنل‌ها).
+- **هدرها بیرون از کانتینر `p-4` صفحه رندر می‌شوند**: `AppHeader` و `PageHeader` تمام‌عرض و سفیدند، پس ساختار هر صفحه به شکل «هدر + یک `div` با `p-4` برای محتوا» است، نه یک کانتینر `p-4` دور همه‌چیز. در صفحه‌ی پروژه `ProjectSectionTabs` و در تسک‌های من `SectionTabs` بیرون از پدینگ می‌نشینند (نوار تب تمام‌عرض، پدینگ داخل پنل‌ها).
 - **`TimelineView` عمداً دو جهت دارد**: ساید‌بار تسک‌ها در جریان RTL صفحه می‌ماند، اما ناحیه‌ی تقویم `dir="ltr"` است تا تاریخ از چپ به راست جلو برود و `scrollLeft` رفتار استاندارد داشته باشد. هدر تاریخ داخل همان کانتینر اسکرول است تا با تقویم هم‌زمان حرکت کند؛ ارتفاع ردیف‌های ساید‌بار (`h-9`) و ردیف خالی زیر عنوان آن (`h-7`) باید دقیقاً با دو ردیف هدر تقویم یکی بماند وگرنه ردیف‌ها از تراز خارج می‌شوند.
 - **`AddTaskFab` با کلاس‌های منطقی (`start-4`) جای‌گذاری شده**، نه `right-4` — چون کل اپ RTL است و `start` همان سمت راست است؛ اگر روزی LTR اضافه شد، دکمه خودبه‌خود به سمت درست می‌رود. ارتفاع `bottom` هم باید بالاتر از `h-14` نوار تب‌ها بماند.
 - **همه‌ی محاسبه‌های تاریخ در `src/lib/jalali.ts` متمرکز است** (`parseDate`, `formatDate`, `toOrdinal`/`fromOrdinal`, `addDays`, `startOfWeek`, `daysInMonth`, `MONTH_NAMES`, `isBefore`). این تقویم **واقعی نیست**: کبیسه ندارد (اسفند همیشه ۲۹ روز، هر سال ۳۶۵ روز) و `weekdayIndex` یک قرارداد داخلی است نه روزِ هفته‌ی واقعی — فقط برای ترتیب، فاصله و چیدمان نسبی معتبر است. `TimelineView` و `CalendarView` هر دو از همین ماژول استفاده می‌کنند (قبلاً هرکدام نسخه‌ی خودشان را داشتند).
@@ -285,3 +294,30 @@ src/components/providers/
 - `useTheme()` (`{ theme, setTheme }`) در هر Client Component قابل‌استفاده است.
 
 برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`). اگر بعد از چند بار ادیت پیاپی فایل‌ها خطاهای عجیب/قدیمی در کنسول مرورگر دیدید (مثل ارجاع به فایلی که قبلاً rename شده)، احتمالاً کش Turbopack کهنه شده — سرور را متوقف کنید، `frontend/.next` را پاک کنید، و دوباره اجرا کنید.
+
+### اصلاح نوار پروژه
+
+دکمهٔ جدول فعلاً از نوار پروژه حذف شده است؛ نمای جدول در کد و سایر مصرف‌کنندگان باقی می‌ماند. نشان تب فعال پروژه مشکی (`#141a1a`)، با ارتفاع ۵px و شعاع گوشه‌های بالایی ۴px است.
+
+پیش‌نمایش اعلان هدر مطابق Figma `1723:29972` است: عرض ۳۹۳px محدود به عرض صفحه، گوشهٔ ۱۶px، بدون سایه، نوار فیلتر پروژه و نشان فعال مشکی با گوشه‌های بالایی گرد. دادهٔ اعضا و پروژه‌ها پویاست؛ ردیف‌ها به مقصد اعلان و تنظیمات به حساب کاربری می‌روند. خواندن اعلان تنها در state محلی است.
+
+## معاونت‌ها و ساخت تیکت
+
+`Organization.divisions` گروه‌بندی شرکت ← معاونت ← پروژه است. `Project.divisionId/divisionName` مرجع معاونت پروژه‌اند؛ `Organization.projects` نمای تجمیعی سازگار است. ناوبری پروژه، کارت‌های `/projects`، خانه و نمای شرکت از معاونت‌ها استفاده می‌کنند.
+
+فیچر جدید `frontend/src/features/tickets/` فرم ساخت تیکت را نگه می‌دارد؛ مسیر مستقل `/tickets/new` برای موبایل است و منوی «جدید» دسکتاپ مودال TicketCreateDialog را باز می‌کند. قرارداد داده در `lib/api/tickets.ts` و `types.ts` است. UI از فرم‌های موجود، دیکشنری و توکن‌های مشترک پیروی می‌کند.
+
+## ساخت موبایل
+
+فیچر tasks میزبان `mobile-create-menu.tsx` (Dialog با زمینهٔ ۳۰٪ و گزینه‌های شناور) و `mobile-task-create-form.tsx` (صفحهٔ ساخت مطابق 1730:30051) است. `/tasks/new` گزینه‌ها و کاربر جاری را واکشی می‌کند و پروژهٔ انتخاب‌شده را از query می‌گیرد. فرم از DatePickerDialog، AssigneePickerDialog، TagPickerDialog، useTaskTimer و NewTaskActivity مشترک استفاده می‌کند. SVGهای موبایل در public/images/figma/mobile-task نگه‌داری می‌شوند.
+
+## ساخت خودکار و چیدمان مشترک تسک
+
+صفحهٔ ساخت تسک یک state مشترک دارد: زیر ۱۰۲۴px تمام عرض صفحه است، از ۱۰۲۴px یک قاب دسکتاپ با حداکثر عرض ۱۰۷۲px، جزئیات و فعالیت‌های کنار هم می‌شود. جابه‌جایی اندازه هیچ کامپوننت اطلاعاتی را unmount نمی‌کند. `features/tasks/local-created-tasks.ts` ذخیره/حذف تسک‌های خودکار را در localStorage انجام می‌دهد؛ با محتوای خالی رکورد نمی‌سازد.
+
+## ساخت تیکت مطابق فضای تسک
+
+فیچر tickets یک TicketWorkspace مشترک برای مودال هدر و صفحهٔ `/tickets/new` دارد. از DialogContent(taskWorkspace)، NewTaskAsset، MobileTaskAsset، NewTaskActivity و تب‌های مشترک استفاده می‌کند. زیر ۱۰۲۴px صفحه است؛ در دسکتاپ دو ستون جزئیات/فعالیت و قاب حداکثر ۱۰۷۲px دارد. state فرم مستقل از تغییر اندازه حفظ می‌شود. ذخیرهٔ خودکار و حذف محلی در local-created-tickets.ts است.
+
+## کارتابل و فضای کاری تسک
+features/tickets/ticket-inbox.tsx در app/(tabs)/inbox تیکت‌های Mock و local-created-tickets را ترکیب و فیلتر می‌کند؛ TicketCreateDialog برای ویرایش هم استفاده می‌شود. TaskPanel تنها میزبان Dialog است و NewTaskDialog را برای ساخت/ویرایش مصرف می‌کند. ویژگی recurrence روی Task/NewTaskInput/TaskUpdateInput تاریخ‌های انتخابی و تعداد تکرار را نگه می‌دارد؛ repeat-picker.tsx انتخابگر مشترک موبایل/دسکتاپ است. app/(tabs)/messages از ChatPage استفاده می‌کند.

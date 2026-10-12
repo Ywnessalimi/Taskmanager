@@ -1,43 +1,34 @@
-import { AIAssistantFab } from "@/components/navigation/ai-assistant-fab"
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar"
 import { DesktopHeader } from "@/components/navigation/desktop-header"
 import { SidebarNav } from "@/components/navigation/sidebar-nav"
 import { TaskPanelProvider } from "@/components/providers/task-panel-provider"
 import { getNotifications } from "@/lib/api/notifications"
-import { getOrganizations } from "@/lib/api/organizations"
 import { getTaskFormOptions } from "@/lib/api/tasks"
 import { getCurrentUser } from "@/lib/api/users"
 
 /**
- * از breakpoint `lg` (≥1024px) به بالا، `SidebarNav` جایگزین `BottomTabBar` می‌شود و یک
- * `DesktopHeader` مستقل (نه بخشی از ساید‌بار) دقیقاً بالای محتوای اصلی می‌نشیند؛ محتوا تمام‌عرض
- * است و هیچ عرض حداکثری ندارد. رجوع به docs/DESIGN.md بخش ۸.۱.
- *
- * سازمان‌ها/اعلان‌ها/کاربر واردشده/گزینه‌های فرم تسک اینجا (Server Component) واکشی می‌شوند
- * تا `SidebarNav` بتواند `WorkspaceList` صفحه‌ی خانه را مستقیم نشان دهد و `DesktopHeader`
- * بتواند اواتار، خلاصه‌ی اعلان‌های خوانده‌نشده، و پنل تسک (`TaskPanelProvider`) را نمایش دهد.
+ * مینی‌بار در موبایل پایین و از `lg` به بالا کنار محتواست؛ با RTL/LTR محل افقی آن
+ * خودکار تغییر می‌کند. اعلان‌ها، کاربر و گزینه‌های تسک برای هدر و پنل واکشی می‌شوند.
  */
 export default async function TabsLayout({ children }: { children: React.ReactNode }) {
-  const [organizations, notifications, currentUser, taskFormProjects] = await Promise.all([
-    getOrganizations(),
+  const [notifications, currentUser, taskFormProjects] = await Promise.all([
     getNotifications(),
     getCurrentUser(),
     getTaskFormOptions(),
   ])
 
   return (
-    <TaskPanelProvider projects={taskFormProjects}>
+    <TaskPanelProvider projects={taskFormProjects} user={currentUser}>
       <div className="flex min-h-full flex-1 flex-col lg:flex-row lg:min-h-screen">
-        <SidebarNav organizations={organizations} />
-        <main className="flex min-w-0 flex-1 flex-col pb-14 lg:pb-0">
+        <SidebarNav />
+        <main className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0">
           <div className="flex w-full flex-1 flex-col">
-            <DesktopHeader currentUser={currentUser} notifications={notifications} />
+            <DesktopHeader currentUser={currentUser} notifications={notifications} projects={taskFormProjects} />
             {children}
           </div>
         </main>
         <BottomTabBar />
       </div>
-      <AIAssistantFab />
     </TaskPanelProvider>
   )
 }

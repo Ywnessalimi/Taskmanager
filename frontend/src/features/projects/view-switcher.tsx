@@ -36,11 +36,7 @@ export function ViewSwitcher({
           key={item.id}
           type="button"
           onClick={() => onChange(item.id)}
-          className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-sm ${
-            view === item.id
-              ? "border-border bg-bg2 text-foreground"
-              : "border-transparent text-text2 hover:text-foreground"
-          }`}
+          className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-sm ${view === item.id ? "border-border bg-bg2 text-foreground" : "border-transparent text-text2 hover:text-foreground"}`}
         >
           <RemixIcon name={item.icon} className="text-base" />
           {t(item.labelKey)}

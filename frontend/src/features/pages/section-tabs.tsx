@@ -10,7 +10,6 @@ import {
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useT } from "@/components/providers/locale-provider"
-import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { TaskPanel } from "@/features/tasks/task-panel"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import { ChatPage } from "./chat-page"
@@ -62,7 +61,6 @@ export function SectionTabs({
   /** شمارنده‌ی محلی برای شناسه‌ی صفحه‌ها؛ عمداً Date.now نیست تا رندر خالص بماند. */
   const nextId = useRef(1)
   const t = useT()
-  const panelOpen = Boolean(useTaskPanel()?.panel)
 
   function addPage(kind: CustomPageKind) {
     const meta = PAGE_KINDS.find((item) => item.kind === kind)!
@@ -84,7 +82,7 @@ export function SectionTabs({
       <Tabs
         value={value}
         onValueChange={(next) => setValue(next as string)}
-        className={panelOpen ? "hidden min-w-0 flex-1 lg:flex" : "min-w-0 flex-1"}
+        className="min-w-0 flex-1"
       >
       <TabsList
         variant="line"

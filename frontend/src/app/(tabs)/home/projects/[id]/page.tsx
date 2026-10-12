@@ -1,20 +1,22 @@
-import { SectionTabs } from "@/features/pages/section-tabs"
-import { ProjectOverview } from "@/features/projects/project-overview"
 import { ProjectPageHeader } from "@/features/projects/project-page-header"
-import { ProjectTaskList } from "@/features/projects/project-task-list"
+import { ProjectSectionTabs } from "@/features/projects/project-section-tabs"
+import { ProjectNavigator } from "@/features/projects/project-navigator"
 import { t } from "@/lib/i18n/dictionary"
 import { getLocale } from "@/lib/i18n/server"
 import { getToday } from "@/lib/api/calendar"
 import { getProject } from "@/lib/api/projects"
+import { getOrganizations } from "@/lib/api/organizations"
 import { getCurrentUser } from "@/lib/api/users"
+import { RemixIcon } from "@/components/ui/remix-icon"
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [project, today, user, locale] = await Promise.all([
+  const [project, today, user, locale, organizations] = await Promise.all([
     getProject(id),
     getToday(),
     getCurrentUser(),
     getLocale(),
+    getOrganizations(),
   ])
 
   if (!project) {
@@ -28,19 +30,28 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const isAdmin = project.members.some((member) => member.name === user.name && member.role === "admin")
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <ProjectPageHeader
-        title={project.name}
-        subtitle={project.organizationName}
-        projectId={project.id}
-        isAdmin={isAdmin}
-      />
+    <div className="flex min-h-0 flex-1 flex-col bg-background lg:flex-row">
+      <ProjectNavigator organizations={organizations} activeId={project.id} locale={locale} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 items-center justify-between border-b border-border px-4 lg:hidden">
+          <span className="text-base font-semibold">{user.name}</span>
+          <RemixIcon name="search-2-line" className="text-xl" />
+        </header>
+        <div className="hidden lg:block">
+          <ProjectPageHeader
+            title={project.name}
+            subtitle={project.organizationName}
+            projectId={project.id}
+            isAdmin={isAdmin}
+          />
+        </div>
 
-      <SectionTabs
-        currentUserName={user.name}
-        listContent={<ProjectTaskList project={project} today={today} />}
-        overviewContent={<ProjectOverview project={project} />}
-      />
+        <ProjectSectionTabs
+          currentUserName={user.name}
+          project={project}
+          today={today}
+        />
+      </div>
     </div>
   )
 }

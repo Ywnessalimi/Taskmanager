@@ -29,7 +29,7 @@ export async function getUserById(id: string): Promise<PublicUser | null> {
     activity: member.activity,
     email: isCurrentUser ? MOCK_CURRENT_USER.email : undefined,
     bio: isCurrentUser ? MOCK_CURRENT_USER.bio : undefined,
-    avatarUrl: isCurrentUser ? MOCK_CURRENT_USER.avatarUrl : undefined,
+    avatarUrl: isCurrentUser ? MOCK_CURRENT_USER.avatarUrl : member.avatarUrl,
     organizations: memberOrgs.map((org) => ({ id: org.id, name: org.name })),
   }
 }

@@ -51,16 +51,19 @@ backend/
 ### apps.organizations
 
 - **Organization**: `name`, `description`, `created_at`
+- **Division**: `organization (FK)`, `name`
 - **OrganizationMembership**: `organization (FK)`, `user (FK)`, `role`, `joined_at`
 
 ### apps.projects
 
-- **Project**: `organization (FK)`, `name`, `description`, `start_date`, `end_date`, `created_at`
+- **Project**: `division (FK)`, `name`, `description`, `start_date`, `end_date`, `created_at`
 - **Column** (وضعیت‌های سفارشی Board): `project (FK)`, `name`, `order`, `is_done_column (bool)`
 - **ProjectMembership**: `project (FK)`, `user (FK)` — تعیین اینکه کدام عضو سازمان به این Board دسترسی دارد
 - **ProjectAttachment**: `project (FK)`, `file`, `uploaded_by (FK)`, `uploaded_at`
 
 ### apps.tasks
+
+قرارداد Mock فرانت برای ساخت تسک (`NewTaskInput`) علاوه بر فیلدهای اولیه، مقادیر اختیاری وضعیت، دنبال‌کنندگان، علاقه‌مندی، زمان صرف‌شده و عنوان زیرتسک‌های اولیه را می‌پذیرد. این تغییر متعلق به مودال ساخت فرانت است؛ `createTask` همچنان فقط ورودی را لاگ می‌کند و سرویس Django جدیدی در این تغییر ساخته نمی‌شود. نظرها و نام فایل‌های انتخاب‌شده صرفاً پیش‌نویس محلی مودال‌اند.
 
 - **Task**: `project (FK)`, `column (FK)`, `parent_task (FK, self, nullable)` (برای Sublist/Subtask و ساختار Tree)، `display_id` (مثل `#324`، یکتا در سطح پروژه یا کل سیستم)، `title`, `assignee (FK → User, nullable)`, `priority` (choices: none/low/medium/high/urgent)، `due_date`, `created_at`, `description`
 - **Tag**: `project (FK)`, `name`, `color`
@@ -99,3 +102,16 @@ backend/
 | یک پروژه‌ی مونولیتیک Django | امکان جدا کردن هر اپ (`tasks`, `notifications`, ...) به سرویس مستقل، چون از ابتدا مرز دامنه‌ها (App Boundaries) رعایت شده |
 
 هدف این جدول این است که تصمیم‌های امروز (سادگی و SQLite) هزینه‌ی فردا (مهاجرت به سیستم حرفه‌ای) را زیاد نکنند.
+
+## قرارداد جدید معاونت و تیکت (فرانت Mock)
+
+در اپ organizations موجودیت Division با `organization (FK), name` تعریف خواهد شد. شرکت ← معاونت ← پروژه رابطه‌های یک‌به‌چند دارند؛ شرکت پروژه از معاونت مشتق می‌شود. حوزهٔ مستقل tickets در آینده Ticket (title, subject, status, description) و TicketPermission را با رابطهٔ چندبه‌چند مجوزها نگه می‌دارد. مجوز در اینجا نوع تایید کسب‌وکار است، نه دسترسی امنیتی کاربران. فعلاً کد Django نداریم؛ `createTicket` در فرانت فقط ورودی را لاگ می‌کند.
+
+## ساخت خودکار و چیدمان مشترک تسک
+
+قرارداد ساخت خودکار تسک در `/tasks/new`: اولین عنوان یا شرح غیرخالی یک تسک ایجاد می‌کند؛ سپس تغییرها همان رکورد را به‌روز می‌کنند و حذف مستقل است. پیاده‌سازی فعلی localStorage است؛ اتصال آینده به POST/PATCH/DELETE در لایهٔ API انجام خواهد شد.
+
+
+ساخت تیکت فعلاً از local-created-tickets.ts و localStorage با کلید quire:created-tickets:v1 استفاده می‌کند؛ با واردکردن عنوان یا شرح ذخیره و از منوی سه‌نقطه حذف می‌شود. اتصال این جریان به API سرور هنوز انجام نشده است.
+
+کارتابل فعلاً دادهٔ نمونه و localStorage دارد. Ticket دارای createdById/createdByName است. Task.recurrence شامل dates:string[] و count:number است؛ فقط تنظیم ذخیره می‌شود و زمان‌بندی/ساخت خودکار سروری فعلاً وجود ندارد.

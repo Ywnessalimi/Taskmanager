@@ -4,7 +4,7 @@
 
 ## چه‌کار می‌کند
 
-صفحه دو بخش دارد (با `SectionTabs` مشترک، دقیقاً مثل صفحه‌ی پروژه): **لیست** و **نمای‌کلی** — به‌علاوه‌ی صفحه‌هایی که کاربر با دکمه‌ی «+» اضافه می‌کند (رجوع به `features/pages/README.md`).
+صفحه دو بخش دارد (با `SectionTabs` عمومی): **لیست** و **نمای‌کلی** — به‌علاوه‌ی صفحه‌هایی که کاربر با دکمه‌ی «+» اضافه می‌کند (رجوع به `features/pages/README.md`). صفحهٔ پروژه اکنون نوار یکپارچهٔ اختصاصی دارد.
 
 - `my-task-list.tsx` → `MyTaskList` (Client): همان ۵ نمای پروژه (درختی/برد/جدول/خط زمانی/تقویم) که مستقیماً از `features/projects/views/` ری‌یوز می‌شوند، با سوییچر مشترک `features/projects/ViewSwitcher`. چون تسک‌های این صفحه از **چند پروژه** می‌آیند، فیلتر پروژه لازم است — اما به‌جای رندر محلی، از `my-tasks-filter-provider.tsx` خوانده می‌شود.
 - `my-tasks-filter-provider.tsx` → `MyTasksFilterProvider`/`useMyTasksFilter` (Client): state فیلتر پروژه (`projectId` + لیست پروژه‌ها از روی `tasks`) را بین `MyTasksProjectSwitcher` (کنار عنوان صفحه، داخل `AppHeader`) و `MyTaskList` (پایین‌تر، داخل `SectionTabs`) مشترک می‌کند — همان الگوی `components/providers/task-panel-provider.tsx`.

@@ -1,12 +1,13 @@
 "use client"
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react"
-import type { Task, TaskFormProjectOption } from "@/lib/api/types"
+import type { CurrentUser, Task, TaskFormProjectOption } from "@/lib/api/types"
 
 /** پنل باز: یا فرم «تسک جدید» است یا جزئیات یک تسک موجود. */
 export type TaskPanelState = { kind: "new" } | { kind: "detail"; task: Task } | null
 
 type TaskPanelContextValue = {
+  user: CurrentUser
   panel: TaskPanelState
   /** گزینه‌های پروژه/اعضا برای فرم — یک‌بار در لایه‌ی `(tabs)` واکشی می‌شود. */
   projects: TaskFormProjectOption[]
@@ -17,19 +18,14 @@ type TaskPanelContextValue = {
 
 const TaskPanelContext = createContext<TaskPanelContextValue | null>(null)
 
-/**
- * وضعیت پنل کناری تسک را بین دو نقطه‌ی دور از هم در درخت کامپوننت‌ها مشترک می‌کند:
- * دکمه‌ی «تسک جدید» در `DesktopHeader` (داخل layout) و ردیف‌های `TreeView` (داخل صفحه)
- * پنل را **باز** می‌کنند، اما خودِ پنل داخل `SectionTabs` رندر می‌شود تا کنار همان باکس
- * لیست/نمای‌کلی بنشیند و آن را جمع کند — نه به‌صورت مودال روی کل صفحه.
- *
- * چون این سه در شاخه‌های مختلف درخت‌اند، Context تنها راه تمیز اشتراک این state است.
- */
+/** وضعیت مشترک مودال تسک؛ میزبان TaskPanel در صفحهٔ پروژه یا تسک‌های من است. */
 export function TaskPanelProvider({
   projects,
+  user,
   children,
 }: {
   projects: TaskFormProjectOption[]
+  user: CurrentUser
   children: React.ReactNode
 }) {
   const [panel, setPanel] = useState<TaskPanelState>(null)
@@ -39,8 +35,8 @@ export function TaskPanelProvider({
   const close = useCallback(() => setPanel(null), [])
 
   const value = useMemo(
-    () => ({ panel, projects, openNewTask, openTaskDetail, close }),
-    [panel, projects, openNewTask, openTaskDetail, close]
+    () => ({ user, panel, projects, openNewTask, openTaskDetail, close }),
+    [user, panel, projects, openNewTask, openTaskDetail, close]
   )
 
   return <TaskPanelContext.Provider value={value}>{children}</TaskPanelContext.Provider>

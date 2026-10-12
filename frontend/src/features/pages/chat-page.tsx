@@ -1,7 +1,8 @@
 "use client"
 
+import { useLocale } from "@/components/providers/locale-provider"
 import { useState } from "react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RemixIcon } from "@/components/ui/remix-icon"
 
 type Message = {
@@ -17,7 +18,9 @@ type Message = {
  * پیام‌ها فقط در state مرورگر می‌مانند؛ نه ذخیره می‌شوند و نه به کاربر دیگری می‌رسند
  * (هنوز نه API چتی وجود دارد و نه اتصال بلادرنگ).
  */
-export function ChatPage({ currentUserName }: { currentUserName: string }) {
+export function ChatPage({ currentUserName, currentUserAvatarUrl="/avatars/u1.svg" }: { currentUserName: string; currentUserAvatarUrl?: string }) {
+  const {locale}=useLocale()
+  const en=locale==="en"
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState("")
 
@@ -26,7 +29,7 @@ export function ChatPage({ currentUserName }: { currentUserName: string }) {
     if (!text) return
     setMessages((prev) => [
       ...prev,
-      { id: `m-${Date.now()}`, authorName: currentUserName, text, timeLabel: "همین حالا" },
+      { id: `m-${Date.now()}`, authorName: currentUserName, text, timeLabel: en ? "Just now" : "همین حالا" },
     ])
     setDraft("")
   }
@@ -36,12 +39,13 @@ export function ChatPage({ currentUserName }: { currentUserName: string }) {
       <div className="flex min-h-60 flex-col gap-3">
         {messages.length === 0 ? (
           <p className="py-12 text-center text-sm text-text2">
-            هنوز پیامی نیست. اولین پیام را بنویسید.
+            {en ? "No messages yet. Write the first message." : "هنوز پیامی نیست. اولین پیام را بنویسید."}
           </p>
         ) : (
           messages.map((message) => (
             <div key={message.id} className="flex items-start gap-2.5">
               <Avatar size="sm">
+                <AvatarImage src={currentUserAvatarUrl} alt={message.authorName} />
                 <AvatarFallback>{message.authorName.slice(0, 1)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
@@ -61,14 +65,15 @@ export function ChatPage({ currentUserName }: { currentUserName: string }) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && send()}
-          placeholder="پیام بنویسید…"
+          aria-label={en ? "Message" : "پیام"}
+          placeholder={en ? "Write a message…" : "پیام بنویسید…"}
           className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
         />
         <button
           type="button"
           onClick={send}
           disabled={!draft.trim()}
-          aria-label="ارسال پیام"
+          aria-label={en ? "Send message" : "ارسال پیام"}
           className="flex size-8 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon disabled:opacity-40"
         >
           <RemixIcon name="send-plane-line" className="text-base" />

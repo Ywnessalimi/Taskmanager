@@ -1,69 +1,36 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { WorkspaceList } from "@/features/home/workspace-list"
-import type { Organization } from "@/lib/api/types"
-import type { TranslationKey } from "@/lib/i18n/dictionary"
+import { AIAssistantDialog } from "@/features/ai/ai-assistant-dialog"
 import { cn } from "cn"
 
-const NAV_ITEMS = [
-  { href: "/my-tasks", labelKey: "nav.myTasks", icon: "task" },
-] satisfies { href: string; labelKey: TranslationKey; icon: string }[]
+const item = "flex w-full flex-col items-center gap-0.5 text-[11px] leading-4"
 
-/**
- * ناوبری کناری برای نسخه‌ی دسکتاپ — جایگزین `BottomTabBar` از breakpoint `lg` به بالا
- * (رجوع به `components/navigation/README.md` و docs/DESIGN.md بخش ۸.۱). چون اپ RTL است، به‌عنوان
- * اولین فرزند یک ردیف flex قرار می‌گیرد و طبیعتاً سمت راست می‌نشیند؛ `border-e` هم لبه‌ی سمت چپش
- * (مرز با محتوا) را مشخص می‌کند.
- *
- * برخلاف `BottomTabBar` (۴ آیتم مساوی)، اینجا «خانه» و «اعلان‌ها»/«حساب کاربری»/«تسک جدید» دیگر
- * اینجا نیستند: اعلان‌ها/حساب کاربری/تسک جدید به `components/navigation/desktop-header.tsx`
- * (هدر مستقل بالای محتوا، نه ساید‌بار) منتقل شده‌اند، و «خانه» با نمایش مستقیم `WorkspaceList`
- * (همان فهرست سازمان‌ها/پروژه‌های صفحه‌ی خانه‌ی موبایل) جایگزین شده. فقط «تسک‌های من» به‌صورت
- * آیتم معمولی باقی مانده است.
- */
-export function SidebarNav({ organizations }: { organizations: Organization[] }) {
+/** مینی‌بار دسکتاپ؛ موقعیت آن از جهت سراسری صفحه پیروی می‌کند. */
+export function SidebarNav() {
   const pathname = usePathname()
   const t = useT()
-
-  function isActive(href: string) {
-    return pathname === href || pathname.startsWith(`${href}/`)
-  }
+  const projectsActive = pathname === "/projects" || pathname.includes("/projects/")
 
   return (
-    <aside
-      data-slot="sidebar-nav"
-      className="hidden w-60 shrink-0 flex-col border-e border-border bg-background lg:flex"
-    >
-      <div className="flex h-13 items-center px-4">
-        <span className="text-base font-medium text-foreground">Quire</span>
-      </div>
-
-      <nav className="flex flex-col gap-0.5 px-3 pb-2">
-        {NAV_ITEMS.map(({ href, labelKey, icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex h-9 items-center gap-2 rounded-md px-2.5 text-sm",
-                active ? "bg-bg2 text-brand" : "text-text2 hover:bg-bg2 hover:text-foreground"
-              )}
-            >
-              <RemixIcon name={`${icon}-${active ? "fill" : "line"}`} className="text-lg" />
-              {t(labelKey)}
-            </Link>
-          )
-        })}
+    <aside data-slot="sidebar-nav" className="hidden w-20 shrink-0 bg-background py-3 ps-3 lg:flex">
+      <nav aria-label={t("miniBar.navigation")} className="flex min-h-[calc(100vh-24px)] w-full flex-col items-center justify-between rounded-2xl border border-[var(--mini-bar-border)] bg-[var(--mini-bar-bg)] px-2 py-5 text-white">
+        <div className="flex w-full flex-col items-center gap-6">
+          <Link href="/inbox" aria-current={pathname === "/inbox" ? "page" : undefined} className={cn(item, pathname === "/inbox" ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><RemixIcon name="home-smile-line" className="text-2xl" />{t("miniBar.inbox")}</Link>
+          <Link href="/projects" aria-current={projectsActive ? "page" : undefined} className={cn(item, projectsActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><RemixIcon name={projectsActive ? "dashboard-fill" : "dashboard-line"} className="text-2xl" />{t("miniBar.projects")}</Link>
+          <Dialog><DialogTrigger className={cn(item, "text-[var(--mini-bar-muted)] hover:text-white")} aria-label={t("aiAssistant.aria")}><RemixIcon name="brain-line" className="text-2xl" />{t("aiAssistant.title")}</DialogTrigger><AIAssistantDialog /></Dialog>
+          <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><RemixIcon name="team-line" className="text-2xl" />{t("miniBar.teams")}</span>
+        </div>
+        <div className="flex w-full flex-col items-center gap-4 border-t border-[var(--mini-bar-border)] pt-4">
+          <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><Image src="/avatars/u1.svg" alt="" width={24} height={24} className="size-6 rounded-full object-cover" />{t("miniBar.profile")}</span>
+          <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><RemixIcon name="settings-3-line" className="text-2xl" />{t("miniBar.settings")}</span>
+        </div>
       </nav>
-
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-3 pt-2">
-        <WorkspaceList organizations={organizations} showProgress={false} />
-      </div>
     </aside>
   )
 }

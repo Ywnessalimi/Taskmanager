@@ -30,7 +30,13 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
       <ProjectCover name={project.name} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 pt-1">
-        <h1 className="truncate text-xl font-medium text-foreground">{project.name}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="min-w-0 truncate text-xl font-medium text-foreground">{project.name}</h1>
+          <Link href={`/home/projects/${project.id}/settings`} className="flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1 text-xs text-text2 hover:bg-bg2">
+            <RemixIcon name="settings-3-line" className="text-xl" />
+            {t(locale, "project.settings")}
+          </Link>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Link
@@ -39,6 +45,7 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
           >
             {project.organizationName}
           </Link>
+          <span className="text-text2">{project.divisionName}</span>
           <span className="h-4 w-px bg-border" />
           <MembersDialog members={project.members} />
           <span className="h-4 w-px bg-border" />

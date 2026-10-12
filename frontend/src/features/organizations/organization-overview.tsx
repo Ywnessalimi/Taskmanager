@@ -40,7 +40,9 @@ function ProjectRow({ project }: { project: ProjectRef }) {
  */
 export function OrganizationOverview({ organization }: { organization: Organization }) {
   const t = useT()
-  const [projects, setProjects] = useState(organization.projects)
+  const [divisions, setDivisions] = useState(organization.divisions)
+  const [divisionId, setDivisionId] = useState(organization.divisions[0]?.id ?? "")
+  const projects = divisions.flatMap((division) => division.projects)
   const [addingProject, setAddingProject] = useState(false)
   const [draftProjectName, setDraftProjectName] = useState("")
   const [description, setDescription] = useState("")
@@ -64,7 +66,7 @@ export function OrganizationOverview({ organization }: { organization: Organizat
   function commitNewProject() {
     const name = draftProjectName.trim()
     if (name) {
-      setProjects((prev) => [...prev, { id: `local-${Date.now()}`, name, progress: 0 }])
+      setDivisions((previous) => previous.map((division) => division.id === divisionId ? { ...division, projects: [...division.projects, { id: `local-${Date.now()}`, name, progress: 0 }] } : division))
     }
     setDraftProjectName("")
     setAddingProject(false)
@@ -152,13 +154,13 @@ export function OrganizationOverview({ organization }: { organization: Organizat
       <div className="flex flex-col gap-3">
         <SectionTitle>{t("org.projectsSummary")}</SectionTitle>
         <div className="flex flex-col gap-3">
-          {projects.map((project) => (
-            <ProjectRow key={project.id} project={project} />
-          ))}
+          {divisions.map((division) => <div key={division.id} className="flex flex-col gap-2"><h3 className="text-sm font-medium">{division.name}</h3><div className="ps-4">{division.projects.map((project) => <ProjectRow key={project.id} project={project} />)}</div></div>)}
           {projects.length === 0 && !addingProject && (
             <p className="text-sm text-text2">{t("org.noProjects")}</p>
           )}
           {addingProject ? (
+            <div className="flex flex-col gap-2">
+            <select aria-label={t("hierarchy.division")} value={divisionId} onChange={(event) => setDivisionId(event.target.value)} className="h-9 rounded-md border border-border bg-background px-2 text-sm">{divisions.map((division) => <option key={division.id} value={division.id}>{division.name}</option>)}</select>
             <input
               autoFocus
               value={draftProjectName}
@@ -167,10 +169,11 @@ export function OrganizationOverview({ organization }: { organization: Organizat
                 if (e.key === "Enter") commitNewProject()
                 if (e.key === "Escape") setAddingProject(false)
               }}
-              onBlur={commitNewProject}
-              placeholder={t("org.newProjectPlaceholder")}
+                            placeholder={t("org.newProjectPlaceholder")}
               className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-text3"
             />
+            <button type="button" onClick={commitNewProject} className="w-fit rounded-md border border-border px-3 py-1.5 text-sm">{t("org.newProject")}</button>
+            </div>
           ) : (
             <button
               type="button"

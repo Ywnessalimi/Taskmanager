@@ -46,6 +46,8 @@ export type TaskPriority = "none" | "low" | "medium" | "high" | "urgent"
 export type TaskStatus = "todo" | "in-progress" | "completed"
 
 /** الگوی تکرار تسک — روی «تاریخ» تسک تنظیم می‌شود (رجوع به `DateEditDialog`). */
+export type TaskRecurrence = { dates: string[]; count: number }
+
 export type RepeatOption = "none" | "daily" | "weekly" | "monthly"
 
 /** یک ردیف از لاگ رویدادهای یک تسک — رجوع به یادداشت «TaskActivityEntry» در PRODUCT_OVERVIEW.md. */
@@ -68,6 +70,7 @@ export type Task = {
   /** تاریخ شروع تسک — کنار `dueDate` در `DateEditDialog` تنظیم می‌شود. */
   startDate?: string
   /** الگوی تکرار تسک؛ نبودش یعنی «هیچ». */
+  recurrence?: TaskRecurrence
   repeat?: RepeatOption
   status: TaskStatus
   /** برچسب‌های تسک (Tag) — فعلاً فقط در فرم ساخت تسک ست می‌شود و هیچ نمایی آن را نشان نمی‌دهد */
@@ -91,6 +94,8 @@ export type Project = {
   name: string
   organizationId: string
   organizationName: string
+  divisionId: string
+  divisionName: string
   startDate: string
   endDate: string
   /** توضیحات پروژه — اختیاری، مثل `Task.description`؛ وقتی خالی است هدر نمای‌کلی جای‌گزین «افزودن توضیحات» را نشان می‌دهد. */
@@ -107,12 +112,21 @@ export type Project = {
   activityUpdatedAt: string
 }
 
+export type Division = {
+  id: string
+  organizationId: string
+  name: string
+  projects: ProjectRef[]
+}
+
 export type Organization = {
   id: string
   name: string
   /** تاریخ ساخت سازمان (جلالی، رقم لاتین — مثل بقیه‌ی تاریخ‌های این مدل) */
   createdAt: string
   members: Member[]
+  divisions: Division[]
+  /** نمای تجمیعی پروژه‌های معاونت‌ها برای گزارش‌ها */
   projects: ProjectRef[]
   taskCount: number
 }
@@ -233,6 +247,7 @@ export type TaskUpdateInput = {
   assigneeNames?: string[]
   dueDate?: string
   startDate?: string
+  recurrence?: TaskRecurrence
   repeat?: RepeatOption
   priority: TaskPriority
   status: TaskStatus
@@ -250,10 +265,16 @@ export type NewTaskInput = {
   assigneeNames?: string[]
   dueDate?: string
   startDate?: string
+  recurrence?: TaskRecurrence
   repeat?: RepeatOption
   priority: TaskPriority
   tags: string[]
   description?: string
+  status?: TaskStatus
+  followers?: string[]
+  isFavorite?: boolean
+  timeSpentMinutes?: number
+  subtasks?: { title: string }[]
 }
 
 /** یک گزینه‌ی پروژه در فرم ساخت تسک، به‌همراه اعضایی که می‌توانند مسئول تسک شوند. */
@@ -268,4 +289,17 @@ export type TaskFormProjectOption = {
   name: string
   organizationName: string
   members: TaskFormMemberOption[]
+}
+
+export type TicketSubject = "hr" | "purchasing" | "warehouse" | "general"
+export type TicketStatus = "open" | "in-review" | "closed"
+export type TicketPermission = "salary-payment" | "purchase" | "warehouse-release" | "other"
+export type NewTicketInput = {
+  createdById?: string
+  createdByName?: string
+  title: string
+  subject: TicketSubject
+  status: TicketStatus
+  permissionIds: TicketPermission[]
+  description?: string
 }
