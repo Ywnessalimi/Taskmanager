@@ -169,10 +169,6 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
                 <div className="flex gap-2"><input value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addSubtask() } }} placeholder={t("newTask.subtaskPlaceholder")} aria-label={t("newTask.subtaskPlaceholder")} className="min-w-0 flex-1 rounded border border-border px-2 py-1 outline-none" /><Button type="button" variant="ghost" onClick={addSubtask} disabled={!subtaskTitle.trim()}>{t("projectTabs.add")}</Button></div>
               </div>
             </details>
-            <details className="border-b border-[var(--task-workspace-border)]">
-              <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-[var(--task-workspace-muted)]"><NewTaskAsset name="history-line" />{t("newTask.history")}<NewTaskAsset name="arrow-down-sline" className="ms-auto" /></summary>
-              {task?.activityLog?.length ? <div className="divide-y divide-border">{task.activityLog.map(entry=><p key={entry.id} className="py-2 text-xs text-text2">{entry.message}<span className="ms-2 text-text3">{entry.date}</span></p>)}</div> : <p className="pb-3 text-xs text-[var(--task-workspace-muted)]">{t("taskDetail.noActivity")}</p>}
-            </details>
           </div>
           {!task && <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-[var(--task-workspace-border)] p-3">
             {error && <p role="alert" className="me-auto text-xs text-error">{t("newTask.submitError")}</p>}
