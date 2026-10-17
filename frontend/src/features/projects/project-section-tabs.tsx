@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useRef, useState } from "react"
+import type { ReactNode } from "react"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChatPage } from "@/features/pages/chat-page"
 import { DocumentPage } from "@/features/pages/document-page"
 import { TaskPanel } from "@/features/tasks/task-panel"
-import type { Project } from "@/lib/api/types"
+import type { Member, Project, Task } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import { ProjectOverview } from "./project-overview"
 import { ProjectTaskList } from "./project-task-list"
@@ -35,8 +36,22 @@ function Divider() {
   return <Image src="/images/figma/project-tabs/divider.svg" alt="" width={14} height={1} className="mx-1 shrink-0 rotate-90" />
 }
 
-/** نوار یکپارچهٔ پروژه مطابق فریم 1710:27099؛ صفحات افزوده‌شده و پنل تسک را حفظ می‌کند. */
-export function ProjectSectionTabs({ project, today, currentUserName }: { project: Project; today: string; currentUserName: string }) {
+/** نوار یکپارچهٔ پروژه و MyTasks مطابق فریم 1710:27099؛ صفحات افزوده‌شده و پنل تسک را حفظ می‌کند. */
+export function ProjectSectionTabs({
+  project,
+  tasks = project?.tasks ?? [],
+  overviewContent,
+  today,
+  currentUserName,
+  ticketAssignees,
+}: {
+  project?: Project
+  tasks?: Task[]
+  overviewContent?: ReactNode
+  today: string
+  currentUserName: string
+  ticketAssignees?: Member[]
+}) {
   const [value, setValue] = useState<string>("board")
   const [pages, setPages] = useState<CustomPage[]>([])
   const nextId = useRef(1)
@@ -82,10 +97,12 @@ export function ProjectSectionTabs({ project, today, currentUserName }: { projec
           </DropdownMenu>
         </TabsList>
 
-        <TabsContent value="overview" className="p-4"><ProjectOverview project={project} /></TabsContent>
+        <TabsContent value="overview" className="p-4">
+          {overviewContent ?? (project ? <ProjectOverview project={project} /> : null)}
+        </TabsContent>
         {VIEW_TABS.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="min-w-0 p-4">
-            <ProjectTaskList project={project} today={today} view={tab.id} />
+            <ProjectTaskList project={project} tasks={tasks} today={today} view={tab.id} ticketAssignees={ticketAssignees} />
           </TabsContent>
         ))}
         {pages.map((page) => (

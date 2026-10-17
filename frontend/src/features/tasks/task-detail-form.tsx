@@ -22,7 +22,7 @@ export function TaskDetailForm({
 }: {
   task: Task
   projects: TaskFormProjectOption[]
-  /** پروژه‌ی تسک، اگر مشخص باشد (تسک‌های تب «تسک‌های من» آن را دارند). */
+  /** پروژه‌ی تسک، اگر مشخص باشد (تسک‌های نمای تجمیعی آن را دارند). */
   projectId?: string
   onDone: () => void
 }) {

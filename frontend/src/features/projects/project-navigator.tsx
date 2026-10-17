@@ -7,11 +7,14 @@ import { t, type Locale } from "@/lib/i18n/dictionary"
 /** فهرست همهٔ پروژه‌ها در محیط مستقل پروژه‌ها، کنار پروژهٔ انتخاب‌شده. */
 export function ProjectNavigator({ organizations, activeId, locale }: { organizations: Organization[]; activeId?: string; locale: Locale }) {
   const activeProject = organizations.flatMap((organization) => organization.projects).find((project) => project.id === activeId)
+  const isMyTasks = activeId === "MyTasks"
+  const myTasksHref = "/home/projects/MyTasks"
   return (
     <>
     <details className="relative border-b border-border bg-background px-4 py-3 lg:hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium"><span>{activeProject?.name ?? t(locale, "projects.all")}</span><RemixIcon name="arrow-down-s-line" className="text-lg" /></summary>
+      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium"><span>{activeProject?.name ?? (isMyTasks ? t(locale, "nav.myTasks") : t(locale, "projects.all"))}</span><RemixIcon name="arrow-down-s-line" className="text-lg" /></summary>
       <nav aria-label={t(locale, "projects.all")} className="absolute inset-x-3 top-full z-40 max-h-64 overflow-y-auto rounded-xl border border-border bg-background p-2">
+        <Link href={myTasksHref} aria-current={isMyTasks ? "page" : undefined} className={`block rounded-md px-3 py-2 text-sm ${isMyTasks ? "bg-bg2 font-semibold" : "hover:bg-bg2"}`}>{t(locale, "nav.myTasks")}</Link>
         <Link href="/projects" className="block rounded-md px-3 py-2 text-sm">{t(locale, "projects.all")}</Link>
         {organizations.map((organization) => <div key={organization.id} className="py-2">
           <p className="px-3 text-sm font-medium">{organization.name}</p>
@@ -20,8 +23,8 @@ export function ProjectNavigator({ organizations, activeId, locale }: { organiza
       </nav>
     </details>
     <aside className="hidden w-52 shrink-0 flex-col border-e border-border bg-[var(--project-surface)] lg:flex">
-      <nav className="flex h-[78px] flex-col justify-center gap-3 border-b border-border px-4">
-        {[{href:"/my-tasks",label:"nav.myTasks",icon:"tasks"},{href:"/notifications",label:"projectNav.notifications",icon:"notifications"},{href:"/messages",label:"nav.messages",icon:"messages"}].map(item => <Link key={item.href} href={item.href} className="flex items-center gap-2 px-1 text-xs leading-normal font-medium text-[#595959] hover:text-foreground"><Image src={`/images/figma/project-navigation/${item.icon}.svg`} width={16} height={16} alt="" />{t(locale,item.label as "nav.myTasks")}</Link>)}
+      <nav className="flex flex-col gap-3 border-b border-border px-4 py-4">
+        {[{href:myTasksHref,label:"nav.myTasks",icon:"tasks"},{href:"/notifications",label:"projectNav.notifications",icon:"notifications"},{href:"/messages",label:"nav.messages",icon:"messages"}].map(item => <Link key={item.href} href={item.href} aria-current={item.href === myTasksHref && isMyTasks ? "page" : undefined} className={`flex items-center gap-2 px-1 text-xs leading-normal font-medium ${item.href === myTasksHref && isMyTasks ? "text-foreground" : "text-[#595959] hover:text-foreground"}`}><Image src={`/images/figma/project-navigation/${item.icon}.svg`} width={16} height={16} alt="" />{t(locale,item.label as "nav.myTasks")}</Link>)}
       </nav>
       <nav aria-label={t(locale, "projects.all")} className="flex flex-col gap-4 overflow-y-auto p-3">
         {organizations.map((organization) => (

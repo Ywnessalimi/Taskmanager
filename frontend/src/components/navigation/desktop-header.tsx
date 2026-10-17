@@ -32,7 +32,7 @@ export function DesktopHeader({
   const sectionTitle = pathname.startsWith("/inbox") ? t("miniBar.inbox") : pathname.startsWith("/messages") ? t("nav.messages") : pathname.startsWith("/tickets") ? t("ticket.title")
     : pathname.startsWith("/account") ? t("nav.account")
     : pathname.startsWith("/notifications") ? t("nav.notifications")
-    : pathname.startsWith("/my-tasks") ? t("nav.myTasks")
+    : pathname === "/home/projects/MyTasks" ? t("nav.myTasks")
     : pathname.startsWith("/projects") ? t("projects.all")
     : t("nav.home")
 

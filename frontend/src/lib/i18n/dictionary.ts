@@ -51,6 +51,8 @@ const fa = {
   "ticket.name": "عنوان تیکت",
   "ticket.subject": "موضوع",
   "ticket.status": "وضعیت",
+  "ticket.assign": "ارجاع تیکت",
+  "ticket.unassigned": "بدون ارجاع",
   "ticket.permissions": "مجوزها",
   "ticket.description": "توضیحات",
   "ticket.create": "ساخت تیکت",
@@ -114,6 +116,7 @@ const fa = {
   "board.iconPause": "مکث",
   "board.addColor": "افزودن رنگ",
   "board.changeColor": "تغییر رنگ ستون",
+  "board.dropTicket": "تیکت را اینجا رها کنید",
 
   "pageHeader.back": "بازگشت",
   "pageHeader.moreOptions": "گزینه‌های بیشتر",
@@ -447,6 +450,8 @@ const en: Record<keyof typeof fa, string> = {
   "ticket.name": "Ticket title",
   "ticket.subject": "Subject",
   "ticket.status": "Status",
+  "ticket.assign": "Assign ticket",
+  "ticket.unassigned": "Unassigned",
   "ticket.permissions": "Permissions",
   "ticket.description": "Description",
   "ticket.create": "Create Ticket",
@@ -510,6 +515,7 @@ const en: Record<keyof typeof fa, string> = {
   "board.iconPause": "Paused",
   "board.addColor": "Add color",
   "board.changeColor": "Change column color",
+  "board.dropTicket": "Drop ticket here",
 
   "pageHeader.back": "Back",
   "pageHeader.moreOptions": "More options",

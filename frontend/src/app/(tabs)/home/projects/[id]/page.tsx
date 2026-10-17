@@ -43,6 +43,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             subtitle={project.organizationName}
             projectId={project.id}
             isAdmin={isAdmin}
+            organizations={organizations}
           />
         </div>
 

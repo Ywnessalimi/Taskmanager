@@ -39,8 +39,8 @@
 - برچسب‌های ازقبل‌ساخته‌شده از `MOCK_TAGS` در `src/lib/api/mock-data.ts` می‌آید — `TagPickerDialog` مصرف‌کننده‌ی آن است.
 - کاربر جاری برای تشخیص «آیا من دنبال‌کننده‌ام» از `MOCK_CURRENT_USER` (در `src/lib/api/mock-data.ts`) مستقیماً در `task-detail-header.tsx` ایمپورت می‌شود — همان الگویی که `DatePickerDialog` برای `MOCK_TODAY` استفاده می‌کند.
 - variant تازه‌ی `fullscreen` در `components/ui/dialog.tsx` (`DialogContent variant="fullscreen"`) مصرف‌کننده‌ی مشترک `FollowersDialog`/`TimerDialog` (داخل `TimeSpentBox`)/`ActivityLogDialog` (داخل `ActivityLogBox`)/`DateEditDialog`/`TagPickerDialog` است.
-- وضعیت باز/بسته‌ی پنل از `components/providers/task-panel-provider.tsx` می‌آید — Context، چون باز‌کننده‌ها (دکمه‌های ساخت داخل صفحه و ردیف‌های `TreeView`) و خودِ پنل (داخل نوار تب صفحه) در شاخه‌های مختلف درخت کامپوننت‌ها هستند. گزینه‌های پروژه/اعضا هم یک‌بار در `app/(tabs)/layout.tsx` واکشی و به همان Provider داده می‌شود.
-- مصرف‌کننده‌ها: `src/app/tasks/new/page.tsx` (Server Component، خارج از `(tabs)` — موبایل، `h-dvh flex-col` با `PageHeader`)، `src/features/pages/section-tabs.tsx` و `src/features/projects/project-section-tabs.tsx` (که `TaskPanel` را کنار تب‌ها رندر می‌کنند).
+- وضعیت باز/بسته‌ی پنل از `components/providers/task-panel-provider.tsx` می‌آید — Context، چون باز‌کننده‌ها (دکمه‌های ساخت داخل صفحه و ردیف‌های نماهای تسک) و خودِ پنل (داخل نوار تب صفحه) در شاخه‌های مختلف درخت کامپوننت‌ها هستند. گزینه‌های پروژه/اعضا یک‌بار در `app/(tabs)/layout.tsx` واکشی و به همان Provider داده می‌شود. `TaskPanel` شناسهٔ مسیر را به‌عنوان پروژهٔ پیش‌فرض می‌پذیرد اگر در گزینه‌های پروژه موجود باشد؛ مسیر تجمیعی MyTasks پروژهٔ پیش‌فرض ندارد.
+- مصرف‌کننده‌ها: `src/app/tasks/new/page.tsx` (Server Component، خارج از `(tabs)` — موبایل، `h-dvh flex-col` با `PageHeader`) و `src/features/projects/project-section-tabs.tsx` (که `TaskPanel` را کنار تب‌های پروژه و `/home/projects/MyTasks` رندر می‌کند).
 - ورودی‌ها: `components/navigation/add-task-fab.tsx` (دکمه‌ی گرد شناور موبایل → صفحه‌ی `/tasks/new`)، `NewTaskButton` در `desktop-header.tsx` (→ مودال مستقل ساخت)، و کلیک روی ردیف‌های `features/projects/views/tree-view.tsx` (→ پنل، حالت جزئیات).
 
 ## نکات ناقص فعلی
@@ -48,7 +48,7 @@
 - **تسک واقعاً ساخته یا ویرایش نمی‌شود.** `createTask`/`updateTask` فقط ورودی را در کنسول لاگ می‌کنند؛ تغییرهای پنل جزئیات با بستن آن از بین می‌روند و ردیف تسک در نماها همان مقدار قبلی را نشان می‌دهد. داده‌ی Mock در ماژول ثابت است و نوشتن در آن بین رفرش‌ها باقی نمی‌ماند و فقط توهم ذخیره‌سازی می‌ساخت. با آمدن بک‌اند به `POST /api/tasks/` وصل می‌شود.
 - تاریخ سررسید از `DatePickerDialog` می‌آید (نه دیگر یک `input` متنی)؛ مقدار همچنان رشته‌ی `"YYYY/MM/DD"` با رقم لاتین است، فقط منبعش تقویم جلالی یا میلادی است بسته به زبان — رجوع به [components/ui/README.md](../../components/ui/README.md).
 - `tags` و `description` هنوز در هیچ نمایی (غیر از خودِ پنل جزئیات) نشان داده نمی‌شوند؛ فقط در همین فرم ست و خوانده می‌شوند.
-- پنل جزئیات فقط از `TreeView` باز می‌شود؛ نماهای جدول/برد/خط زمانی/تقویم هنوز کلیک‌پذیر نیستند.
+- پنل جزئیات از ردیف‌های Tree و کارت‌های Board باز می‌شود؛ نماهای Table/Timeline/Calendar هنوز پنل جزئیات ندارند.
 - پیوست/کامنت هنوز در پنل جزئیات نیستند (فقط زیر-تسک‌ها، آن هم فقط‌خواندنی).
 - دنبال‌کننده و مسئول هر دو با **نام** مچ می‌شوند، نه `id` (چون `TaskFormMemberOption` فعلاً `id` ندارد) — یک محدودیت شناخته‌شده که با اضافه شدن بک‌اند واقعی باید حل شود.
 - تایمر فقط در state محلی `TaskForm` زندگی می‌کند؛ اگر پنل بدون «ذخیره» بسته شود، دور جاری تایمر (اگر در حال اجرا بوده) از بین می‌رود — دقیقاً مثل بقیه‌ی فیلدهای این فرم.

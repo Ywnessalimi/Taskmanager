@@ -11,7 +11,7 @@
 ## چه‌کار می‌کند
 
 - `task-display.tsx` → ثابت‌ها و کامپوننت مشترک بین همه‌ی نماها: `PRIORITY_LABEL`، `PRIORITY_COLOR`، `STATUS_LABEL`، `STATUS_COLUMNS`، `PriorityDot`.
-- `view-switcher.tsx` → `TASK_VIEWS` + `ViewSwitcher`: نوار سوییچ قدیمی که هنوز در `MyTaskList` استفاده می‌شود؛ صفحهٔ پروژه نوار اختصاصی Figma را دارد.
+- `view-switcher.tsx` → شناسه‌های مشترک نماها (`TaskViewId`)؛ نوار صفحهٔ پروژه و MyTasks در `project-section-tabs.tsx` است.
 - `project-task-list.tsx` → کامپوننت `ProjectTaskList` (Client): محتوای نمای انتخاب‌شده از میان ۵ نمای پیاده‌شده:
   - `views/table-view.tsx` → جدول واقعی (`<table>`) با ردیف هدر و بوردر بین همه‌ی سلول‌ها: اولویت، شناسه، عنوان، مسئول، سررسید، وضعیت. در عرض کم به‌صورت افقی اسکرول می‌شود.
   - `views/tree-view.tsx` → نمای درختی با باز/بسته کردن زیر-تسک‌ها (`task.subtasks`).
@@ -31,7 +31,7 @@
   - نشان درصد همیشه با رنگ *خودِ همان متریک* رنگ می‌شود (نه رنگ‌های ناهم‌خوان طرح — مثلاً «انجام‌شده» در فایل طرح یک نشان قرمز داشت که به‌نظر اشتباه کپی از «عقب‌افتاده» بود)؛ فقط جهت فلش (بالا/پایین) از علامت تغییر می‌آید.
   - عنوان «Project Health» و خط جداکننده‌ی زیرش — برخلاف بقیه‌ی بخش‌های همین صفحه — **داخل خودِ کارت** (با بوردر مشترک) است، نه یک `SectionTitle` بیرونیِ جدا؛ چون خودِ طرح Figma همین ساختار را دارد.
   - چون هیچ تاریخچه‌ی واقعی سلامت پروژه ذخیره نمی‌شود، روند نمودار از `Project.healthTrend` (شبه‌تصادفیِ Mock، رجوع به `mockHealthTrend` در `lib/api/mock-data.ts`) می‌آید — دقیقاً مثل الگوی `Project.activity`/`mockActivity`؛ آخرین نقطه‌ی هر سری همیشه با عدد واقعی `ProjectHealth` یکی است.
-- `project-page-header.tsx` → پوستهٔ دسکتاپ روی `PageHeader`. صفحهٔ پروژه در موبایل هدر سادهٔ مستقل دارد؛ `ProjectSectionTabs` وقتی پنل تسک باز می‌شود نوار و محتوای نماها را در موبایل پنهان می‌کند.
+- `project-page-header.tsx` → پوستهٔ دسکتاپ روی `PageHeader` با انتخابگر عنوان برای جابه‌جایی بین پروژه‌ها و گزینهٔ «همهٔ پروژه‌ها» به مسیر `/home/projects/MyTasks`. صفحهٔ پروژه در موبایل هدر سادهٔ مستقل دارد؛ `ProjectSectionTabs` وقتی پنل تسک باز می‌شود نوار و محتوای نماها را در موبایل پنهان می‌کند.
 
 ## وابستگی‌ها
 
@@ -39,7 +39,9 @@
 - کامپوننت‌های مشترک: `src/components/charts/{activity-heatmap,status-donut-chart,line-trend-chart,member-activity-grid}.tsx`، `src/components/layout/{section,stat-tile}.tsx` (`OverviewCard` در `section.tsx`)، `src/components/ui/date-picker-dialog.tsx` (`GREGORIAN_MONTHS`/`GREGORIAN_WEEKDAYS` export شده برای `DeadlineCalendar`)، `src/lib/jalali.ts` (همه‌ی محاسبه‌های تاریخ Timeline/Calendar و محور x نمودار سلامت پروژه در فارسی).
 - وابستگی بین‌فیچری: `ProjectOverviewHeader` مستقیماً `features/organizations/members-dialog.tsx` (`MembersDialog`) را reuse می‌کند — همان دیالوگ مدیریت اعضای سازمان، بدون کپی یا نسخه‌ی جدا.
 - کتابخانه‌ی خارجی: `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` فقط در `views/board-view.tsx` — تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه؛ دلیل اضافه‌شدنش Drag & Drop لمسی/ماوس واقعی (و انیمیشن جابه‌جایی چند-کانتینری `sortable`) است که پیاده‌سازی دستی‌اش شکننده می‌شود.
-- مصرف‌کننده: `src/app/(tabs)/home/projects/[id]/page.tsx` — نوار یکپارچهٔ `ProjectSectionTabs` جای `SectionTabs` عمومی را در همین صفحه گرفته است و دکمهٔ افزودن سند/چت و `TaskPanel` را نیز در خود دارد. صفحهٔ «تسک‌های من» همچنان `SectionTabs` عمومی را استفاده می‌کند.
+- مصرف‌کنندگان: `src/app/(tabs)/home/projects/[id]/page.tsx` و `src/app/(tabs)/home/projects/MyTasks/page.tsx` — هر دو از `ProjectSectionTabs` استفاده می‌کنند؛ صفحهٔ دوم داده‌های چندپروژه‌ای کاربر را می‌دهد و Overview شخصی را در Dashboard قرار می‌دهد.
+- در Board صفحهٔ MyTasks، `ProjectSectionTabs` فهرست تیکت‌ها و اعضای سازمان را به `ProjectTaskList` و `BoardView` می‌دهد؛ عنوان/وضعیت تیکت‌ها خواندنی‌اند، آواتارها سمت راست کمی روی هم می‌افتند و کاربر می‌تواند ارجاع تک‌نفره را از کارت عوض کند. هنگام پیوند تیکت جدید، کارت‌های قبلی قابل‌مشاهده می‌مانند و جایگاه درج خاکستری بین آن‌ها ردیابی می‌شود؛ ارتباط و ترتیب نمونه‌ای در localStorage ذخیره می‌شوند.
+- سه پیوند ثابت بالای `ProjectNavigator` («تسک‌های من»، اعلان‌ها و پیام‌ها) از بالا و پایین `py-4` دارند تا ۱۶px پدینگ عمودی حفظ شود.
 
 ## ارتباط با بقیه‌ی بخش‌ها
 
@@ -74,4 +76,4 @@
 نشان وضعیت برد با مشخصات نسخهٔ موجود Figma `1722:28083` تنظیم شده: شعاع ۱۶px، ارتفاع ۳۲px، آیکون ۲۴×۲۴px بدون shrink و کپسول شمارندهٔ ۲۱px با پدینگ افقی ۶px. حاشیهٔ ردیف نشان از بالا و طرفین ۱۲px است.
 
 ## ناوبری و جزئیات جدید
-ProjectNavigator بالای درخت شرکت/معاونت/پروژه، سه لینک تسک‌های من، اعلان‌های من و پیام‌ها مطابق Figma 1734:30636 دارد؛ آیکون‌های ۱۶px محلی و فاصلهٔ ردیف‌ها ۱۲px. کلیک تسک مودال NewTaskDialog را باز می‌کند و لیست جمع نمی‌شود. Board تغییر جزئیات محلی را از local-task-details دریافت می‌کند.
+ProjectNavigator بالای درخت شرکت/معاونت/پروژه، سه لینک تسک‌های من، اعلان‌های من و پیام‌ها مطابق Figma 1734:30636 دارد؛ آیکون‌های ۱۶px محلی و فاصلهٔ ردیف‌ها ۱۲px. لینک تسک‌ها به `/home/projects/MyTasks` می‌رود و همان صفحهٔ پروژه را با تسک‌های تجمیعی کاربر باز می‌کند. Board تغییر جزئیات محلی را از local-task-details دریافت می‌کند.

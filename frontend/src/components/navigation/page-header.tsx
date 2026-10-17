@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import type { ReactNode } from "react"
 import { useLocale } from "@/components/providers/locale-provider"
 import {
   DropdownMenu,
@@ -27,11 +28,13 @@ export type PageHeaderMenuItem = {
  */
 export function PageHeader({
   title,
+  titleContent,
   subtitle,
   /** هر آرایه‌ی داخلی یک گروه است؛ بین گروه‌ها جداکننده رسم می‌شود. */
   menu,
 }: {
   title: string
+  titleContent?: ReactNode
   subtitle?: string
   menu?: PageHeaderMenuItem[][]
 }) {
@@ -51,7 +54,7 @@ export function PageHeader({
       </button>
 
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-base font-medium text-foreground">{title}</h1>
+        <h1 className="truncate text-base font-medium text-foreground">{titleContent ?? title}</h1>
         {subtitle && <p className="truncate text-xs text-text2">{subtitle}</p>}
       </div>
 

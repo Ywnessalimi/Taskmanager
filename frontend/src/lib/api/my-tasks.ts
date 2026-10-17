@@ -3,7 +3,7 @@ import { MOCK_CURRENT_USER, MOCK_MY_ACTIVITY, MOCK_PROJECTS, MOCK_TODAY } from "
 import type { MyTask, MyTasksOverview, Task } from "./types"
 
 /**
- * تسک‌های تب «تسک‌های من». فعلاً از روی MOCK_PROJECTS محاسبه می‌شود (تخصیص بر اساس نام،
+ * تسک‌های مسیر تجمیعی «تسک‌های من». فعلاً از روی MOCK_PROJECTS محاسبه می‌شود (تخصیص بر اساس نام،
  * چون مدل Mock هنوز assigneeId ندارد). وقتی بک‌اند Django آماده شد، جایگزین
  * GET /api/me/tasks/ می‌شود (رجوع به docs/BACKEND.md بخش ۴) بدون تغییر در کامپوننت‌ها.
  */
@@ -33,7 +33,7 @@ function allMyTasks(userName: string): MyTask[] {
 }
 
 /**
- * لیست تب «تسک‌های من» — طبق docs/PRODUCT_OVERVIEW.md فقط تسک‌های «در حال انجام» نمایش داده
+ * فهرست نمای تجمیعی «تسک‌های من» — طبق docs/PRODUCT_OVERVIEW.md فقط تسک‌های «در حال انجام» نمایش داده
  * می‌شوند. زیرتسک‌ها برای نمای Tree نگه داشته می‌شوند (بدون فیلتر وضعیت، چون زمینه‌ی تسک والدند).
  */
 export async function getMyTasks(): Promise<MyTask[]> {

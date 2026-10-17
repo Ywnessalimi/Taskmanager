@@ -8,12 +8,17 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
+  closestCenter,
+  pointerWithin,
+  rectIntersection,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type CollisionDetection,
 } from "@dnd-kit/core"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -24,6 +29,7 @@ import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -31,11 +37,15 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
-import { useT } from "@/components/providers/locale-provider"
+import { useLocale, useT } from "@/components/providers/locale-provider"
 import { readTaskDetails } from "@/features/tasks/local-task-details"
 import { AssigneePickerDialog } from "@/features/tasks/assignee-picker-dialog"
 import { PRIORITY_COLOR, PriorityDot, STATUS_COLUMNS } from "@/features/projects/task-display"
-import type { MyTask, Task, TaskPriority } from "@/lib/api/types"
+import type { Member, MyTask, Task, TaskPriority, TicketSubject } from "@/lib/api/types"
+import { getTickets } from "@/features/tickets/ticket-data"
+import { saveLocalTicket, type LocalTicket } from "@/features/tickets/local-created-tickets"
+import { linkTicketToTask, readTicketTaskLinks, type TicketTaskLinks } from "@/features/tickets/ticket-task-links"
+import type { TranslationKey } from "@/lib/i18n/dictionary"
 
 type BoardColumn = { id: string; label: string; color: string; icon: string }
 
@@ -71,6 +81,29 @@ const DEFAULT_COLUMNS: BoardColumn[] = STATUS_COLUMNS.map((column) => ({
 }))
 
 const STATUS_COLUMN_IDS = new Set<string>(STATUS_COLUMNS.map((column) => column.id))
+const TICKET_SUBJECT_LABELS: Record<TicketSubject, TranslationKey> = {
+  general: "ticket.general",
+  hr: "ticket.hr",
+  purchasing: "ticket.purchasing",
+  warehouse: "ticket.warehouse",
+}
+const TICKET_USER_AVATARS: Record<string, string> = {
+  u1: "/avatars/u1.svg",
+  u2: "/avatars/u2.svg",
+  u3: "/avatars/u3.svg",
+  u4: "/avatars/u4.svg",
+  u5: "/avatars/u5.svg",
+  u6: "/avatars/u6.svg",
+}
+
+const boardCollisionDetection: CollisionDetection = (args) => {
+  if (args.active.data.current?.kind === "ticket") {
+    const taskTargets = args.droppableContainers.filter((container) => container.data.current?.kind === "ticket-target")
+    return pointerWithin({ ...args, droppableContainers: taskTargets })
+  }
+  const taskTargets = args.droppableContainers.filter((container) => container.data.current?.kind !== "ticket-target")
+  return rectIntersection({ ...args, droppableContainers: taskTargets })
+}
 
 /**
  * پالت انتخاب رنگ ستون — تزئینی است، نه معنایی، پس مستقیم hex (نه توکن‌های success/warning/error).
@@ -107,7 +140,7 @@ function findContainer(order: Record<string, string[]>, id: string): string | un
   return Object.keys(order).find((key) => order[key].includes(id))
 }
 
-/** پروژه‌ی یک تسک برای نگاشتن به لیست اعضا: `MyTask` (تب «تسک‌های من») خودش `projectId` دارد، بقیه از prop صفحه‌ی پروژه. */
+/** پروژه‌ی یک تسک برای نگاشتن به لیست اعضا: تسک‌های MyTasks خودشان `projectId` دارند، بقیه از prop صفحه‌ی پروژه. */
 export function resolveProjectId(task: Task, fallback?: string): string | undefined {
   return (task as Partial<MyTask>).projectId ?? fallback
 }
@@ -128,6 +161,109 @@ export function FieldIcon({ name, active }: { name: string; active?: boolean }) 
     <span className="flex size-6 shrink-0 items-center justify-center">
       <RemixIcon name={name} className={`text-base ${active ? "text-icon" : "text-icon2"}`} />
     </span>
+  )
+}
+
+/** محتوای تیکت و وضعیتش خواندنی می‌ماند؛ ارجاع تک‌نفره از همین کارت قابل تغییر است. */
+function BoardTicketCard({
+  ticket,
+  compact = false,
+  members = [],
+  onAssigneeChange,
+  parentTaskId,
+}: {
+  ticket: LocalTicket
+  compact?: boolean
+  members?: Member[]
+  onAssigneeChange?: (member?: Member) => void
+  parentTaskId?: string
+}) {
+  const t = useT()
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `ticket:${ticket.id}`,
+    data: { kind: "ticket", ticketId: ticket.id },
+  })
+  const assignedMember = members.find((member) => member.id === ticket.assigneeId)
+  const creatorAvatar = ticket.createdByAvatarUrl ?? (ticket.createdById ? TICKET_USER_AVATARS[ticket.createdById] : undefined)
+  const assigneeName = assignedMember?.name ?? ticket.assigneeName
+  const assigneeAvatar = assignedMember?.avatarUrl ?? ticket.assigneeAvatarUrl
+  const avatarSize = compact ? "size-5" : "size-6"
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+    listeners?.onPointerDown?.(event)
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform) }}
+      {...attributes}
+      {...listeners}
+      onPointerDown={handlePointerDown}
+      onClick={stop}
+      data-ticket-drop-id={parentTaskId ? ticket.id : undefined}
+      data-ticket-drop-task={parentTaskId}
+      aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
+      className={`flex min-w-0 touch-none items-center gap-2 border border-border bg-bg2 text-start text-text2 ${compact ? "rounded-md px-2 py-1" : "rounded-xl px-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+    >
+      <AvatarGroup className="shrink-0 rtl:space-x-reverse">
+        <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
+          {creatorAvatar && <AvatarImage src={creatorAvatar} alt={ticket.createdByName ?? t("ticket.name")} />}
+          <AvatarFallback className="text-[9px]">{ticket.createdByName?.slice(0, 1) ?? "?"}</AvatarFallback>
+        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={`${t("ticket.assign")}: ${assigneeName ?? t("ticket.unassigned")}`}
+            title={assigneeName ?? t("ticket.assign")}
+            onPointerDown={stop}
+            onClick={stop}
+            className={`${avatarSize} relative z-10 flex shrink-0 items-center justify-center rounded-full bg-background ring-2 ring-background hover:bg-bg3`}
+          >
+            {assigneeName ? (
+              <Avatar className="size-full">
+                {assigneeAvatar && <AvatarImage src={assigneeAvatar} alt={assigneeName} />}
+                <AvatarFallback className="text-[9px]">{assigneeName.slice(0, 1)}</AvatarFallback>
+              </Avatar>
+            ) : <RemixIcon name="user-add-line" className="text-xs text-text3" />}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onPointerDown={stop} onClick={stop}>
+            <DropdownMenuItem onSelect={() => onAssigneeChange?.(undefined)}>{t("ticket.unassigned")}</DropdownMenuItem>
+            {members.map((member) => (
+              <DropdownMenuItem key={member.id} onSelect={() => onAssigneeChange?.(member)}>
+                <Avatar className="size-5">
+                  {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
+                  <AvatarFallback className="text-[10px]">{member.name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+                {member.name}
+                {member.id === ticket.assigneeId && <RemixIcon name="check-line" className="ms-auto text-base" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </AvatarGroup>
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">{ticket.title || t("ticket.name")}</span>
+      <span className="shrink-0 rounded bg-background px-1.5 py-0.5 text-[10px] text-text3">{t(TICKET_SUBJECT_LABELS[ticket.subject])}</span>
+    </div>
+  )
+}
+
+function BoardTicketOverlay({ ticket }: { ticket: LocalTicket }) {
+  const t = useT()
+  return (
+    <div className="flex w-64 min-w-0 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-text2">
+      <AvatarGroup className="shrink-0 rtl:space-x-reverse">
+        <Avatar className="size-6 shrink-0">
+          {ticket.createdByAvatarUrl && <AvatarImage src={ticket.createdByAvatarUrl} alt={ticket.createdByName ?? t("ticket.name")} />}
+          <AvatarFallback className="text-[9px]">{ticket.createdByName?.slice(0, 1) ?? "?"}</AvatarFallback>
+        </Avatar>
+        {ticket.assigneeName && <Avatar className="relative z-10 size-6 shrink-0">
+          {ticket.assigneeAvatarUrl && <AvatarImage src={ticket.assigneeAvatarUrl} alt={ticket.assigneeName} />}
+          <AvatarFallback className="text-[9px]">{ticket.assigneeName.slice(0, 1)}</AvatarFallback>
+        </Avatar>}
+      </AvatarGroup>
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">{ticket.title || t("ticket.name")}</span>
+      <span className="shrink-0 rounded bg-bg2 px-1.5 py-0.5 text-[10px] text-text3">{t("ticket.title")}</span>
+    </div>
   )
 }
 
@@ -245,14 +381,42 @@ function TaskCardBody({
   task,
   projectId,
   onUpdate,
+  attachedTickets = [],
+  ticketAssignees = [],
+  onTicketAssigneeChange,
+  draggedTicketId,
+  isTicketTarget = false,
+  ticketDropIndex = null,
 }: {
   task: Task
   projectId?: string
   onUpdate: (patch: Partial<Task>) => void
+  attachedTickets?: LocalTicket[]
+  ticketAssignees?: Member[]
+  onTicketAssigneeChange?: (ticketId: string, member?: Member) => void
+  draggedTicketId?: string | null
+  isTicketTarget?: boolean
+  ticketDropIndex?: number | null
 }) {
+  const t = useT()
+  const visibleTickets = isTicketTarget && draggedTicketId
+    ? attachedTickets.filter((ticket) => ticket.id !== draggedTicketId)
+    : attachedTickets
+  const visibleDropIndex = Math.max(0, Math.min(ticketDropIndex ?? visibleTickets.length, visibleTickets.length))
+  const dropSlot = <div data-ticket-drop-slot="" data-ticket-drop-task={task.id} className="flex min-h-7 items-center justify-center rounded-lg border border-dashed border-[#a9a9a9] bg-[#e5e5e5] px-2 py-1 text-[11px] text-[#555]">{t("board.dropTicket")}</div>
   return (
     <>
       <p className="py-1 text-sm font-medium text-foreground">{task.title}</p>
+
+      {visibleTickets.length > 0 ? (
+        <div className="flex flex-col gap-1 rounded-lg bg-bg2 p-1.5">
+          {visibleTickets.map((ticket, index) => <div key={ticket.id} className="flex flex-col gap-1">
+            {isTicketTarget && visibleDropIndex === index && dropSlot}
+            <BoardTicketCard key={ticket.id} ticket={ticket} compact members={ticketAssignees} parentTaskId={task.id} onAssigneeChange={(member) => onTicketAssigneeChange?.(ticket.id, member)} />
+          </div>)}
+          {isTicketTarget && visibleDropIndex === visibleTickets.length && dropSlot}
+        </div>
+      ) : isTicketTarget ? dropSlot : null}
 
       {task.assigneeNames && task.assigneeNames.length > 0 && (
         <AssigneeField
@@ -289,18 +453,44 @@ function SortableTaskCard({
   projectId,
   onUpdate,
   figmaStyle,
+  attachedTickets,
+  ticketAssignees,
+  onTicketAssigneeChange,
+  draggedTicketId,
+  ticketDropEnabled,
+  isTicketTarget,
+  ticketDropIndex,
 }: {
   task: Task
   projectId?: string
   onUpdate: (patch: Partial<Task>) => void
   figmaStyle?: boolean
+  attachedTickets: LocalTicket[]
+  ticketAssignees: Member[]
+  onTicketAssigneeChange: (ticketId: string, member?: Member) => void
+  draggedTicketId: string | null
+  ticketDropEnabled: boolean
+  isTicketTarget: boolean
+  ticketDropIndex: number | null
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { kind: "task", taskId: task.id },
+  })
+  const { setNodeRef: setTargetRef } = useDroppable({
+    id: `ticket-target:${task.id}`,
+    data: { kind: "ticket-target", taskId: task.id },
+    disabled: !ticketDropEnabled,
+  })
   const panel = useTaskPanel()
+  const setCardRef = (node: HTMLDivElement | null) => {
+    setSortableRef(node)
+    setTargetRef(node)
+  }
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setCardRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
@@ -309,7 +499,17 @@ function SortableTaskCard({
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
-      <TaskCardBody task={task} projectId={projectId} onUpdate={onUpdate} />
+      <TaskCardBody
+        task={task}
+        projectId={projectId}
+        onUpdate={onUpdate}
+        attachedTickets={attachedTickets}
+        ticketAssignees={ticketAssignees}
+        onTicketAssigneeChange={onTicketAssigneeChange}
+        draggedTicketId={draggedTicketId}
+        isTicketTarget={isTicketTarget}
+        ticketDropIndex={ticketDropIndex}
+      />
     </div>
   )
 }
@@ -327,6 +527,15 @@ function Column({
   column,
   taskIds,
   tasksById,
+  ticketIds,
+  ticketsById,
+  attachedTicketsByTask,
+  ticketAssignees,
+  onTicketAssigneeChange,
+  draggedTicketId,
+  ticketDropEnabled,
+  ticketTargetTaskId,
+  ticketTargetIndex,
   projectId,
   isDragOver,
   onAddTask,
@@ -340,6 +549,15 @@ function Column({
   column: BoardColumn
   taskIds: string[]
   tasksById: Map<string, Task>
+  ticketIds: string[]
+  ticketsById: Map<string, LocalTicket>
+  attachedTicketsByTask: Map<string, LocalTicket[]>
+  ticketAssignees: Member[]
+  onTicketAssigneeChange: (ticketId: string, member?: Member) => void
+  draggedTicketId: string | null
+  ticketDropEnabled: boolean
+  ticketTargetTaskId: string | null
+  ticketTargetIndex: number | null
   projectId?: string
   isDragOver: boolean
   onAddTask: () => void
@@ -352,6 +570,7 @@ function Column({
 }) {
   const { setNodeRef } = useDroppable({ id: column.id })
   const t = useT()
+  const itemCount = taskIds.length + ticketIds.length
   const columnLabel = column.id === "todo" ? t("status.todo") : column.id === "in-progress" ? t("status.inProgress") : column.id === "completed" ? t("status.completed") : column.id === "cancelled" ? t("board.cancelled") : column.label
 
   return (
@@ -371,7 +590,7 @@ function Column({
             >
               <ColumnIcon icon={column.icon} />
               <span className="truncate text-xs font-bold">{columnLabel}</span>
-              <span className="flex h-[21px] min-w-5 shrink-0 items-center justify-center rounded-[16px] bg-white px-1.5 py-1 text-xs font-semibold leading-[13px] text-black">{taskIds.length}</span>
+              <span className="flex h-[21px] min-w-5 shrink-0 items-center justify-center rounded-[16px] bg-white px-1.5 py-1 text-xs font-semibold leading-[13px] text-black">{itemCount}</span>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-3">
               <ColorPickerGrid value={column.color} onChange={onColorChange} customColors={customColors} onAddCustomColor={onAddCustomColor} />
@@ -396,7 +615,7 @@ function Column({
         </Popover>
         <span className={`min-w-0 truncate text-sm font-medium ${figmaStyle ? "rounded-full px-2 py-1 text-white" : "flex-1 text-foreground"}`} style={figmaStyle ? { backgroundColor: column.color } : undefined}>{columnLabel}</span>
         <span className="flex shrink-0 items-center justify-center rounded-full bg-background px-2 py-0.5 text-xs font-semibold text-foreground">
-          {taskIds.length}
+          {itemCount}
         </span>
         </>}
       </div>
@@ -412,10 +631,21 @@ function Column({
                 projectId={projectId}
                 onUpdate={(patch) => onUpdateTask(task.id, patch)}
                 figmaStyle={figmaStyle}
+                attachedTickets={attachedTicketsByTask.get(task.id) ?? []}
+                ticketAssignees={ticketAssignees}
+                onTicketAssigneeChange={onTicketAssigneeChange}
+                draggedTicketId={draggedTicketId}
+                ticketDropEnabled={ticketDropEnabled}
+                isTicketTarget={ticketTargetTaskId === task.id}
+                ticketDropIndex={ticketTargetTaskId === task.id ? ticketTargetIndex : null}
               />
             ) : null
           })}
-          {taskIds.length === 0 && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
+          {ticketIds.map((ticketId) => {
+            const ticket = ticketsById.get(ticketId)
+            return ticket ? <BoardTicketCard key={ticket.id} ticket={ticket} members={ticketAssignees} onAssigneeChange={(member) => onTicketAssigneeChange(ticket.id, member)} /> : null
+          })}
+          {itemCount === 0 && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
         </div>
       </SortableContext>
 
@@ -597,9 +827,24 @@ function AddColumnTile({
  *   مسئول/تاریخ/اولویت با `stopPropagation` مستقل کلیک می‌شوند و مودال/دراپ‌داون ویرایش
  *   همان فیلد را باز می‌کنند (بدون باز کردن پنل جزئیات).
  */
-export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }: { tasks: Task[]; projectId?: string; figmaStyle?: boolean }) {
+export function BoardView({
+  tasks: initialTasks,
+  projectId,
+  figmaStyle = false,
+  includeTickets = false,
+  ticketAssignees = [],
+}: {
+  tasks: Task[]
+  projectId?: string
+  figmaStyle?: boolean
+  includeTickets?: boolean
+  ticketAssignees?: Member[]
+}) {
   const router = useRouter()
+  const { locale } = useLocale()
   const [tasks, setTasks] = useState(initialTasks)
+  const [tickets, setTickets] = useState<LocalTicket[]>([])
+  const [ticketTaskLinks, setTicketTaskLinks] = useState<TicketTaskLinks>({})
   const [columns, setColumns] = useState<BoardColumn[]>(() => figmaStyle ? [
     { id: "todo", label: "در انتظار", color: "var(--project-status-blue)", icon: "time-line" },
     { id: "in-progress", label: "در حال انجام", color: "var(--project-status-green)", icon: "figma-progress" },
@@ -610,6 +855,8 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
   const [order, setOrder] = useState<Record<string, string[]>>(() => ({ ...buildInitialOrder(initialTasks), ...(figmaStyle ? { cancelled: [] } : {}) }))
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
+  const [ticketTargetTaskId, setTicketTargetTaskId] = useState<string | null>(null)
+  const [ticketTargetIndex, setTicketTargetIndex] = useState<number | null>(null)
   const nextColumnId = useRef(1)
   const panel = useTaskPanel()
 
@@ -620,8 +867,79 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
     window.addEventListener("task-details-changed",changed)
     return()=>window.removeEventListener("task-details-changed",changed)
   },[])
+
+  useEffect(() => {
+    if (!includeTickets) return
+    const refresh = () => {
+      try {
+        setTickets(getTickets(locale))
+        setTicketTaskLinks(readTicketTaskLinks())
+      } catch {
+        setTickets([])
+        setTicketTaskLinks(readTicketTaskLinks())
+      }
+    }
+
+    refresh()
+    window.addEventListener("tickets-changed", refresh)
+    window.addEventListener("ticket-task-links-changed", refresh)
+    window.addEventListener("storage", refresh)
+    return () => {
+      window.removeEventListener("tickets-changed", refresh)
+      window.removeEventListener("ticket-task-links-changed", refresh)
+      window.removeEventListener("storage", refresh)
+    }
+  }, [includeTickets, locale])
+
   const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
+  const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
+  const { attachedTicketsByTask, attachedTicketIds } = useMemo(() => {
+    const byTask = new Map<string, Array<{ ticket: LocalTicket; index: number }>>()
+    const attachedIds = new Set<string>()
+    for (const ticket of tickets) {
+      const link = ticketTaskLinks[ticket.id]
+      if (!link || !tasksById.has(link.taskId)) continue
+      byTask.set(link.taskId, [...(byTask.get(link.taskId) ?? []), { ticket, index: link.index }])
+      attachedIds.add(ticket.id)
+    }
+    const ordered = new Map<string, LocalTicket[]>()
+    for (const [taskId, items] of byTask) {
+      ordered.set(taskId, items.sort((left, right) => left.index - right.index).map(({ ticket }) => ticket))
+    }
+    return { attachedTicketsByTask: ordered, attachedTicketIds: attachedIds }
+  }, [ticketTaskLinks, tickets, tasksById])
+  const ticketIdsByColumn = useMemo(() => {
+    const byColumn: Record<string, string[]> = Object.fromEntries(columns.map((column) => [column.id, []]))
+    for (const ticket of tickets) {
+      if (!attachedTicketIds.has(ticket.id) && byColumn[ticket.status]) byColumn[ticket.status].push(ticket.id)
+    }
+    return byColumn
+  }, [attachedTicketIds, columns, tickets])
   const activeTask = activeId ? tasksById.get(activeId) : undefined
+  const activeTicket = activeId?.startsWith("ticket:") ? ticketsById.get(activeId.slice("ticket:".length)) : undefined
+
+  function getTicketInsertionIndex(taskId: string, ticketId: string, activeRect: { top: number; height: number } | null) {
+    const currentTickets = (attachedTicketsByTask.get(taskId) ?? []).filter((ticket) => ticket.id !== ticketId)
+    if (!activeRect) return currentTickets.length
+    const draggedCenter = activeRect.top + activeRect.height / 2
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-ticket-drop-task]"))
+      .filter((node) => node.dataset.ticketDropTask === taskId)
+    const nodesByTicketId = new Map(nodes.map((node) => [node.dataset.ticketDropId, node]))
+    const slot = nodes.find((node) => node.hasAttribute("data-ticket-drop-slot"))
+    const slotIndex = ticketTargetTaskId === taskId && ticketTargetIndex !== null
+      ? Math.max(0, Math.min(ticketTargetIndex, currentTickets.length))
+      : null
+    const slotGap = slot ? Number.parseFloat(getComputedStyle(slot.parentElement ?? slot).rowGap) || 0 : 0
+    const slotOffset = slot && slotIndex !== null ? slot.getBoundingClientRect().height + slotGap : 0
+    for (let index = 0; index < currentTickets.length; index += 1) {
+      const node = nodesByTicketId.get(currentTickets[index].id)
+      if (!node) continue
+      const rect = node.getBoundingClientRect()
+      const center = rect.top + rect.height / 2 - (slotIndex !== null && index >= slotIndex ? slotOffset : 0)
+      if (draggedCenter < center) return index
+    }
+    return currentTickets.length
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -630,6 +948,17 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
 
   function updateTask(taskId: string, patch: Partial<Task>) {
     setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)))
+  }
+
+  function updateTicketAssignee(ticketId: string, member?: Member) {
+    const ticket = ticketsById.get(ticketId)
+    if (!ticket) return
+    void saveLocalTicket(ticketId, {
+      ...ticket,
+      assigneeId: member?.id,
+      assigneeName: member?.name,
+      assigneeAvatarUrl: member?.avatarUrl,
+    })
   }
 
   function updateColumnColor(columnId: string, color: string) {
@@ -646,15 +975,30 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id))
+    setTicketTargetTaskId(null)
+    setTicketTargetIndex(null)
   }
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
-    if (!over) {
+    if (active.data.current?.kind === "ticket") {
       setDragOverColumnId(null)
+      const taskId = over?.data.current?.kind === "ticket-target" ? String(over.data.current.taskId) : null
+      const ticketId = String(active.data.current.ticketId)
+      setTicketTargetTaskId(taskId)
+      setTicketTargetIndex(taskId ? getTicketInsertionIndex(taskId, ticketId, active.rect.current.translated) : null)
       return
     }
 
+    if (!over) {
+      setDragOverColumnId(null)
+      setTicketTargetTaskId(null)
+      setTicketTargetIndex(null)
+      return
+    }
+
+    setTicketTargetTaskId(null)
+    setTicketTargetIndex(null)
     const activeTaskId = String(active.id)
     const overId = String(over.id)
     const activeContainer = findContainer(order, activeTaskId)
@@ -679,6 +1023,19 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
     const { active, over } = event
     setActiveId(null)
     setDragOverColumnId(null)
+    setTicketTargetTaskId(null)
+    setTicketTargetIndex(null)
+
+    if (active.data.current?.kind === "ticket") {
+      const ticketId = String(active.data.current.ticketId)
+      const taskId = over?.data.current?.kind === "ticket-target" ? String(over.data.current.taskId) : undefined
+      if (taskId && ticketsById.has(ticketId)) {
+        const index = getTicketInsertionIndex(taskId, ticketId, active.rect.current.translated)
+        setTicketTaskLinks(linkTicketToTask(ticketId, taskId, index, ticketTaskLinks))
+      }
+      return
+    }
+
     if (!over) return
 
     const activeTaskId = String(active.id)
@@ -707,13 +1064,17 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
 
   return (
     <DndContext
+      id={`board-${projectId ?? "my-tasks"}`}
       sensors={sensors}
+      collisionDetection={boardCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setActiveId(null)
         setDragOverColumnId(null)
+        setTicketTargetTaskId(null)
+        setTicketTargetIndex(null)
       }}
     >
       <div data-slot="board-scroll" className={figmaStyle ? "-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto pb-2"}>
@@ -724,6 +1085,15 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
             column={column}
             taskIds={order[column.id] ?? []}
             tasksById={tasksById}
+            ticketIds={ticketIdsByColumn[column.id] ?? []}
+            ticketsById={ticketsById}
+            attachedTicketsByTask={attachedTicketsByTask}
+            ticketAssignees={ticketAssignees}
+            onTicketAssigneeChange={updateTicketAssignee}
+            draggedTicketId={activeTicket?.id ?? null}
+            ticketDropEnabled={includeTickets}
+            ticketTargetTaskId={ticketTargetTaskId}
+            ticketTargetIndex={ticketTargetIndex}
             projectId={projectId}
             isDragOver={dragOverColumnId === column.id}
             onAddTask={() => { if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/tasks/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`); else panel?.openNewTask() }}
@@ -739,7 +1109,9 @@ export function BoardView({ tasks: initialTasks, projectId, figmaStyle = false }
       </div>
       </div>
 
-      <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} projectId={projectId} /> : null}</DragOverlay>
+      <DragOverlay>
+        {activeTicket ? <BoardTicketOverlay ticket={activeTicket} /> : activeTask ? <TaskCardOverlay task={activeTask} projectId={projectId} /> : null}
+      </DragOverlay>
     </DndContext>
   )
 }

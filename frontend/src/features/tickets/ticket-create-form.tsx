@@ -16,7 +16,7 @@ import type { CurrentUser, TicketPermission, TicketStatus, TicketSubject } from 
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 
 const SUBJECTS: { value: TicketSubject; label: TranslationKey }[] = [{ value: "general", label: "ticket.general" }, { value: "hr", label: "ticket.hr" }, { value: "purchasing", label: "ticket.purchasing" }, { value: "warehouse", label: "ticket.warehouse" }]
-const STATUSES: { value: TicketStatus; label: TranslationKey }[] = [{ value: "open", label: "ticket.open" }, { value: "in-review", label: "ticket.inReview" }, { value: "closed", label: "ticket.closed" }]
+const STATUSES: { value: TicketStatus; label: TranslationKey }[] = [{ value: "todo", label: "status.todo" }, { value: "in-progress", label: "status.inProgress" }, { value: "completed", label: "status.completed" }]
 const PERMISSIONS: { value: TicketPermission; label: TranslationKey }[] = [{ value: "salary-payment", label: "ticket.salaryPayment" }, { value: "purchase", label: "ticket.purchase" }, { value: "warehouse-release", label: "ticket.warehouseRelease" }, { value: "other", label: "ticket.other" }]
 const FIELD = "flex min-h-6 w-full items-center gap-6 text-start"
 
@@ -24,7 +24,7 @@ const FIELD = "flex min-h-6 w-full items-center gap-6 text-start"
 function TicketWorkspace({ user, onDone, ticket }: { user: CurrentUser; onDone: () => void; ticket?: LocalTicket }) {
   const t = useT()
   const [title, setTitle] = useState(ticket?.title ?? ""), [description, setDescription] = useState(ticket?.description ?? "")
-  const [subject, setSubject] = useState<TicketSubject>(ticket?.subject ?? "general"), [status, setStatus] = useState<TicketStatus>(ticket?.status ?? "open")
+  const [subject, setSubject] = useState<TicketSubject>(ticket?.subject ?? "general"), [status, setStatus] = useState<TicketStatus>(ticket?.status ?? "todo")
   const [permissions, setPermissions] = useState<TicketPermission[]>(ticket?.permissionIds ?? [])
   const [following, setFollowing] = useState(false), [favorite, setFavorite] = useState(false), [tab, setTab] = useState("activities")
   const [files, setFiles] = useState<string[]>([]), [error, setError] = useState(false)
@@ -33,12 +33,12 @@ function TicketWorkspace({ user, onDone, ticket }: { user: CurrentUser; onDone: 
   useEffect(() => {
     if (removed.current || (!id.current && !title.trim() && !description.trim())) return
     id.current ??= crypto.randomUUID()
-    const input={createdById:ticket?.createdById??user.id,createdByName:ticket?.createdByName??user.name,title:title.trim(),subject,status,permissionIds:permissions,description:description||undefined}
+    const input={createdById:ticket?.createdById??user.id,createdByName:ticket?.createdByName??user.name,createdByAvatarUrl:ticket?.createdByAvatarUrl??user.avatarUrl,assigneeId:ticket?.assigneeId,assigneeName:ticket?.assigneeName,assigneeAvatarUrl:ticket?.assigneeAvatarUrl,title:title.trim(),subject,status,permissionIds:permissions,description:description||undefined}
     const signature=JSON.stringify(input)
     if(ticket&&lastSaved.current===null){lastSaved.current=signature;return}
     if(lastSaved.current===signature)return
     void saveLocalTicket(id.current,input).then(()=>{lastSaved.current=signature;setError(false)}).catch(()=>setError(true))
-  }, [ticket, title, subject, status, permissions, description, ticket?.createdById, ticket?.createdByName, user.id, user.name])
+  }, [ticket, title, subject, status, permissions, description, ticket?.createdById, ticket?.createdByName, ticket?.createdByAvatarUrl, ticket?.assigneeId, ticket?.assigneeName, ticket?.assigneeAvatarUrl, user.id, user.name, user.avatarUrl])
   async function remove() {
     try { if (id.current) await deleteLocalTicket(id.current); removed.current = true; onDone() }
     catch { setError(true) }

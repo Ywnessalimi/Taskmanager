@@ -177,7 +177,7 @@ export type NotificationPreferences = {
   weeklyDigest: boolean
 }
 
-/** فایلی که کاربر به پروفایل خودش پیوست کرده — در Overview تب «تسک‌های من» نمایش داده می‌شود. */
+/** فایلی که کاربر به پروفایل خودش پیوست کرده — در Overview صفحهٔ «تسک‌های من» نمایش داده می‌شود. */
 export type UserAttachment = {
   id: string
   name: string
@@ -205,7 +205,7 @@ export type PublicUser = {
 
 /**
  * کاربر واردشده (Current User). فیلدهای پروفایل (نام، ایمیل، عکس، توضیحات) علاوه بر تب
- * «حساب کاربری»، در Overview تب «تسک‌های من» هم استفاده خواهند شد.
+ * «حساب کاربری»، در Overview صفحهٔ «تسک‌های من» هم استفاده خواهند شد.
  */
 export type CurrentUser = {
   id: string
@@ -216,7 +216,7 @@ export type CurrentUser = {
   /** توضیح کوتاه کاربر (Bio) */
   bio?: string
   notifications: NotificationPreferences
-  /** فایل‌های پیوست‌شده‌ی کاربر (بخش پروفایل در Overview تب «تسک‌های من») */
+  /** فایل‌های پیوست‌شده‌ی کاربر (بخش پروفایل در Overview صفحهٔ «تسک‌های من») */
   attachments: UserAttachment[]
 }
 
@@ -227,8 +227,8 @@ export type MyTask = Task & {
 }
 
 /**
- * داده‌ی تجمیعی Overview تب «تسک‌های من» — همان مفاهیم سطح پروژه، اما روی همه‌ی
- * پروژه‌های کاربر (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تب ۲ — تسک‌های من»).
+ * داده‌ی تجمیعی Overview صفحهٔ «تسک‌های من» — همان مفاهیم سطح پروژه، اما روی همه‌ی
+ * پروژه‌های کاربر (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تسک‌های من»).
  */
 export type MyTasksOverview = {
   /** تسک‌هایی که نیاز به رسیدگی فوری دارند (عقب‌افتاده یا اولویت فوری) */
@@ -292,11 +292,16 @@ export type TaskFormProjectOption = {
 }
 
 export type TicketSubject = "hr" | "purchasing" | "warehouse" | "general"
-export type TicketStatus = "open" | "in-review" | "closed"
+export type TicketStatus = TaskStatus
 export type TicketPermission = "salary-payment" | "purchase" | "warehouse-release" | "other"
 export type NewTicketInput = {
   createdById?: string
   createdByName?: string
+  createdByAvatarUrl?: string
+  /** تیکت در هر زمان حداکثر به یک عضو ارجاع می‌شود. */
+  assigneeId?: string
+  assigneeName?: string
+  assigneeAvatarUrl?: string
   title: string
   subject: TicketSubject
   status: TicketStatus

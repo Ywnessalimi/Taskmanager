@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useRef, useState, type TouchEvent, type WheelEvent } from "react"
 import { useLocale, useT } from "@/components/providers/locale-provider"
+import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { readLocalTickets, type LocalTicket } from "./local-created-tickets"
+import type { LocalTicket } from "./local-created-tickets"
+import { getTickets } from "./ticket-data"
 import type { CurrentUser } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 
@@ -24,9 +26,9 @@ const subjects = {
 } as const
 
 const statuses = {
-  open: "ticket.open",
-  "in-review": "ticket.inReview",
-  closed: "ticket.closed",
+  todo: "status.todo",
+  "in-progress": "status.inProgress",
+  completed: "status.completed",
 } as const
 
 const permissions = {
@@ -36,52 +38,16 @@ const permissions = {
   other: "ticket.other",
 } as const
 
-const mockOwners: Record<string, string> = {
-  u1: "سارا احمدی",
-  u2: "علی رضایی",
-  u3: "مریم کریمی",
-}
-
-const mockTicketData = [
-  { id: "ticket-example-1", subject: "hr", status: "open", permissionIds: ["salary-payment"], createdById: "u1", titleFa: "مجوز واریز حقوق", titleEn: "Payroll authorization" },
-  { id: "ticket-example-2", subject: "purchasing", status: "in-review", permissionIds: ["purchase"], createdById: "u2", titleFa: "خرید تجهیزات اداری", titleEn: "Office equipment purchase" },
-  { id: "ticket-example-3", subject: "warehouse", status: "closed", permissionIds: ["warehouse-release"], createdById: "u3", titleFa: "خروج کالا از انبار", titleEn: "Warehouse dispatch" },
-  { id: "ticket-example-4", subject: "general", status: "open", permissionIds: ["other"], createdById: "u2", titleFa: "درخواست دسترسی", titleEn: "Access request" },
-  { id: "ticket-example-5", subject: "hr", status: "in-review", permissionIds: ["salary-payment"], createdById: "u3", titleFa: "بررسی حقوق ماهانه", titleEn: "Monthly payroll review" },
-  { id: "ticket-example-6", subject: "hr", status: "open", permissionIds: ["salary-payment"], createdById: "u1", titleFa: "پرداخت قرارداد پشتیبانی", titleEn: "Support contract payment" },
-  { id: "ticket-example-7", subject: "purchasing", status: "open", permissionIds: ["purchase"], createdById: "u2", titleFa: "خرید مانیتور برای تیم", titleEn: "Monitors for the team" },
-  { id: "ticket-example-8", subject: "warehouse", status: "in-review", permissionIds: ["warehouse-release"], createdById: "u3", titleFa: "اصلاح موجودی کالا", titleEn: "Inventory adjustment" },
-  { id: "ticket-example-9", subject: "general", status: "closed", permissionIds: ["other"], createdById: "u1", titleFa: "دسترسی به پنل گزارش", titleEn: "Reports dashboard access" },
-  { id: "ticket-example-10", subject: "purchasing", status: "in-review", permissionIds: ["purchase"], createdById: "u2", titleFa: "تأمین قطعات دستگاه‌ها", titleEn: "Equipment parts purchase" },
-  { id: "ticket-example-11", subject: "hr", status: "closed", permissionIds: ["salary-payment"], createdById: "u3", titleFa: "تأیید فهرست حقوق", titleEn: "Approve payroll list" },
-  { id: "ticket-example-12", subject: "warehouse", status: "open", permissionIds: ["warehouse-release"], createdById: "u2", titleFa: "ارسال نمونه از انبار", titleEn: "Dispatch warehouse samples" },
-  { id: "ticket-example-13", subject: "general", status: "in-review", permissionIds: ["other"], createdById: "u1", titleFa: "افزودن دسترسی مدیر پروژه", titleEn: "Add project manager access" },
-] as const
-
-function examples(en: boolean): LocalTicket[] {
-  return mockTicketData.map((ticket) => ({
-    id: ticket.id,
-    title: en ? ticket.titleEn : ticket.titleFa,
-    subject: ticket.subject,
-    status: ticket.status,
-    permissionIds: [...ticket.permissionIds],
-    createdById: ticket.createdById,
-    createdByName: mockOwners[ticket.createdById],
-    createdAt: "2026-10-11T09:00:00Z",
-    updatedAt: "2026-10-11T09:00:00Z",
-  }))
-}
-
 const statusIcons = {
-  open: "checkbox-blank-circle-line",
-  "in-review": "play-circle-fill",
-  closed: "checkbox-circle-fill",
+  todo: "checkbox-blank-circle-line",
+  "in-progress": "play-circle-fill",
+  completed: "checkbox-circle-fill",
 } as const
 
 const statusClasses = {
-  open: "text-text3",
-  "in-review": "text-[var(--project-brand)]",
-  closed: "text-success",
+  todo: "text-text3",
+  "in-progress": "text-[var(--project-brand)]",
+  completed: "text-success",
 } as const
 
 const avatarByOwner: Record<string, string> = {
@@ -94,8 +60,20 @@ const avatarByOwner: Record<string, string> = {
 }
 
 function ticketAvatar(ticket: LocalTicket, user: CurrentUser) {
+  if (ticket.createdByAvatarUrl) return ticket.createdByAvatarUrl
   if (ticket.createdById === user.id) return user.avatarUrl ?? avatarByOwner.u1
   return (ticket.createdById && avatarByOwner[ticket.createdById]) || user.avatarUrl || avatarByOwner.u1
+}
+
+function assignedAvatar(ticket: LocalTicket) {
+  return ticket.assigneeAvatarUrl ?? (ticket.assigneeId ? avatarByOwner[ticket.assigneeId] : undefined)
+}
+
+function TicketAvatar({ name, src, size }: { name: string; src?: string; size: "size-6" | "size-[29px]" }) {
+  return <Avatar title={name} className={`${size} shrink-0 rounded-2xl`}>
+    {src && <AvatarImage src={src} alt={name} />}
+    <AvatarFallback className="rounded-2xl text-[10px]">{name.slice(0, 1)}</AvatarFallback>
+  </Avatar>
 }
 
 function TicketCard({
@@ -112,15 +90,13 @@ function TicketCard({
   style?: React.CSSProperties
 }) {
   const t = useT()
+  const assigneeAvatar = assignedAvatar(ticket)
   const content = (
     <>
-      <Image
-        src={ticketAvatar(ticket, user)}
-        alt={ticket.createdByName ?? user.name}
-        width={29}
-        height={29}
-        className="size-[29px] shrink-0 rounded-2xl object-cover"
-      />
+      <AvatarGroup className="shrink-0 rtl:space-x-reverse">
+        <TicketAvatar src={ticketAvatar(ticket, user)} name={ticket.createdByName ?? user.name} size="size-[29px]" />
+        {ticket.assigneeName && <TicketAvatar src={assigneeAvatar} name={ticket.assigneeName} size="size-[29px]" />}
+      </AvatarGroup>
       <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
         <span className="w-full truncate text-right text-sm leading-5 text-[var(--task-workspace-text)]">
           {ticket.title || t("ticket.name")}
@@ -136,7 +112,7 @@ function TicketCard({
   )
 
   const cardClassName = `flex h-[60px] w-full items-center gap-2 rounded-full border border-[var(--task-workspace-border)] bg-background px-4 py-2 text-start transition-colors hover:bg-bg2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${className}`
-  const label = `${ticket.title || t("ticket.name")}, ${t(statuses[ticket.status])}, ${t(subjects[ticket.subject])}, ${ticket.createdByName ?? user.name}`
+  const label = `${ticket.title || t("ticket.name")}, ${t(statuses[ticket.status])}, ${t(subjects[ticket.subject])}, ${ticket.createdByName ?? user.name}${ticket.assigneeName ? `, ${ticket.assigneeName}` : ""}`
 
   if (!href) {
     return (
@@ -304,12 +280,7 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
   useEffect(() => {
     function load() {
       try {
-        const local = readLocalTickets()
-        const deleted: string[] = JSON.parse(localStorage.getItem("quire:deleted-tickets:v1") ?? "[]")
-        setTickets([
-          ...examples(locale === "en").filter((ticket) => !local.some((item) => item.id === ticket.id)),
-          ...local,
-        ].filter((ticket) => !deleted.includes(ticket.id)))
+        setTickets(getTickets(locale))
         setError(false)
       } catch {
         setError(true)
@@ -333,9 +304,9 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
     new Map(tickets.map((ticket) => [ticket.createdById ?? user.id, ticket.createdByName ?? user.name])).entries(),
   )
   const statusOptions: [string, string][] = [
-    ["open", t(statuses.open)],
-    ["in-review", t(statuses["in-review"])],
-    ["closed", t(statuses.closed)],
+    ["todo", t(statuses.todo)],
+    ["in-progress", t(statuses["in-progress"])],
+    ["completed", t(statuses.completed)],
   ]
   const subjectOptions: [string, string][] = [
     ["general", t(subjects.general)],
@@ -427,8 +398,14 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
             <Link key={ticket.id} href={`/inbox/${encodeURIComponent(ticket.id)}`} className="flex flex-wrap items-center gap-3 p-3 text-start hover:bg-bg2">
               <span className="min-w-40 flex-1 text-sm font-medium">{ticket.title || t("ticket.name")}</span>
               <span className="text-xs text-text3">{t(subjects[ticket.subject])}</span>
-              <span className={`rounded-full px-2 py-1 text-xs ${ticket.status === "closed" ? "bg-success/10 text-success" : ticket.status === "in-review" ? "bg-warning/10 text-warning" : "bg-brand/10 text-brand"}`}>{t(statuses[ticket.status])}</span>
-              <span className="w-28 text-xs text-text2">{ticket.createdByName ?? user.name}</span>
+              <span className={`rounded-full px-2 py-1 text-xs ${ticket.status === "completed" ? "bg-success/10 text-success" : ticket.status === "in-progress" ? "bg-warning/10 text-warning" : "bg-brand/10 text-brand"}`}>{t(statuses[ticket.status])}</span>
+                <span className="flex w-40 shrink-0 items-center gap-1.5 text-xs text-text2">
+                  <AvatarGroup className="shrink-0 rtl:space-x-reverse">
+                    <TicketAvatar src={ticketAvatar(ticket, user)} name={ticket.createdByName ?? user.name} size="size-6" />
+                    {ticket.assigneeName && <TicketAvatar src={assignedAvatar(ticket)} name={ticket.assigneeName} size="size-6" />}
+                  </AvatarGroup>
+                  <span className="truncate">{ticket.createdByName ?? user.name}</span>
+                </span>
               <span className="flex flex-wrap gap-1">{ticket.permissionIds.map((id) => <span key={id} className="rounded-md bg-bg2 px-2 py-1 text-xs text-text2">{t(permissions[id])}</span>)}</span>
             </Link>
           ))}

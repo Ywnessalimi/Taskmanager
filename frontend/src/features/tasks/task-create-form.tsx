@@ -10,7 +10,7 @@ import { TaskForm } from "./task-form"
  * رفتار بعد از پایان تعریف می‌شود.
  *
  * دو مصرف‌کننده دارد: صفحه‌ی کامل `/tasks/new` (موبایل، بدون `onDone` — بعد از ثبت/انصراف
- * `router.back()` می‌شود) و `TaskPanel` (پنل کناری داخل `SectionTabs`، با `onDone` که پنل را می‌بندد).
+ * `router.back()` می‌شود) و `TaskPanel` (داخل نوار تب پروژه/MyTasks، با `onDone` که پنل را می‌بندد).
  */
 export function TaskCreateForm({
   projects,

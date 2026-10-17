@@ -11,10 +11,10 @@ import { PriorityDot } from "@/features/projects/task-display"
 import type { CurrentUser, MyTasksOverview as MyTasksOverviewData } from "@/lib/api/types"
 
 /**
- * بخش Overview تب «تسک‌های من» (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تب ۲»):
+ * بخش Overview صفحهٔ «تسک‌های من» (رجوع به docs/PRODUCT_OVERVIEW.md بخش «تسک‌های من»):
  * پروفایل کاربر، تسک‌های نیازمند رسیدگی، پراکندگی وضعیت، سلامت تجمیعی و فعالیت شخصی.
  * چون از `useT` استفاده می‌کند (زبان جاری)، Client Component است — داده‌اش هنوز از
- * Server Component والدش (`app/(tabs)/my-tasks/page.tsx`) می‌آید.
+ * Server Component والدش (`app/(tabs)/home/projects/MyTasks/page.tsx`) می‌آید.
  */
 export function MyTasksOverview({
   user,

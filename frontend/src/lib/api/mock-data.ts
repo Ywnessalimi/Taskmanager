@@ -280,7 +280,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
 ]
 
 /**
- * کاربر واردشده. عمداً همان `u1` (سارا احمدی) از اعضای `org-1` است تا وقتی تب «تسک‌های من»
+ * کاربر واردشده. عمداً همان `u1` (سارا احمدی) از اعضای `org-1` است تا وقتی صفحهٔ «تسک‌های من»
  * ساخته شد، تسک‌ها و فعالیت او با داده‌ی سازمان/پروژه‌ها هم‌خوان باشد.
  */
 export const MOCK_CURRENT_USER: CurrentUser = {
@@ -307,7 +307,7 @@ export const MOCK_CURRENT_USER: CurrentUser = {
  */
 export const MOCK_TODAY = "1404/05/12"
 
-/** فعالیت روزانه‌ی خود کاربر واردشده (Portfolio Activity در تب «تسک‌های من»). */
+/** فعالیت روزانه‌ی خود کاربر واردشده (Portfolio Activity در صفحهٔ «تسک‌های من»). */
 export const MOCK_MY_ACTIVITY = mockActivity(2)
 
 /** برچسب‌های ازقبل‌ساخته‌شده — `TagPickerDialog` این‌ها را به‌همراه برچسب‌های خودِ تسک جستجو می‌کند. */

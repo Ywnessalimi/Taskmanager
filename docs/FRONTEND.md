@@ -24,9 +24,9 @@
 
 ## ۳. ساختار مسیرها (Routing)
 
-**به‌روزرسانی ناوبری:** `/projects` ورودی محیط مستقل پروژه‌ها و فهرست همهٔ پروژه‌هاست؛ مسیرهای فعلی `/home/projects/[id]` تا زمان انتقال تدریجی همچنان صفحهٔ پروژهٔ انتخاب‌شده‌اند. مینی‌بار مشترک در `components/navigation` در موبایل پایین و در دسکتاپ سمت شروع (`start`) نمایش داده می‌شود؛ RTL/LTR با `dir` ریشه جابه‌جایی راست/چپ را انجام می‌دهد. پروژه‌ها و AI فعال‌اند؛ مدخل پروفایل نیز به `/account` می‌رود. در نمای پروژه، Board با طرح جدید هماهنگ می‌شود و نماهای دیگر همان پیاده‌سازی قبلی را حفظ می‌کنند.
+**به‌روزرسانی ناوبری:** `/` به کارتابل `/inbox` هدایت می‌شود تا کارتابل صفحهٔ شروع برنامه باشد. `/projects` ورودی محیط مستقل پروژه‌ها و فهرست همهٔ پروژه‌هاست؛ `/home/projects/[id]` صفحهٔ پروژهٔ انتخاب‌شده است و مسیر ثابت `/home/projects/MyTasks` صفحهٔ تجمیعی «تسک‌های من» را در همان محیط ارائه می‌کند. این مسیر از همان `ProjectNavigator` و `ProjectSectionTabs` استفاده می‌کند؛ در فهرست نماها تسک‌های تخصیص‌یافته به کاربر از همهٔ پروژه‌ها می‌آیند. مسیر قدیمی `/my-tasks` وجود ندارد. مینی‌بار مشترک در `components/navigation` در موبایل پایین و در دسکتاپ سمت شروع (`start`) نمایش داده می‌شود؛ RTL/LTR با `dir` ریشه جابه‌جایی راست/چپ را انجام می‌دهد. پروژه‌ها و AI فعال‌اند؛ مدخل پروفایل نیز به `/account` می‌رود. عنوان داخل هدر پروژه انتخابگر پروژه‌هاست و گزینهٔ «همهٔ پروژه‌ها» به `/home/projects/MyTasks` می‌رود. در نمای پروژه، Board با طرح جدید هماهنگ می‌شود و نماهای دیگر همان پیاده‌سازی قبلی را حفظ می‌کنند.
 
-صفحهٔ پروژه از `features/projects/project-section-tabs.tsx` برای یک نوار یکپارچه مطابق Figma node `1710:27099` استفاده می‌کند: Dashboard (محتوای Overview)، Board، List (Tree)، Table، Calendar، Gantt و «افزودن» صفحهٔ سفارشی. `SectionTabs` عمومی همچنان در «تسک‌های من» به کار می‌رود. SVGهای نوار پروژه در `public/images/figma/project-tabs/` ذخیره می‌شوند؛ محتوا و رفتار نماهای غیربرد تغییر نمی‌کند. `DesktopHeader` در همهٔ مسیرها طرح node `1710:27098` را نشان می‌دهد؛ عنوان از مسیر می‌آید و در صفحهٔ پروژه، نام پروژه از گزینه‌های واکشی‌شده در layout پیدا می‌شود و منوی انتخاب پروژه دارد. خوشهٔ سمت پایان به ترتیب «جدید»، جداکننده، جست‌وجو، اعلان و آواتار است. SVGهای این هدر در `public/images/figma/project-header/` ذخیره شده‌اند. نشان ستون Board از node `1710:27237` پیروی می‌کند؛ آیکون Figma آن در `public/images/figma/board/` قرار دارد و رنگ/آیکون ستون در state محلی Board نگه داشته می‌شود.
+صفحهٔ پروژه و `/home/projects/MyTasks` از `features/projects/project-section-tabs.tsx` برای یک نوار یکپارچه مطابق Figma node `1710:27099` استفاده می‌کنند: Dashboard، Board، List (Tree)، Calendar، Gantt و «افزودن» صفحهٔ سفارشی. محتوای Dashboard در صفحهٔ MyTasks، Overview شخصی و در پروژه، Overview همان پروژه است؛ نماهای MyTasks از همهٔ پروژه‌ها تسک می‌گیرند. فقط Board این صفحه فهرست تیکت‌ها را هم از ماژول tickets می‌گیرد؛ وضعیت و عنوان تیکت خواندنی‌اند، آواتار سازنده و در صورت ارجاع آواتار تنها ارجاع‌گیرنده نمایش داده می‌شود و ارجاع از منوی کارت قابل تغییر است. آواتارها در سمت راست کارت کمی روی هم می‌افتند. وضعیت تیکت با `TaskStatus` مشترک است؛ ارجاع و اتصال تیکت به تسک در localStorage نمونه‌سازی می‌شوند. هنگام کشیدن تیکت به کارت، تیکت‌های پیوندخورده باقی می‌مانند و جایگاه خاکستری در محل درج نشان داده می‌شود؛ رهاکردن بین تیکت‌ها ترتیب محلی آن‌ها را هم ثبت می‌کند. در `ProjectNavigator`، نوار سه‌پیوندی ثابت بالای فهرست پروژه‌ها ۱۶px پدینگ عمودی دارد. SVGهای نوار پروژه در `public/images/figma/project-tabs/` ذخیره می‌شوند؛ محتوا و رفتار نماهای غیربرد تغییر نمی‌کند. `DesktopHeader` در همهٔ مسیرها طرح node `1710:27098` را نشان می‌دهد؛ عنوان از مسیر می‌آید و در صفحهٔ پروژه، نام پروژه از گزینه‌های واکشی‌شده در layout پیدا می‌شود و منوی انتخاب پروژه دارد. خوشهٔ سمت پایان به ترتیب «جدید»، جداکننده، جست‌وجو، اعلان و آواتار است. SVGهای این هدر در `public/images/figma/project-header/` ذخیره شده‌اند. نشان ستون Board از node `1710:27237` پیروی می‌کند؛ آیکون Figma آن در `public/images/figma/board/` قرار دارد و رنگ/آیکون ستون در state محلی Board نگه داشته می‌شود.
 
 رنگ‌های طرح جدید در `src/styles/colors.css` با پیشوندهای `--mini-bar-*` و `--project-*` تعریف شده‌اند؛ هیچ مؤلفهٔ محیط پروژه رنگ خام طرح را تکرار نمی‌کند. دارایی عکس مینی‌بار در `public/images/figma/minibar-profile.png` قرار دارد.
 
@@ -37,6 +37,7 @@ app/
   (tabs)/
     home/                        → تب خانه: خوش‌آمدگویی + تعداد تسک‌های در حال انجام + لیست Workspace ها
       organizations/[orgId]/     → صفحه‌ی Overview سازمان
+      projects/MyTasks/          → تسک‌های کاربر در پوستهٔ صفحهٔ پروژه؛ از همهٔ پروژه‌ها
       projects/[projectId]/      → صفحه‌ی پروژه
         list/                    → بخش List با ساب-روت برای هر نما
           tree/
@@ -45,7 +46,6 @@ app/
           timeline/
           calendar/
         overview/                → بخش Overview پروژه
-    my-tasks/                    → تب تسک‌های من (همان نماها + Overview شخصی)
     notifications/                → تب اعلان‌ها
     account/                     → تب حساب کاربری
   tasks/new/                     → صفحه‌ی ساخت تسک جدید (مقصد دکمه‌ی شناور + در تب‌های خانه و تسک‌های من)
@@ -72,12 +72,12 @@ app/
 | لیست Workspace در خانه (با درصد پیشرفت هر پروژه) | `features/home/WorkspaceList` |
 | Organization Overview (هدر، اعضا، خلاصه‌ی پروژه‌ها، آخرین فعالیت‌ها) | `features/organizations/OrganizationOverview` — بازطراحی‌شده مطابق طرح Figma «Home/OrganizationPage» |
 | Project Overview (Health، Pie Chart، Deadline Calendar، Member Activity) | `features/projects/ProjectOverview` |
-| نماهای Tree/Board/Table/Timeline/Calendar | `features/projects/views/{tree-view, board-view, table-view, timeline-view, calendar-view}`؛ صفحهٔ پروژه با `ProjectSectionTabs` و «تسک‌های من» با `ViewSwitcher` بین آن‌ها جابه‌جا می‌شوند |
-| نوار تب و صفحه‌های افزودنی (سند/چت) | `features/projects/ProjectSectionTabs` برای پروژه؛ `features/pages/{SectionTabs, DocumentPage, ChatPage}` برای «تسک‌های من» و محتوای سند/چت |
+| نماهای Board/Tree/Calendar/Timeline | `features/projects/views/{board-view, tree-view, calendar-view, timeline-view}`؛ صفحهٔ پروژه و `/home/projects/MyTasks` با `ProjectSectionTabs` بین نماها جابه‌جا می‌شوند. نمای Table در کد باقی است اما در این نوار تب فعال نیست |
+| نوار تب و صفحه‌های افزودنی (سند/چت) | `features/projects/ProjectSectionTabs` برای پروژه و MyTasks؛ `features/pages/{DocumentPage, ChatPage}` برای محتوای سند/چت |
 | مدیریت ستون‌های Board | `features/projects/ColumnManager` — هنوز ساخته نشده، ستون‌ها فعلاً ثابت‌اند |
 | افزودن عضو به پروژه/Board | `features/projects/MemberAccessManager` — هنوز ساخته نشده |
 | کارت/فرم تسک (نام، ID، Assignee، Tag، Timer، Description، Priority، Sublist) + دنبال‌کننده/علاقه‌مندی/زمان صرف‌شده/لاگ فعالیت/تاریخ+تکرار | `features/tasks/TaskForm` (حالت ویرایش) به‌همراه زیرکامپوننت‌های `task-detail-header`, `followers-dialog`, `time-tracking`, `activity-log`, `date-edit-dialog`, `tag-picker-dialog` — رجوع به [features/tasks/README.md](../frontend/src/features/tasks/README.md). Attachment/Comment هنوز ساخته نشده. |
-| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — ساخته شد (به‌همراه `MyTaskList` برای بخش لیست) |
+| Attention Required، Task Status Distribution، Project Health، Portfolio Activity در «تسک‌های من» | `features/my-tasks/MyTasksOverview` — در Dashboard مسیر `/home/projects/MyTasks` استفاده می‌شود |
 | فیلتر اعلان‌ها (All/Unread/Read/Approval) | `features/notifications/NotificationList` — ساخته شد |
 | تنظیمات و خروج حساب کاربری | `features/account/AccountSettings` — ساخته شد (پروفایل، تنظیمات حساب، سوییچ‌های اعلان، خروج با تایید) |
 | ویجت‌های تکرارشونده (Activity Heatmap، Pie/Donut Chart) | `components/charts/{ActivityHeatmap, StatusDonutChart}` — ساخته شد |
@@ -126,7 +126,7 @@ app/
 | کامپوننت | دلیل نصب اولیه |
 |---|---|
 | `button` | دکمه‌ی Ghost/Primary در سراسر اپ (سایز پیش‌فرض ۳۲px، `lg` معادل ۳۶px — مطابق [DESIGN.md](./DESIGN.md#۵-الگوی-دکمهها)) |
-| `tabs` | نوار یکپارچهٔ Dashboard/Board/List/Table/Calendar/Gantt پروژه در `ProjectSectionTabs` و لیست/نمای‌کلی «تسک‌های من»؛ فیلتر All/Unread/Read/Approval در اعلان‌ها هنوز نه |
+| `tabs` | نوار یکپارچهٔ Dashboard/Board/List/Calendar/Gantt پروژه و MyTasks در `ProjectSectionTabs`؛ فیلتر All/Unread/Read/Approval در اعلان‌ها هنوز نه |
 | `avatar` | نمایش اعضا در `OrganizationOverview` استفاده شده (فعلاً فقط `AvatarFallback` با حرف اول اسم، بدون عکس واقعی) |
 | `badge` | برچسب/وضعیت/اولویت — فعلاً فقط برای نشانه‌ی «این بخش هنوز ساخته نشده» در صفحات Placeholder استفاده شده |
 | `separator` | جداکننده‌ی بین بخش‌های `OrganizationOverview` (هدر/خلاصه‌ی پروژه‌ها/آخرین فعالیت‌ها) |
@@ -147,7 +147,6 @@ src/app/
   (tabs)/
     layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
     home/page.tsx        → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
-    my-tasks/page.tsx    → Placeholder
     notifications/page.tsx → getNotifications() + NotificationList
     account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
 src/components/
@@ -181,7 +180,7 @@ src/components/layout/
   org-logo.tsx            → OrgLogo (جای‌گزین لوگوی سازمان، اندازه‌پذیر — OrganizationOverview و WorkspaceList)
 src/features/home/
   home-greeting.tsx → HomeGreeting: هدر خوش‌آمدگویی صفحه‌ی خانه (جایگزین AppHeader فقط اینجا) — «خوش آمدی {نام}» +
-                        ردیف لینک «N تسک برای انجام داری امروز» (تعداد تسک‌های در حال انجام کاربر) → /my-tasks
+                        ردیف لینک «N تسک برای انجام داری امروز» (تعداد تسک‌های در حال انجام کاربر) → /home/projects/MyTasks
   workspace-list.tsx → WorkspaceList: آکوردئون سازمان‌ها؛ هر سازمان یک ردیف با نام (لینک) + OrgLogo + شورون باز/بسته؛
                         وقتی باز است پروژه‌هایش تورفته زیرش لیست می‌شوند، هرکدام با شماره‌ی ترتیبی + نام + درصد
                         پیشرفت (ProjectRef.progress) + ProgressRing. یک آیکون + برای افزودن پروژه‌ی جدید
@@ -198,21 +197,20 @@ src/features/projects/
   views/table-view.tsx      → TableView: جدول واقعی با هدر ستون و بوردر بین همه‌ی سلول‌ها
   views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks)
   views/board-view.tsx       → BoardView: کانبان با Drag & Drop واقعی (@dnd-kit) بین ۳ ستون ثابت (وضعیت تسک)
-  view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: نوار سوییچ ۵ نما برای MyTaskList
+  view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: سوییچر قدیمی نماها (نوار فعال صفحه در ProjectSectionTabs است)
   views/timeline-view.tsx    → TimelineView: ساید‌بار جمع‌شونده‌ی تسک‌ها + تقویم افقی اسکرول‌شونده (مقیاس روزانه/هفتگی/ماهانه، دکمه‌ی «امروز»)
   views/calendar-view.tsx    → CalendarView: تقویم ماهانه با پیمایش بین ماه‌های دارای تسک
   project-overview.tsx      → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
                                پراکندگی وضعیت تسک‌ها (SectionBox + StatusDonutChart)، تقویم سررسیدها (SectionBox، Placeholder ساده)،
                                فعالیت اعضا (SectionBox + ActivityHeatmap)
 src/features/pages/
-  section-tabs.tsx      → SectionTabs (Client): نوار تب «تسک‌های من» (لیست/نمای‌کلی + صفحه‌های افزوده‌شده + دکمه‌ی +)
   document-page.tsx      → DocumentPage: صفحه‌ی خالی نوشتن متن
   chat-page.tsx          → ChatPage: صفحه‌ی چت (state محلی، بدون بلادرنگ)
 src/features/tasks/
   task-create-form.tsx  → TaskCreateForm (Client): فرم ساخت تسک جدید (عنوان، پروژه، مسئول، سررسید،
                            اولویت، برچسب، توضیحات) — ذخیره فقط شبیه‌سازی است و به صفحه‌ی قبل برمی‌گردد
 src/features/my-tasks/
-  my-task-list.tsx      → MyTaskList (Client): فیلتر پروژه + همان ۵ نمای صفحه‌ی پروژه (ری‌یوز مستقیم، بدون کپی)
+  my-tasks-page-header.tsx → MyTasksPageHeader: PageHeader محیط پروژه‌ها با اکشن ساخت تسک
   my-tasks-overview.tsx  → MyTasksOverview: پروفایل + پیوست‌ها، نیازمند رسیدگی، پراکندگی وضعیت،
                             سلامت تجمیعی پروژه‌ها، فعالیت شخصی (Portfolio Activity)
 src/features/account/
@@ -226,10 +224,10 @@ src/features/notifications/
 src/app/(tabs)/
   home/page.tsx                     → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
   home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
-  home/projects/[id]/page.tsx       → getProject(id) + ProjectPageHeader + ProjectSectionTabs → Dashboard / ۵ نمای تسک / سند و چت
+  home/projects/[id]/page.tsx       → getProject(id) + ProjectPageHeader + ProjectSectionTabs → Dashboard / ۴ نمای تسک / سند و چت
+  home/projects/MyTasks/page.tsx    → getMyTasks()/getMyTasksOverview() + ProjectNavigator + ProjectSectionTabs؛ نمای تجمیعی کاربر
   notifications/page.tsx            → getNotifications() + NotificationList
   account/page.tsx                  → getCurrentUser() + AccountSettings
-  my-tasks/page.tsx                 → getCurrentUser() + getMyTasks/Range/Overview + Tabs (لیست/نمای‌کلی)
 src/app/tasks/new/page.tsx          → getTaskFormOptions() + PageHeader + TaskCreateForm (خارج از (tabs)، بدون Bottom Tab Bar)
 src/features/users/user-profile.tsx → UserProfile: پروفایل + سازمان‌ها + ActivityHeatmap
 src/app/users/[id]/page.tsx         → getUserById(id) + PageHeader + UserProfile؛ اگر id نامعتبر بود پیام «پیدا نشد»
@@ -250,9 +248,9 @@ src/components/providers/
 
 نکات مهم برای ادامه‌ی کار:
 
-- **جزئیات تسک مودال است**: `TaskPanel` در پروژه و تسک‌های من میزبان Dialog مشترک NewTaskDialog است؛ وضعیت از TaskPanelProvider می‌آید و محتوای صفحه جمع یا پنهان نمی‌شود.
-- **`my-tasks` و صفحه‌ی پروژه پس‌زمینه‌ی سفید دارند** (نه `bg2` عمومی بدنه) — طبق بازخورد کاربر؛ برای اینکه سفید تا پایین صفحه کشیده شود، `main` و کانتینر `mx-auto` در layout یک ستون flex کشیده‌اند و خودِ صفحه `flex-1 bg-background` می‌گیرد.
-- **هدرها بیرون از کانتینر `p-4` صفحه رندر می‌شوند**: `AppHeader` و `PageHeader` تمام‌عرض و سفیدند، پس ساختار هر صفحه به شکل «هدر + یک `div` با `p-4` برای محتوا» است، نه یک کانتینر `p-4` دور همه‌چیز. در صفحه‌ی پروژه `ProjectSectionTabs` و در تسک‌های من `SectionTabs` بیرون از پدینگ می‌نشینند (نوار تب تمام‌عرض، پدینگ داخل پنل‌ها).
+- **جزئیات تسک مودال است**: `TaskPanel` در پروژه و `/home/projects/MyTasks` میزبان Dialog مشترک NewTaskDialog است؛ وضعیت از TaskPanelProvider می‌آید و محتوای صفحه جمع یا پنهان نمی‌شود.
+- **`/home/projects/MyTasks` و صفحه‌ی پروژه پس‌زمینه‌ی سفید دارند** (نه `bg2` عمومی بدنه) — برای اینکه سفید تا پایین صفحه کشیده شود، `main` و کانتینر `mx-auto` در layout یک ستون flex کشیده‌اند و خودِ صفحه `flex-1 bg-background` می‌گیرد.
+- **هدرها بیرون از کانتینر `p-4` صفحه رندر می‌شوند**: `AppHeader` و `PageHeader` تمام‌عرض و سفیدند، پس ساختار هر صفحه به شکل «هدر + یک `div` با `p-4` برای محتوا» است، نه یک کانتینر `p-4` دور همه‌چیز. در صفحه‌ی پروژه و `/home/projects/MyTasks`، `ProjectSectionTabs` بیرون از پدینگ می‌نشیند (نوار تب تمام‌عرض، پدینگ داخل پنل‌ها).
 - **`TimelineView` عمداً دو جهت دارد**: ساید‌بار تسک‌ها در جریان RTL صفحه می‌ماند، اما ناحیه‌ی تقویم `dir="ltr"` است تا تاریخ از چپ به راست جلو برود و `scrollLeft` رفتار استاندارد داشته باشد. هدر تاریخ داخل همان کانتینر اسکرول است تا با تقویم هم‌زمان حرکت کند؛ ارتفاع ردیف‌های ساید‌بار (`h-9`) و ردیف خالی زیر عنوان آن (`h-7`) باید دقیقاً با دو ردیف هدر تقویم یکی بماند وگرنه ردیف‌ها از تراز خارج می‌شوند.
 - **`AddTaskFab` با کلاس‌های منطقی (`start-4`) جای‌گذاری شده**، نه `right-4` — چون کل اپ RTL است و `start` همان سمت راست است؛ اگر روزی LTR اضافه شد، دکمه خودبه‌خود به سمت درست می‌رود. ارتفاع `bottom` هم باید بالاتر از `h-14` نوار تب‌ها بماند.
 - **همه‌ی محاسبه‌های تاریخ در `src/lib/jalali.ts` متمرکز است** (`parseDate`, `formatDate`, `toOrdinal`/`fromOrdinal`, `addDays`, `startOfWeek`, `daysInMonth`, `MONTH_NAMES`, `isBefore`). این تقویم **واقعی نیست**: کبیسه ندارد (اسفند همیشه ۲۹ روز، هر سال ۳۶۵ روز) و `weekdayIndex` یک قرارداد داخلی است نه روزِ هفته‌ی واقعی — فقط برای ترتیب، فاصله و چیدمان نسبی معتبر است. `TimelineView` و `CalendarView` هر دو از همین ماژول استفاده می‌کنند (قبلاً هرکدام نسخه‌ی خودشان را داشتند).
@@ -264,7 +262,7 @@ src/components/providers/
 - رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
 - صفحه‌های افزوده‌شده با دکمه‌ی «+» (سند/چت)، متن سند و پیام‌های چت هم فقط در state مرورگرند و با رفرش پاک می‌شوند؛ چت اتصال بلادرنگ ندارد.
 - افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، خواندن/تایید در `NotificationList`، و ویرایش پروفایل/سوییچ‌های اعلان در `AccountSettings` — همه فقط در state مرورگر است و با رفرش از بین می‌رود؛ هیچ‌کدام API واقعی ندارند.
-- **هنوز Auth واقعی وجود ندارد**: `getCurrentUser()` یک کاربر ثابت (`u1`، سارا احمدی از `org-1`) برمی‌گرداند. صفحه‌های `/login` و `/signup` (رجوع به `src/features/auth/README.md`) هم هر ورودیِ غیرخالی را می‌پذیرند و مستقیم به `/home` می‌روند — هیچ session/کوکی/توکنی ست نمی‌شود؛ دکمه‌ی «خروج» در `AccountSettings` هم فقط به `/login` ناوبری می‌کند، نه پاک‌کردن یک session واقعی. صفحه‌ی اصلی (`src/app/page.tsx`) هم هنوز مستقیم به `/home` ریدایرکت می‌شود، نه `/login` — یعنی این دو صفحه به بقیه‌ی اپ گیت نمی‌زنند، فقط در دسترس‌اند. تب «تسک‌های من» هم وقتی ساخته شد باید از همین `getCurrentUser()` استفاده کند، نه یک منبع کاربرِ موازی.
+- **هنوز Auth واقعی وجود ندارد**: `getCurrentUser()` یک کاربر ثابت (`u1`، سارا احمدی از `org-1`) برمی‌گرداند. صفحه‌های `/login` و `/signup` (رجوع به `src/features/auth/README.md`) هم هر ورودیِ غیرخالی را می‌پذیرند و مستقیم به `/home` می‌روند — هیچ session/کوکی/توکنی ست نمی‌شود؛ دکمه‌ی «خروج» در `AccountSettings` هم فقط به `/login` ناوبری می‌کند، نه پاک‌کردن یک session واقعی. صفحه‌ی اصلی (`src/app/page.tsx`) هم هنوز مستقیم به `/home` ریدایرکت می‌شود، نه `/login` — یعنی این دو صفحه به بقیه‌ی اپ گیت نمی‌زنند، فقط در دسترس‌اند. مسیر `/home/projects/MyTasks` نیز از همان `getCurrentUser()` استفاده می‌کند.
 - ردیف‌های تنظیمات حساب که هنوز صفحه‌ی مقصد ندارند (تغییر ایمیل/رمز، راهنما، حریم خصوصی) عمداً غیرفعال و بدون فلش رندر می‌شوند تا کلیک‌پذیر به‌نظر نرسند. **«زبان» و «ظاهر» اما واقعاً کار می‌کنند** (نه Placeholder) — رجوع به بخش ۹.
 - منوی سه‌نقطه‌ی `PageHeader` (افزودن تسک/مایل‌استون/بخش، تنظیمات، حذف) فعلاً فقط UI است؛ آیتم‌ها `onClick` ندارند چون صفحه/فرم مقصدشان هنوز ساخته نشده.
 - **تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه `@dnd-kit` است** (`@dnd-kit/core` + `@dnd-kit/utilities`)، فقط در `views/board-view.tsx` — برای Drag & Drop واقعی روی موبایل/ماوس. تست کامل ژست Drag روی دستگاه واقعی توصیه می‌شود؛ ابزارهای خودکار مرورگر گاهی رویداد Pointer را درست شبیه‌سازی نمی‌کنند.
@@ -284,7 +282,7 @@ src/components/providers/
 - **جهت آیکون‌های جهت‌دار باید دستی هماهنگ شود** — مثلاً فلش بازگشت `PageHeader` بر اساس جهت زبان بین `arrow-right-line` (RTL) و `arrow-left-line` (LTR) سوییچ می‌کند. آیکون‌های جهت‌دار عمیق‌تر (پیمایش ماه در `CalendarView`، اسکرول `TimelineView`) هنوز این‌کار را نکرده‌اند — اگر جایی به‌صورت بصری اشتباه به‌نظر رسید، همین الگو را تکرار کنید.
 - **تله‌ی `items-end`/`items-start` روی `flex-col` در RTL**: برخلاف تصور رایج، `items-end` روی یک کانتینر `flex-col` متن/محتوا را در RTL به **چپ** می‌چسباند نه راست — چون محور عرضی یک ستون همان محور inline است و در RTL `end` منطقاً چپ است (`start` = راست). این باگ واقعی در `HomeGreeting` پیش آمد (رجوع به `features/home/README.md`). امن‌ترین راه برای راست‌چین کردن یک بلوک متنی در ستون: اصلاً `items-*` نگذارید و بگذارید پیش‌فرض `stretch` + `text-align` طبیعی (که از `dir` پیروی می‌کند) کار را انجام دهد — همان الگویی که در `organization-overview.tsx` استفاده شده.
 
-**پوشش فعلی ترجمه** (فقط زیرمجموعه‌ای از UI که مستقیماً لمس شد؛ کامل نیست): ناوبری (`BottomTabBar`, `SidebarNav`, `DesktopHeader`, `NotificationsPreviewDialog`, `PageHeader`), صفحه‌ی «حساب کاربری» (کامل، هر دو دیالوگ), «خانه» (`HomeGreeting`, `WorkspaceList`), «تسک‌های من» (فهرست + Overview), «اعلان‌ها», Overview سازمان/پروژه + `MembersDialog`, `ViewSwitcher`, `SectionTabs`, برچسب‌های وضعیت/اولویت مشترک (`status.*`/`priority.*` در دیکشنری — `PriorityDot` هم یک prop اختیاری `label` گرفته تا محل‌های چندزبانه بتوانند آن را بدهند)، و فرم ساخت تسک. **داخل نماها** (`board-view.tsx`, `table-view.tsx`, `tree-view.tsx`, `timeline-view.tsx`, `calendar-view.tsx`) و صفحه‌های سند/چت (`document-page.tsx`, `chat-page.tsx`) هنوز به این دیکشنری وصل نشده‌اند و همیشه فارسی نشان داده می‌شوند — وقتی کسی روی آن‌ها کار کرد، باید همین الگو (کلید در دیکشنری + `useT`/`t`) را ادامه دهد.
+**پوشش فعلی ترجمه** (فقط زیرمجموعه‌ای از UI که مستقیماً لمس شد؛ کامل نیست): ناوبری (`BottomTabBar`, `SidebarNav`, `DesktopHeader`, `NotificationsPreviewDialog`, `PageHeader`), صفحه‌ی «حساب کاربری» (کامل، هر دو دیالوگ), «خانه» (`HomeGreeting`, `WorkspaceList`), «تسک‌های من» (فهرست + Overview), «اعلان‌ها», Overview سازمان/پروژه + `MembersDialog`, `ProjectSectionTabs`, برچسب‌های وضعیت/اولویت مشترک (`status.*`/`priority.*` در دیکشنری — `PriorityDot` هم یک prop اختیاری `label` گرفته تا محل‌های چندزبانه بتوانند آن را بدهند)، و فرم ساخت تسک. **داخل نماها** (`board-view.tsx`, `table-view.tsx`, `tree-view.tsx`, `timeline-view.tsx`, `calendar-view.tsx`) و صفحه‌های سند/چت (`document-page.tsx`, `chat-page.tsx`) هنوز به این دیکشنری وصل نشده‌اند و همیشه فارسی نشان داده می‌شوند — وقتی کسی روی آن‌ها کار کرد، باید همین الگو (کلید در دیکشنری + `useT`/`t`) را ادامه دهد.
 
 ### ۹.۲. ظاهر (روشن/تیره/سیستم)
 

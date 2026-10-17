@@ -1,12 +1,22 @@
-import type { NewTicketInput } from "@/lib/api/types"
+import type { NewTicketInput, TicketStatus } from "@/lib/api/types"
 
 export const LOCAL_TICKETS_KEY = "quire:created-tickets:v1"
 export type LocalTicket = NewTicketInput & { id: string; createdAt: string; updatedAt: string }
 export function readLocalTickets(): LocalTicket[] {
   const parsed: unknown = JSON.parse(localStorage.getItem(LOCAL_TICKETS_KEY) ?? "[]")
   if (!Array.isArray(parsed)) throw new Error("Invalid ticket storage")
-  return parsed as LocalTicket[]
+  return (parsed as Array<LocalTicket & { status: string }>).map((ticket) => ({
+    ...ticket,
+    status: normalizeTicketStatus(ticket.status),
+  }))
 }
+
+function normalizeTicketStatus(status: string): TicketStatus {
+  if (status === "in-progress" || status === "in-review") return "in-progress"
+  if (status === "completed" || status === "closed") return "completed"
+  return "todo"
+}
+
 export async function saveLocalTicket(id: string, input: NewTicketInput): Promise<void> {
   const tickets = readLocalTickets(), now = new Date().toISOString()
   const createdAt = tickets.find(ticket => ticket.id === id)?.createdAt ?? now

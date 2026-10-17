@@ -4,7 +4,7 @@ import type { Task } from "@/lib/api/types"
 const CELL = "border-s border-border px-2.5 py-2 last:border-s-0"
 
 /** نمای جدولی: جدول واقعی با هدر ستون‌ها و بوردر بین همه‌ی سلول‌ها. */
-export function TableView({ tasks }: { tasks: Task[] }) {
+export function TableView({ tasks, showProject = false }: { tasks: Task[]; showProject?: boolean }) {
   if (tasks.length === 0) {
     return <p className="py-8 text-center text-sm text-text2">تسکی وجود ندارد.</p>
   }
@@ -19,6 +19,7 @@ export function TableView({ tasks }: { tasks: Task[] }) {
             </th>
             <th className={`${CELL} w-16 text-start font-normal`}>شناسه</th>
             <th className={`${CELL} text-start font-normal`}>عنوان</th>
+            {showProject && <th className={`${CELL} w-32 text-start font-normal`}>پروژه</th>}
             <th className={`${CELL} w-32 text-start font-normal`}>مسئول</th>
             <th className={`${CELL} w-28 text-start font-normal`}>سررسید</th>
             <th className={`${CELL} w-24 text-start font-normal`}>وضعیت</th>
@@ -34,6 +35,7 @@ export function TableView({ tasks }: { tasks: Task[] }) {
               </td>
               <td className={`${CELL} text-xs text-text3`}>{task.displayId}</td>
               <td className={`${CELL} text-foreground`}>{task.title}</td>
+              {showProject && <td className={`${CELL} text-xs text-text2`}>{(task as Task & { projectName?: string }).projectName ?? "—"}</td>}
               <td className={`${CELL} text-xs text-text2`}>{task.assigneeNames?.join("، ") || "—"}</td>
               <td className={`${CELL} text-xs text-text2`}>{task.dueDate ?? "—"}</td>
               <td className={`${CELL} text-xs text-text2`} title={PRIORITY_LABEL[task.priority]}>

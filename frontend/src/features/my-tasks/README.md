@@ -1,37 +1,25 @@
 # features/my-tasks
 
-پیاده‌سازی تب دوم — «تسک‌های من» (رجوع به [docs/PRODUCT_OVERVIEW.md](../../../docs/PRODUCT_OVERVIEW.md) بخش «تب ۲ — تسک‌های من»).
+پیاده‌سازی بخش «تسک‌های من» در محیط پروژه‌ها (رجوع به [docs/PRODUCT_OVERVIEW.md](../../../docs/PRODUCT_OVERVIEW.md) بخش «تسک‌های من»).
 
 ## چه‌کار می‌کند
 
-صفحه دو بخش دارد (با `SectionTabs` عمومی): **لیست** و **نمای‌کلی** — به‌علاوه‌ی صفحه‌هایی که کاربر با دکمه‌ی «+» اضافه می‌کند (رجوع به `features/pages/README.md`). صفحهٔ پروژه اکنون نوار یکپارچهٔ اختصاصی دارد.
-
-- `my-task-list.tsx` → `MyTaskList` (Client): همان ۵ نمای پروژه (درختی/برد/جدول/خط زمانی/تقویم) که مستقیماً از `features/projects/views/` ری‌یوز می‌شوند، با سوییچر مشترک `features/projects/ViewSwitcher`. چون تسک‌های این صفحه از **چند پروژه** می‌آیند، فیلتر پروژه لازم است — اما به‌جای رندر محلی، از `my-tasks-filter-provider.tsx` خوانده می‌شود.
-- `my-tasks-filter-provider.tsx` → `MyTasksFilterProvider`/`useMyTasksFilter` (Client): state فیلتر پروژه (`projectId` + لیست پروژه‌ها از روی `tasks`) را بین `MyTasksProjectSwitcher` (کنار عنوان صفحه، داخل `AppHeader`) و `MyTaskList` (پایین‌تر، داخل `SectionTabs`) مشترک می‌کند — همان الگوی `components/providers/task-panel-provider.tsx`.
-- `my-tasks-project-switcher.tsx` → `MyTasksProjectSwitcher` (Client): دراپ‌داون بدون استایل خاص (فقط متن پروژه‌ی انتخاب‌شده + آیکون) که به‌جای عنوان صفحه در `AppHeader` قرار می‌گیرد؛ با `useMyTasksFilter` به فیلتر بالا وصل است.
-- `my-tasks-overview.tsx` → `MyTasksOverview` (Server): پروفایل کاربر (اواتار، نام، ایمیل، توضیحات، فایل‌های پیوست)، «نیازمند رسیدگی»، «پراکندگی وضعیت تسک‌ها» (`StatusDonutChart`)، «سلامت پروژه‌ها» (`StatTile`) و «فعالیت من» (`ActivityHeatmap`).
+- `my-tasks-overview.tsx` → `MyTasksOverview` (Server): پروفایل کاربر، «نیازمند رسیدگی»، پراکندگی وضعیت، سلامت تجمیعی پروژه‌ها و فعالیت شخصی؛ در تب Dashboard مسیر `/home/projects/MyTasks` نمایش داده می‌شود.
+- `my-tasks-page-header.tsx` → هدر مسیر تجمیعی با ظاهر `PageHeader` پروژه و اکشن ساخت تسک.
 
 ## وابستگی‌ها
 
-- داده: `src/lib/api/my-tasks.ts` (`getMyTasks`, `getMyTasksOverview`) و `src/lib/api/users.ts` (`getCurrentUser`)؛ تایپ‌های `MyTask` / `MyTasksOverview` در `src/lib/api/types.ts`.
-- کامپوننت‌ها: `features/projects/views/*` (هر ۵ نما)، `features/projects/task-display.tsx` (`PriorityDot`)، `components/charts/{status-donut-chart, activity-heatmap}`، `components/layout/{section, stat-tile}`، `components/layout/app-header.tsx` (پراپ `action`).
-- مصرف‌کننده: `src/app/(tabs)/my-tasks/page.tsx` (کل صفحه را در `MyTasksFilterProvider` می‌پیچد و `MyTasksProjectSwitcher` را به‌عنوان `action` به `AppHeader` می‌دهد).
+- داده: `src/lib/api/my-tasks.ts` (`getMyTasks`, `getMyTasksOverview`)، `src/lib/api/users.ts` (`getCurrentUser`)؛ تایپ‌های `MyTask` و `MyTasksOverview` در `src/lib/api/types.ts`.
+- رابط: `features/projects/ProjectNavigator`, `ProjectSectionTabs` و `ProjectTaskList`; نمودارهای `StatusDonutChart` و `ActivityHeatmap`.
+- مصرف‌کننده: `src/app/(tabs)/home/projects/MyTasks/page.tsx` و پیوندهای خانه و ProjectNavigator.
+
+## قواعد داده‌ای
+
+- فهرست نماها تسک‌های «در حال انجام» را از همهٔ پروژه‌ها نشان می‌دهد؛ Overview همهٔ وضعیت‌های تسک‌های کاربر را برای نمودارها و سلامت تجمیعی در نظر می‌گیرد.
+- فقط نمای Board، همهٔ تیکت‌های نمونه و محلی را نیز از ماژول tickets می‌گیرد؛ عنوان و وضعیت تیکت‌ها خواندنی‌اند و با همان `TaskStatus` در ستون وضعیت خود قرار می‌گیرند. آواتار سازنده و در صورت وجود آواتار یک ارجاع‌گیرنده در سمت راست کمی روی هم می‌افتند؛ ارجاع را می‌توان از کارت تغییر داد یا پاک کرد. هنگام کشیدن تیکت روی کارت تسک، تیکت‌های متصل باقی می‌مانند و جایگاه خاکستری محل درج را نشان می‌دهد؛ پیوند و ترتیب نمونه‌ای در localStorage می‌ماند و تیکت همچنان از Subtask متمایز است.
+- تخصیص تسک فعلاً با مقایسه‌ی نام انجام می‌شود، چون مدل Mock هنوز `assigneeId` ندارد.
+- «عقب‌افتاده» با `MOCK_TODAY` در `mock-data.ts` سنجیده می‌شود؛ تاریخ‌ها جلالی و دستی‌اند.
 
 ## ارتباط با بقیه‌ی بخش‌ها
 
-- نماها **کپی نشده‌اند**؛ همان کامپوننت‌های صفحه‌ی پروژه‌اند و دست‌نخورده باقی مانده‌اند (چون `MyTask` گسترش‌یافته‌ی `Task` است). هر تغییری در آن نماها روی این صفحه هم اثر می‌گذارد.
-- `StatTile` هنگام ساخت همین صفحه از `ProjectOverview` بیرون کشیده شد تا بین دو Overview مشترک باشد.
-- کاربر از همان `getCurrentUser()` تب «حساب کاربری» می‌آید (رجوع به `features/account/README.md`) — منبع کاربرِ موازی ساخته نشده.
-
-## قواعد داده‌ای این بخش
-
-- **لیست فقط تسک‌های «در حال انجام» را نشان می‌دهد** (طبق سند محصول)، اما **Overview روی همه‌ی وضعیت‌ها** محاسبه می‌شود — وگرنه نمودار پراکندگی و «سلامت» همیشه تک‌ستونه بودند.
-- تخصیص تسک فعلاً با **مقایسه‌ی نام** انجام می‌شود، چون `Task` در مدل Mock هنوز `assigneeId` ندارد. با آمدن بک‌اند باید به شناسه تغییر کند.
-- «عقب‌افتاده» با `MOCK_TODAY` در `mock-data.ts` سنجیده می‌شود، نه تاریخ واقعی سیستم (تاریخ‌ها جلالی و دستی‌اند). مقایسه‌ها از `src/lib/jalali.ts` می‌آید که تقویم تقریبی است، نه واقعی.
-- نمای «خط زمانی» بازه‌ی خودش را از سررسید تسک‌های همان لیست می‌سازد و «امروز» را از `getToday()` می‌گیرد؛ صفحه فقط `today` را پاس می‌دهد.
-
-## نکات ناقص فعلی
-
-- ستون «مسئول» در نمای جدول همیشه نام خودِ کاربر است (نماها مشترک‌اند و برای صفحه‌ی پروژه نوشته شده‌اند). اگر بعداً نماها پارامتری شدند، بهتر است در این صفحه به‌جای مسئول، **نام پروژه** نشان داده شود.
-- جابه‌جایی تسک در نمای برد فقط در state مرورگر است و با رفرش/تغییر فیلتر پروژه بازنشانی می‌شود (`key={projectId}` عمداً کامپوننت را ری‌مانت می‌کند).
-- «فایل‌های پیوست» فقط نمایشی است؛ آپلود/حذف ندارد.
+نماهای Board، Tree، Calendar و Timeline از `features/projects/views/` می‌آیند و کپی نشده‌اند؛ چیدمان و نوار تب با صفحهٔ پروژه یکی است. Board برای تیکت‌ها prop اختیاری می‌گیرد؛ صفحه‌های پروژه این prop را نمی‌فرستند و تیکت نشان نمی‌دهند. مسیر قدیمی `/my-tasks` دیگر وجود ندارد.

@@ -11,6 +11,7 @@ export function TaskPanel(){
  if(!context||!state)return null
  let task=state.kind==="detail"?state.task:undefined
  if(task){try{task=readTaskDetails(task)}catch{/* داده اصلی هنگام storage نامعتبر */}}
- const projectId=(state.kind==="detail" ? (state.task as typeof state.task & {projectId?:string}).projectId : undefined) ?? pathname.match(/\/projects\/([^/]+)/)?.[1]
+ const routeProjectId=pathname.match(/\/projects\/([^/]+)/)?.[1]
+ const projectId=(state.kind==="detail" ? (state.task as typeof state.task & {projectId?:string}).projectId : undefined) ?? context.projects.find(project=>project.id===routeProjectId)?.id
  return <Dialog open onOpenChange={open=>{if(!open)context.close()}}><NewTaskDialog key={task?.id??"new"} task={task} projects={context.projects} defaultProjectId={projectId} user={context.user} onDone={context.close} /></Dialog>
 }

@@ -9,3 +9,5 @@
 ## تغییرات شرکت و تیکت
 
 `Division` زیرمجموعهٔ شرکت است و `Project.divisionId/divisionName` مرجع معاونت‌اند. دادهٔ معاونت‌های Mock در `mock-data.ts` تعریف شده؛ `Organization.projects` نمای تجمیعی برای سازگاری است. `tickets.ts` قرارداد مستقل `createTicket(NewTicketInput)` را دارد که فقط ورودی را لاگ می‌کند؛ مصرف‌کننده فیچر tickets است.
+
+`TicketStatus` در `types.ts` همان `TaskStatus` است تا وضعیت Ticket و Task در Board مشترک بماند. `NewTicketInput` مشخصات سازنده و حداکثر یک ارجاع‌گیرنده را با شناسه، نام و آواتار اختیاری نگه می‌دارد. نوع Ticket کامل و تجمیع نمونه/محلی آن در `features/tickets` تعریف می‌شود.
