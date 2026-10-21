@@ -1,6 +1,5 @@
 import { t, type Locale } from "@/lib/i18n/dictionary"
 import { AuthHero } from "./auth-hero"
-import { AuthModeToggle } from "./auth-mode-toggle"
 
 /**
  * پوسته‌ی مشترک صفحه‌ی ورود/ثبت‌نام — از طرح Figma «AlignUI» (نودهای log-in موبایل/دسکتاپ
@@ -12,17 +11,18 @@ import { AuthModeToggle } from "./auth-mode-toggle"
  */
 export function AuthScreen({
   locale,
-  active,
   heroImage,
   children,
 }: {
   locale: Locale
-  active: "login" | "signup"
   heroImage: string
   children: React.ReactNode
 }) {
   return (
-    <div className="auth-theme flex min-h-dvh w-full bg-[var(--auth-bg)] lg:bg-[#ededed]">
+    <div
+      className="auth-theme flex min-h-dvh w-full bg-[var(--auth-bg)] lg:bg-[#ededed]"
+      style={{ flexDirection: locale === "fa" ? "row-reverse" : "row" }}
+    >
       <AuthHero locale={locale} imageSrc={heroImage} />
       <div className="flex w-full flex-1 items-center justify-center lg:w-[400px] lg:flex-none lg:p-2.5">
         <div className="flex w-full max-w-[360px] flex-col gap-4 rounded-[20px] bg-[var(--auth-bg)] px-5 pt-[70px] pb-5 lg:pt-10 lg:pb-[30px]">
@@ -32,7 +32,6 @@ export function AuthScreen({
               {t(locale, "auth.welcomeSubtitle")}
             </p>
           </div>
-          <AuthModeToggle locale={locale} active={active} />
           {children}
         </div>
       </div>

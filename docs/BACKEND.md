@@ -1,117 +1,246 @@
 # مستند بک‌اند (Backend)
 
 > پیش‌نیاز خواندن: [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md).
-> این سند نحوه‌ی پیاده‌سازی بک‌اند با **Django + SQLite** را مشخص می‌کند. کد واقعی در پوشه‌ی [`backend/`](../backend/) قرار می‌گیرد.
+> بک‌اند قابل‌اجرا در [`backend/`](../backend/) یک سرویس کوچک Node.js است؛ این سند وضعیت واقعی کد را ثبت می‌کند.
 
-## ۱. فلسفه‌ی فاز اول
+## ۱. هدف و محدوده
 
-بک‌اند در فاز اول عمداً **ساده و مبتدی** نگه داشته می‌شود:
+این سرویس داده‌های پایدار Quire و ورود تک‌حسابی را در SQLite نگه می‌دارد. در اجرای واقعی هیچ Organization، Project، Task یا Ticket دمو seed نمی‌شود؛ فقط حساب اولیه‌ای که مالک سیستم است ساخته می‌شود. ثبت‌نام عمومی وجود ندارد. endpointهای داده نشست معتبر می‌خواهند و شناسهٔ عامل از همان نشست می‌آید.
 
-- بدون میکروسرویس، بدون کش پیچیده، بدون Auth پیشرفته (JWT/OAuth کامل) — یک Session/Token ساده‌ی خود Django کافی است.
-- **SQLite** به‌عنوان پایگاه داده (فایل محلی، بدون نیاز به سرور جدا).
-- اهمیت داده در این فاز صفر است: می‌توان دیتابیس را هر زمان پاک و از نو Migrate کرد. **آنچه اهمیت دارد ساختار درست مدل‌ها، اپ‌ها و APIهاست**, نه محتوای فعلی داده.
-- هدف: خروجی یک API واقعی و قابل‌اتکا برای فرانت (رجوع به [FRONTEND.md](./FRONTEND.md))، با معماری‌ای که مهاجرت به یک سیستم حرفه‌ای‌تر (Postgres، Auth استاندارد، صف/Background Job، Cache) را **بدون بازنویسی اساسی** ممکن کند.
+- زمان اجرا: Node.js 22.13 یا جدیدتر؛ ارتباط مدل با `fetch` داخلی Node انجام می‌شود و وابستگی npm اضافه‌ای ندارد.
+- HTTP: ماژول داخلی `node:http`.
+- پایگاه داده: SQLite از ماژول داخلی `node:sqlite`.
+- مدل اجرا: تک‌پردازه و هم‌زمانی کم؛ `DatabaseSync` عملیات پایگاه داده را همگام اجرا می‌کند. برای بار یا چند نمونهٔ سرویس مناسب نیست.
+- مرز API: `/api/v1` مستقل از جزئیات SQLite است؛ فرانت‌اند فقط با API و لایهٔ `frontend/src/lib/api/` کار می‌کند.
 
-### اصول برای مهاجرت‌پذیری آسان
+`node:sqlite` از Node 22.13 بدون فلگ آزمایشی در دسترس است، اما در نسخهٔ Node 22 هنوز Stability 1.1 (Active Development) دارد. این انتخاب عمداً بدون وابستگی بیرونی است؛ زمان ارتقای Node یا نیاز به پایداری بیشتر، adapter ذخیره‌سازی باید بازبینی شود.
 
-1. **هرگز از SQL خام استفاده نشود** — همیشه از Django ORM استفاده شود تا سوییچ دیتابیس (مثلاً به PostgreSQL) صرفاً با تغییر `DATABASES` در `settings.py` ممکن باشد.
-2. **تنظیمات از طریق متغیر محیطی (Environment Variables)** خوانده شوند (حتی در فاز ساده)، نه Hardcode — تا جابه‌جایی بین محیط‌ها ساده باشد.
-3. هر اپ Django باید **مستقل و تک‌مسئولیتی** باشد (یک اپ = یک حوزه‌ی دامنه) تا در آینده بتوان هرکدام را جدا مقیاس داد یا حتی به سرویس مجزا تبدیل کرد.
-4. از همان ابتدا **Django REST Framework** استفاده شود (حتی برای فاز ساده) تا ساختار API از اول استاندارد و قابل گسترش باشد، نه Viewهای دستی JsonResponse.
+## ۲. ساختار کد
 
-## ۲. ساختار اپ‌ها (Django Apps)
-
-هر اپ متناظر با یک حوزه‌ی دامنه در [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md) است:
-
-```
+```text
 backend/
-  config/                 → تنظیمات پروژه (settings, urls, wsgi/asgi)
+  package.json                 → اجرا و تست با ابزارهای داخلی Node
+  server.js                    → HTTP، مسیرها، اعتبارسنجی ورودی و پاسخ خطا
+  database.js                  → اتصال SQLite، اعمال migration و seed اولیه
+  task-repository.js           → تبدیل مدل Task به ردیف SQLite و عملیات CRUD
   apps/
-    accounts/             → User، پروفایل، احراز هویت ساده
-    organizations/        → Organization، عضویت سازمانی (OrganizationMembership)
-    projects/             → Project، Column، ProjectMembership، Attachment سطح پروژه
-    tasks/                → Task، Subtask، Tag، Comment، Attachment، TimeEntry (Timer)
-    notifications/        → Notification و فیلترهای آن (all/unread/read/approval)
-    activity/             → ActivityLog برای نمودارهای فعالیت (Organization/Project/User)
-  manage.py
-  requirements.txt
-  db.sqlite3
+    auth/
+      README.md                → احراز هویت، حساب اولیه و نشست
+      auth-repository.js       → بررسی رمز، ساخت و ابطال نشست
+    organizations/
+      README.md                → عضویت، مجوزها و مالکیت سلسله‌مراتب سازمانی
+      organization-repository.js → سازمان، معاونت و پروژهٔ کاربر
+    tickets/
+      README.md                → مسئولیت و قرارداد کامنت تیکت
+      ticket-comment-repository.js → خواندن/ثبت کامنت با زمان سرور
+      ticket-repository.js     → رکورد Ticket و Activity پایدار
+    notifications/
+      README.md                → قرارداد اعلان تخصیص تسک
+      notification-repository.js → ثبت، خواندن و علامت‌گذاری اعلان
+    projects/
+      README.md                → مسئولیت API صفحه‌های پروژه
+      project-page-repository.js → سند و پیام‌های چت پروژه
+    ai/
+      README.md                → اتصال امن دستیار به API مدل Nokod
+      ai-service.js            → ارسال پیام‌های گفت‌وگو به مدل و اعتبارسنجی پاسخ
+  seed-data.js                 → چند پروژه و تسک نمونه برای شروع کار محلی
+  migrations/
+    001_initial.sql            → طرح اولیهٔ پروژه و تسک + محدودیت‌های داده
+    002_task_display_sequence.sql → شمارندهٔ پایدار شناسهٔ نمایشی تسک
+    003_ticket_comments.sql    → جدول و index کامنت‌های تیکت
+    004_tickets_and_activity.sql → جدول Ticket و Activity
+    005_project_pages_and_chat.sql → سند و پیام‌های چت هر پروژه
+    006_notifications.sql      → اعلان‌های پایدار تخصیص Task
+    007_users_and_sessions.sql → حساب‌ها و نشست‌های احراز‌شده
+    008_organizations_and_divisions.sql → مالکیت سازمان/معاونت و سازگاری پروژه
+    009_ticket_assignment_notifications.sql → اعلان ارجاع Ticket و مقصد Ticket
+    010_organization_settings_and_members.sql → slug، تصویر و عضویت/مجوزهای سازمان
+  test/
+    task-repository.test.js    → تست migration و CRUD روی دیتابیس موقت
+  data/                         → quire.sqlite (ساخته می‌شود، در Git نیست)
 ```
 
-هر پوشه‌ی اپ باید طبق قانون [AGENTS.md](../AGENTS.md) یک `README.md` داشته باشد که مسئولیت آن اپ و ارتباطش با اپ‌های دیگر را توضیح دهد.
+ماژول‌های دامنهٔ Task و Tickets هرکدام مسئولیت جدا دارند؛ فایل‌های HTTP و SQLite جزئیات اجرایی‌اند. Ticketها در جدول `tickets` ذخیره می‌شوند. جدول کامنت برای سازگاری با شناسه‌های پایدار فعلی، `ticket_id` متنی دارد؛ Activity جدید به جدول Ticket کلید خارجی دارد.
 
-## ۳. مدل داده (Data Model)
+## ۳. تنظیمات و راه‌اندازی
 
-مدل‌های زیر برداشتی مستقیم از موجودیت‌های [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md) هستند و مبنای اولیه‌ی `models.py` هر اپ خواهند بود. فیلدها حداقلی و قابل گسترش‌اند.
+متغیرهای محیطی اختیاری:
 
-### apps.accounts
+| متغیر | پیش‌فرض | کارکرد |
+|---|---|---|
+| `HOST` | `127.0.0.1` | آدرس bind سرویس؛ پیش‌فرض فقط روی همین دستگاه |
+| `PORT` | `4000` | پورت HTTP |
+| `DATABASE_PATH` | `backend/data/quire-live.sqlite` | مسیر فایل SQLite؛ مسیر پوشه در صورت نیاز ساخته می‌شود |
+| `FRONTEND_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | مبدأهای مجاز مرورگر، جداشده با کاما |
+| `INITIAL_ADMIN_EMAIL` | خالی | ایمیل حساب نخست؛ همراه با دو متغیر دیگر حساب را ایجاد می‌کند |
+| `INITIAL_ADMIN_NAME` | `Younes Salimi` | نام نمایشی حساب نخست |
+| `INITIAL_ADMIN_PASSWORD` | خالی | رمز اولیه؛ حداقل ۱۲ نویسه، فقط برای ایجاد اولین حساب |
+| `SESSION_COOKIE_SECURE` | `true` در production | ویژگی `Secure` cookie نشست؛ در HTTP محلی `false` بگذارید |
+| `AI_API_BASE_URL` | `https://service.nokod.ir/v1` | آدرس پایهٔ API سازگار با OpenAI |
+| `AI_API_KEY` | خالی | کلید خصوصی سرویس مدل؛ فقط در محیط بک‌اند، نه در فرانت‌اند |
+| `AI_MODEL` | `Qwen38` | شناسهٔ مدل در سرویس |
 
-- **User** (می‌تواند `AbstractUser` استاندارد جنگو باشد): `username`, `email`, `avatar`, `bio`
+برای توسعهٔ محلی می‌توان این متغیرها را در `backend/.env.local` قرار داد؛ این فایل نادیده‌گرفته‌شده در Git است و اسکریپت‌های `dev` و `start` آن را با Node بارگذاری می‌کنند. کلید را در متغیرهای `NEXT_PUBLIC_*` یا کد مرورگر قرار ندهید.
 
-### apps.organizations
+```bash
+npm --prefix backend run dev
+npm --prefix backend run setup:admin
+```
 
-- **Organization**: `name`, `description`, `created_at`
-- **Division**: `organization (FK)`, `name`
-- **OrganizationMembership**: `organization (FK)`, `user (FK)`, `role`, `joined_at`
+برای اجرای فرانت، ترمینال دوم:
 
-### apps.projects
+```bash
+npm --prefix frontend run dev
+```
 
-- **Project**: `division (FK)`, `name`, `description`, `start_date`, `end_date`, `created_at`
-- **Column** (وضعیت‌های سفارشی Board): `project (FK)`, `name`, `order`, `is_done_column (bool)`
-- **ProjectMembership**: `project (FK)`, `user (FK)` — تعیین اینکه کدام عضو سازمان به این Board دسترسی دارد
-- **ProjectAttachment**: `project (FK)`, `file`, `uploaded_by (FK)`, `uploaded_at`
+پاسخ سلامت: `GET http://127.0.0.1:4000/health`. مرورگر API را از مسیر هم‌مبدأ `/api/v1` فراخوانی می‌کند؛ Next آن را به API محلی می‌فرستد. Server Componentها با `QUIRE_API_ORIGIN` به سرویس بک‌اند وصل می‌شوند.
 
-### apps.tasks
+دیتابیس اجرای سرور با دادهٔ نمونه seed نمی‌شود. پس از migrationها، حساب نخست را با `npm --prefix backend run setup:admin` بسازید؛ این فرمان ایمیل اولیه را از تنظیمات می‌گیرد و رمز را بدون نمایش در ترمینال دریافت می‌کند. فرمان فقط روی دیتابیسی کار می‌کند که هنوز حسابی ندارد. برای bootstrap غیرتعاملی می‌توان متغیرهای `INITIAL_ADMIN_*` را یک‌بار به محیط فرایند داد. `seed-data.js` فقط برای سناریوهای تست/دموی صریح باقی مانده است؛ فایل `quire-live.sqlite` دیتابیس فعال است.
 
-قرارداد Mock فرانت برای ساخت تسک (`NewTaskInput`) علاوه بر فیلدهای اولیه، مقادیر اختیاری وضعیت، دنبال‌کنندگان، علاقه‌مندی، زمان صرف‌شده و عنوان زیرتسک‌های اولیه را می‌پذیرد. این تغییر متعلق به مودال ساخت فرانت است؛ `createTask` همچنان فقط ورودی را لاگ می‌کند و سرویس Django جدیدی در این تغییر ساخته نمی‌شود. نظرها و نام فایل‌های انتخاب‌شده صرفاً پیش‌نویس محلی مودال‌اند.
+## ۴. مدل داده و ذخیره‌سازی
 
-- **Task**: `project (FK)`, `column (FK)`, `parent_task (FK, self, nullable)` (برای Sublist/Subtask و ساختار Tree)، `display_id` (مثل `#324`، یکتا در سطح پروژه یا کل سیستم)، `title`, `assignee (FK → User, nullable)`, `priority` (choices: none/low/medium/high/urgent)، `due_date`, `created_at`, `description`
-- **Tag**: `project (FK)`, `name`, `color`
-- **TaskTag**: جدول واسط چند-به-چند بین Task و Tag
-- **Comment**: `task (FK)`, `author (FK)`, `body`, `created_at`
-- **TaskAttachment**: `task (FK)`, `file`, `uploaded_by (FK)`, `uploaded_at`
-- **TimeEntry** (Start Timer): `task (FK)`, `user (FK)`, `started_at`, `stopped_at`
+### `projects`
 
-> **یادداشت فاز فعلی:** فیلدهای دنبال‌کننده (`Follower`)، علاقه‌مندی (`Favorite`)، تکرار (`repeat` روی `Task`) و لاگ اختصاصی هر تسک (`TaskActivityEntry` — رجوع به یادداشت مربوطه در [PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)) فعلاً فقط در Mock فرانت‌اند (`frontend/src/lib/api/types.ts`/`mock-data.ts`) وجود دارند و هنوز مدل Django ندارند — خارج از دامنه‌ی فاز فعلی (فقط فرانت‌اند). وقتی بک‌اند واقعی برای این بخش‌ها ساخته شد، باید اینجا مدل‌سازی شوند (مثلاً `TaskFollower` به‌عنوان جدول واسط Task×User، `favorited_by` چند-به-چند یا یک `Favorite` جدا، `repeat` به‌عنوان یک choice field روی `Task`، و `TaskActivityEntry` جدا از `ActivityLog` تجمیعی زیر).
+- `id` شناسهٔ پایدار متناظر با شناسهٔ فرانت مثل `proj-1`.
+- `name`, `organization_id`, `organization_name`, `division_id`, `division_name`.
+- `start_date`, `end_date`, `description`.
 
-### apps.notifications
+ساختار واقعی با endpointهای احراز‌شدهٔ Organization، Division و Project ساخته می‌شود. هر سازمان مالک حساب جاری دارد و فهرست پروژه‌ها بر اساس همان مالک محدود می‌شود. محتوای صفحه‌های پروژه در جدول `project_pages` نگه‌داری می‌شود؛ پیام‌های چت در `project_chat_messages` با هویت نشست و زمان سروری ثبت می‌شوند.
 
-- **Notification**: `recipient (FK → User)`, `verb` (متن رخداد)، `related_task (FK, nullable)`, `related_project (FK, nullable)`, `related_organization (FK, nullable)`, `status` (choices: unread/read)، `requires_approval (bool)`, `created_at`
+### `tasks`
 
-### apps.activity
+- `id` شناسهٔ UUID و `display_id` شناسهٔ قابل‌نمایش. شمارندهٔ جداگانه باعث می‌شود حذف آخرین Task شناسهٔ نمایشی را برای Task بعدی بازیافت نکند.
+- `project_id` کلید خارجی؛ حذف پروژهٔ مرجع در این API پشتیبانی نمی‌شود.
+- `title`, `status`, `priority`, `start_date`, `due_date`, `repeat`, `recurrence`, `description`.
+- `assignee_names`, `followers`, `tags`, `subtasks`, `activity_log` به‌صورت JSON معتبر در ستون‌های `TEXT`؛ این کار فاز نمونه را کوچک نگه می‌دارد.
+- `is_favorite`, `time_spent_minutes`, `created_at`, `updated_at`.
 
-- **ActivityLog**: `user (FK)`, `organization (FK, nullable)`, `project (FK, nullable)`, `date`, `count` — مبنای نمودارهای Activity Heatmap (سازمان، پروژه، تسک‌های من).
+Status و Priority با `CHECK` محدود می‌شوند و foreign key فعال است. تاریخ‌های محصول رشته‌اند چون نمونه‌های فعلی تاریخ جلالی دارند؛ API آن‌ها را بدون تبدیل تقویمی نگه می‌دارد. SQL فقط در migration و repository قرار دارد؛ همهٔ ورودی‌ها به statementهای پارامتری bind می‌شوند.
 
-## ۴. API
+فیلدهای آرایه‌ای فعلاً JSON هستند تا مدل و فرم موجود بدون تغییر مفهوم ذخیره شوند. اگر گزارش‌گیری/جست‌وجوی رابطه‌ای روی Assignee/Tag/Subtask لازم شد، migration جدید این مقدارها را به جدول‌های رابطه‌ای می‌برد؛ تغییر schema با فایل migration تازه انجام می‌شود، نه ویرایش migration اعمال‌شده.
 
-- REST ساده با Django REST Framework؛ یک `ViewSet` یا `APIView` استاندارد به‌ازای هر مدل اصلی.
-- الگوی مسیر پیشنهادی: `/api/organizations/`, `/api/organizations/<id>/overview/`, `/api/projects/<id>/`, `/api/projects/<id>/overview/`, `/api/projects/<id>/tasks/?view=board|table|tree|timeline|calendar`, `/api/tasks/<id>/`, `/api/my-tasks/`, `/api/notifications/?filter=all|unread|read|approval`.
-- Endpointهای `overview` (سازمان/پروژه/تسک‌های من) داده‌های تجمیعی (Project Health، Pie Chart، Activity Heatmap، Deadline Calendar) را آماده و سرو می‌کنند تا منطق تجمیع در فرانت تکرار نشود.
-- احراز هویت فاز اول: Session Authentication ساده‌ی خود Django (یا Token ساده‌ی DRF) — کافی برای توسعه؛ ارتقا به یک روش استاندارد‌تر (مثلاً JWT) بدون تغییر مدل داده ممکن است.
+### `ticket_comments`
 
-## ۵. مسیر مهاجرت به سیستم حرفه‌ای (Migration Path)
+- `id` شناسهٔ UUID کامنت و `ticket_id` شناسهٔ تیکت در قرارداد فرانت‌اند.
+- `author_id`, `author_name`, `author_avatar_url` مشخصات نویسندهٔ جاری؛ چون Auth وجود ندارد، این مقادیر از فرانت ارسال می‌شوند.
+- `body` متن کامنت و `created_at` زمان UTC که هنگام درج در سرور تولید می‌شود.
+- index ترکیبی روی تیکت و ترتیب ایجاد، تاریخچه را به ترتیب ثبت برمی‌گرداند.
 
-وقتی زمان مهاجرت رسید، این تغییرات باید بدون بازطراحی مدل‌ها ممکن باشد:
+### `notifications`
 
-| از | به |
-|---|---|
-| SQLite | PostgreSQL (فقط تغییر `DATABASES` در تنظیمات؛ چون فقط از ORM استفاده شده) |
-| Session/Token ساده | JWT یا OAuth2 استاندارد |
-| ActivityLog محاسبه‌ی همزمان (Sync) | Job/Worker پس‌زمینه (مثل Celery) برای محاسبه‌ی سنگین‌تر نمودارها |
-| ذخیره‌ی فایل محلی (Attachment) | Object Storage (S3 یا مشابه) — با تغییر `Storage backend` در جنگو |
-| یک پروژه‌ی مونولیتیک Django | امکان جدا کردن هر اپ (`tasks`, `notifications`, ...) به سرویس مستقل، چون از ابتدا مرز دامنه‌ها (App Boundaries) رعایت شده |
+اعلان `taskAssigned` هنگام تخصیص Task و `ticketAssigned` هنگام ارجاع Ticket برای گیرنده ثبت می‌شود. گیرنده با نام حساب جاری فیلتر می‌شود. مقصد اعلان می‌تواند Task یا Ticket باشد؛ `project_id` برای Ticket بدون پروژه خالی می‌ماند. زمان UTC و وضعیت خوانده‌شدن در SQLite نگه‌داری می‌شوند. migration `009_ticket_assignment_notifications.sql` constraintهای جدول را برای رویداد و مقصد Ticket گسترش می‌دهد.
 
-هدف این جدول این است که تصمیم‌های امروز (سادگی و SQLite) هزینه‌ی فردا (مهاجرت به سیستم حرفه‌ای) را زیاد نکنند.
+این جدول با migration `003_ticket_comments.sql` ساخته می‌شود. فایل‌های پیوست از جدول کامنت جدا هستند و این endpoint متن را ذخیره می‌کند.
 
-## قرارداد جدید معاونت و تیکت (فرانت Mock)
+### `tickets` و `ticket_activity`
 
-در اپ organizations موجودیت Division با `organization (FK), name` تعریف خواهد شد. شرکت ← معاونت ← پروژه رابطه‌های یک‌به‌چند دارند؛ شرکت پروژه از معاونت مشتق می‌شود. حوزهٔ مستقل tickets در آینده Ticket (title, subject, status, description) و TicketPermission را با رابطهٔ چندبه‌چند مجوزها نگه می‌دارد. مجوز در اینجا نوع تایید کسب‌وکار است، نه دسترسی امنیتی کاربران. فعلاً کد Django نداریم؛ `createTicket` در فرانت فقط ورودی را لاگ می‌کند.
+Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فرانت (از جمله اولویت اختیاری `none`/`low`/`medium`/`high`/`urgent`)، و زمان ساخت/به‌روزرسانی در SQLite نگه‌داری می‌شود. تغییر اولویت نیز در Activity جزو تغییرات جزئیات ثبت می‌شود. Activity هر تغییر ارجاع، وضعیت، دنبال‌کردن، علاقه‌مندی، جزئیات و کامنت را با عامل و زمان UTC سرور ثبت می‌کند. ردیف‌ها بر اساس `created_at` از قدیمی به جدید خوانده می‌شوند. این جدول‌ها با migration `004_tickets_and_activity.sql` ساخته می‌شوند.
 
-## ساخت خودکار و چیدمان مشترک تسک
+### `users` و `sessions`
 
-قرارداد ساخت خودکار تسک در `/tasks/new`: اولین عنوان یا شرح غیرخالی یک تسک ایجاد می‌کند؛ سپس تغییرها همان رکورد را به‌روز می‌کنند و حذف مستقل است. پیاده‌سازی فعلی localStorage است؛ اتصال آینده به POST/PATCH/DELETE در لایهٔ API انجام خواهد شد.
+حساب نخست از تنظیمات bootstrap ساخته می‌شود. رمز با `scrypt` و salt تصادفی ذخیره می‌شود. Cookie شامل token تصادفی است؛ فقط SHA-256 آن در جدول `sessions` نگه‌داری می‌شود. شناسهٔ عمومی تصادفی هر نشست برای فهرست/لغو از hash توکن جداست. User-Agent مرورگر هنگام ورود ثبت و برای نمایش نام مرورگر و نوع دستگاه تفسیر می‌شود؛ فرانت مقدار مرورگر را با header داخلی `x-quire-user-agent` می‌فرستد تا User-Agent عمومی درخواست‌های سروری Next.js جای آن را نگیرد. `last_seen_at` با هر درخواست احراز‌شده به‌روز می‌شود. API فقط نشست‌های متعلق به کاربر جاری را فهرست یا لغو می‌کند. عمر نشست ۳۰ روز است و خروج نشست را حذف می‌کند. Cookie دارای `HttpOnly`, `SameSite=Lax`, `Path=/` است و در production دارای `Secure` نیز هست.
 
+### `organizations` و `organization_members`
 
-ساخت تیکت فعلاً از local-created-tickets.ts و localStorage با کلید quire:created-tickets:v1 استفاده می‌کند؛ با واردکردن عنوان یا شرح ذخیره و از منوی سه‌نقطه حذف می‌شود. اتصال این جریان به API سرور هنوز انجام نشده است.
+سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود.
 
-کارتابل فعلاً دادهٔ نمونه و localStorage دارد. Ticket دارای createdById/createdByName است. Task.recurrence شامل dates:string[] و count:number است؛ فقط تنظیم ذخیره می‌شود و زمان‌بندی/ساخت خودکار سروری فعلاً وجود ندارد.
+## ۵. API نسخهٔ ۱
+
+همهٔ پاسخ‌ها JSON‌اند مگر `204 No Content`. همهٔ endpointهای `/api/v1/*` به‌جز ورود، دریافت نشست و خروج، cookie نشست معتبر می‌خواهند. شناسه‌های Task در مسیر URL استفاده می‌شوند.
+
+مسیر دستیار حداکثر ۲۰ پیام با محتوای حداکثر ۶۰۰۰ نویسه می‌پذیرد و فقط وقتی آخرین پیام از نقش `user` باشد درخواست را می‌فرستد. پیام سیستمی سمت سرور اضافه می‌شود؛ ابزارهای ساخت/ویرایش اجرا نمی‌شوند. پاسخ ارائه‌دهنده به متن محدود است و خطاهای upstream بدون بدنه یا کلید به کلاینت برمی‌گردند. درخواست از مسیر `POST /chat/completions` با Bearer token و قرارداد OpenAI-compatible ارسال می‌شود.
+
+| Method | Path | رفتار |
+|---|---|---|
+| `GET` | `/health` | وضعیت سرویس و اتصال پایگاه داده |
+| `POST` | `/api/v1/auth/login` | ورود با ایمیل و رمز؛ cookie نشست و کاربر را برمی‌گرداند |
+| `GET` | `/api/v1/auth/me` | کاربر نشست جاری یا `401` |
+| `PATCH` | `/api/v1/auth/me` | ذخیرهٔ نام، ایمیل، توضیحات و تصویر پروفایل حساب جاری؛ عکس داده‌ای تصویری محدودشده است |
+| `GET` | `/api/v1/auth/sessions` | فهرست نشست‌های کاربر جاری با دستگاه، مرورگر، زمان ساخت، آخرین فعالیت و نشان نشست جاری |
+| `DELETE` | `/api/v1/auth/sessions/:sessionId` | لغو نشست متعلق به کاربر جاری؛ لغو نشست جاری cookie را نیز پاک می‌کند |
+| `POST` | `/api/v1/auth/logout` | حذف نشست و پاک‌کردن cookie |
+| `POST` | `/api/v1/assistant/chat` | ارسال تاریخچهٔ محدود گفت‌وگو به Nokod؛ نشست معتبر لازم دارد |
+| `GET` | `/api/v1/organizations` | سلسله‌مراتب سازمان/معاونت/پروژه برای عضو نشست |
+| `POST` | `/api/v1/organizations` | ساخت سازمان و عضویت owner برای کاربر جاری |
+| `GET` | `/api/v1/organizations/:organizationId/members` | اعضا و مجوزهای سازمان برای عضو مجاز |
+| `POST` | `/api/v1/organizations/:organizationId/members` | افزودن حساب موجود با ایمیل؛ مجوز دعوت یا مدیریت دسترسی |
+| `PATCH` | `/api/v1/organizations/:organizationId/members/:userId` | تغییر نقش/مجوز عضو؛ یکتایی مالک در سرور اعمال می‌شود |
+| `DELETE` | `/api/v1/organizations/:organizationId/members/:userId` | حذف عضو؛ مالک حذف‌ناپذیر است |
+| `PATCH` | `/api/v1/organizations/:organizationId/settings` | ذخیرهٔ نام، توضیحات، تصویر، slug و گزینه‌ها |
+| `GET` | `/api/v1/organizations/by-slug/:organizationSlug` | خواندن سازمان برای مسیر خوانا با عضویت معتبر |
+| `GET` | `/api/v1/organizations/by-slug/:organizationSlug/projects/:projectSlug` | خواندن پروژه با slug سازمان/پروژه برای عضو مجاز |
+| `POST` | `/api/v1/organizations/:organizationId/divisions` | ساخت معاونت با مجوز `createDivision` |
+| `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId` | انتقال معاونت به سازمان مقصد؛ مالکیت سازمان مبدأ و مقصد در نشست بررسی می‌شود و تعارض نام `409` است |
+| `POST` | `/api/v1/divisions/:divisionId/projects` | ساخت پروژه با مجوز `createProject` |
+| `PATCH` | `/api/v1/projects/:projectId/location` | انتقال پروژه به معاونت مقصد؛ مالکیت پروژهٔ مبدأ و معاونت مقصد در نشست بررسی می‌شود |
+| `GET` | `/api/v1/projects` | پروژه‌های مرجع |
+| `GET` | `/api/v1/projects/:projectId` | یک پروژه یا `404` |
+| `GET` | `/api/v1/projects/:projectId/tasks` | Taskهای ریشهٔ پروژه با Subtaskهایشان |
+| `GET` | `/api/v1/projects/:projectId/pages` | صفحه‌های سند/چت پروژه |
+| `PUT` | `/api/v1/projects/:projectId/pages/:kind` | ذخیرهٔ عنوان و متن صفحه (`kind`: `document` یا `chat`)؛ هر نوع برای هر پروژه یکتا است |
+| `GET` | `/api/v1/projects/:projectId/chat` | پیام‌های چت پروژه به ترتیب زمان |
+| `POST` | `/api/v1/projects/:projectId/chat` | ثبت پیام با `authorName` و `text`؛ زمان و شناسه را سرور می‌سازد |
+| `GET` | `/api/v1/tasks` | Taskهای ریشه؛ فیلتر اختیاری `projectId` و `assigneeName` |
+| `GET` | `/api/v1/tasks/:id` | خواندن Task |
+| `POST` | `/api/v1/tasks` | ساخت Task؛ `projectId` و `title` اجباری، مقدارهای دیگر مطابق `NewTaskInput` |
+| `PATCH` | `/api/v1/tasks/:id` | تغییر فیلدهای فرستاده‌شده؛ پاسخ Task نهایی |
+| `DELETE` | `/api/v1/tasks/:id` | حذف Task؛ پاسخ `204`، شناسهٔ ناشناخته `404` |
+| `GET` | `/api/v1/notifications?recipientName=...` | اعلان‌های گیرنده به ترتیب تازه‌ترین، با زمان و وضعیت پایدار |
+| `PATCH` | `/api/v1/notifications/:id/read` | علامت‌گذاری اعلان خوانده‌شده برای همان گیرنده؛ پاسخ `204` |
+| `GET` | `/api/v1/tickets/:ticketId/comments` | خواندن کامنت‌های تیکت به ترتیب زمان ثبت |
+| `POST` | `/api/v1/tickets/:ticketId/comments` | ثبت کامنت؛ `authorId`, `authorName` و `text` اجباری، آواتار اختیاری؛ زمان را سرور می‌سازد |
+| `GET` | `/api/v1/tickets` | تیکت‌های ذخیره‌شده |
+| `GET` | `/api/v1/tickets/inbox` | تیکت‌هایی که کاربر جاری ساخته یا به او ارجاع شده‌اند |
+| `GET` | `/api/v1/tickets/:ticketId` | خواندن یک تیکت |
+| `PUT` | `/api/v1/tickets/:ticketId` | ایجاد یا به‌روزرسانی Ticket؛ عامل و بدنهٔ Ticket ارسال می‌شوند و رویدادهای تغییر سروری ثبت می‌شوند. `projectId` اختیاری است و در صورت ارسال باید به پروژهٔ قابل‌دسترسی کاربر اشاره کند؛ ارجاع‌گیرنده با شناسهٔ کاربر بررسی می‌شود و تغییر ارجاع اعلان می‌سازد |
+| `DELETE` | `/api/v1/tickets/:ticketId` | حذف Ticket و Activity وابسته |
+| `GET` | `/api/v1/tickets/:ticketId/activity` | Activity قدیمی به جدید |
+
+نمونهٔ ثبت کامنت:
+
+```bash
+curl -X POST http://127.0.0.1:4000/api/v1/tickets/TICKET_ID/comments \
+  -H 'content-type: application/json' \\
+  -d '{"authorId":"u1","authorName":"سارا احمدی","text":"در حال بررسی هستم."}'
+```
+
+نمونهٔ ساخت:
+
+```bash
+curl -X POST http://127.0.0.1:4000/api/v1/tasks \
+  -H 'content-type: application/json' \
+  -d '{"projectId":"proj-1","title":"بررسی واقعی API","status":"todo","priority":"medium"}'
+```
+
+نمونهٔ ویرایش و حذف:
+
+```bash
+curl -X PATCH http://127.0.0.1:4000/api/v1/tasks/TASK_ID \
+  -H 'content-type: application/json' \
+  -d '{"status":"in-progress"}'
+curl -X DELETE http://127.0.0.1:4000/api/v1/tasks/TASK_ID
+```
+
+خطاها شکل `{ "error": { "code": "...", "message": "..." } }` دارند. JSON نامعتبر/ورودی نامعتبر `400`، نشست نامعتبر `401`، مسیر ناشناخته `404`، متد نامعتبر `405` و خطای غیرمنتظره `500` است. انتشار عمومی به HTTPS و cookie امن نیاز دارد.
+
+## ۶. مرزهای فرانت‌اند
+
+- `frontend/src/lib/api/backend-client.ts` مسیر هم‌مبدأ `/api/v1`، cookie نشست و خطاهای HTTP را یک‌جا مدیریت می‌کند.
+- `auth.ts` ورود و خروج، و `users.ts` هویت واقعی نشست را از API می‌گیرند؛ `src/proxy.ts` هدایت اولیهٔ صفحه‌های محافظت‌شده را انجام می‌دهد.
+- `projects.ts` اطلاعات نمایشی پروژه را از fixtureهای فعلی می‌گیرد و Taskهای پروژه را از API می‌خواند.
+- `my-tasks.ts` Taskهای پایدار را از API می‌خواند و Overview را در لایهٔ داده محاسبه می‌کند.
+- `tasks.ts` عملیات Create/Update را به API می‌فرستد؛ مودال Task از این توابع استفاده می‌کند.
+- صفحات سازمان و پروژه هنوز بخشی از شمارنده‌ها/نمودارهای Mock را استفاده می‌کنند؛ این مورد محدودیت شناخته‌شده است.
+- Ticketهای موجود در فهرست دمو همچنان fixture هستند، اما بازکردن/ویرایش، Follow/Favorite، حذف، کامنت و Activity جزئیات در API و SQLite پایدار می‌شوند؛ Ticketهای ساخته‌شده نیز در localStorage برای فهرست نمونه نگه داشته می‌شوند.
+
+کامپوننت‌ها نباید URL یا SQL بدانند. `ticket-comments.ts` قرارداد کامنت را برای فیچر tickets فراهم می‌کند؛ هنگام جایگزینی API با بک‌اند دیگر، امضای توابع لایهٔ داده حفظ می‌شود تا UI مجبور به تغییر نشود.
+
+## ۷. Migration و گام بعدی
+
+1. migrationها فایل‌های مرتب‌شده با پیشوند ترتیبی‌اند؛ `schema_migrations` ردیابی می‌کند کدام اجرا شده است. هر migration تازه باید یک‌بار و در transaction اجرا شود. فایل قبلی را پس از اعمال تغییر ندهید. migration `009_ticket_assignment_notifications.sql` constraintهای notifications را برای اعلان ارجاع Ticket و مقصد پروژه‌ای گسترش می‌دهد.
+2. قرارداد `/api/v1` و JSON فرانت قرارداد کاربردی است؛ تغییرات ناسازگار باید در `/api/v2` یا با تبدیل سازگار انجام شوند.
+3. برای مهاجرت DB، مدل و constraintها را با migrationهای پایگاه مقصد بسازید و repositoryهای Task/Ticket را به adapter آن DB ببرید. هم‌زمان با انتقال Ticketها، `ticket_comments.ticket_id` را به foreign key واقعی تبدیل کنید. کد HTTP و UI به SQL وابسته نیستند.
+4. برای بک‌اند سازمانی، ابتدا احراز هویت و مالکیت/مجوز پروژه اضافه شود؛ سپس Organization/User/ProjectMembership و رابطه‌های Task assignee/tag/subtask نرمال شوند. فایل‌های پیوست باید از DB جدا و در storage باشند.
+5. `node:sqlite` API همگام دارد و هنوز در شاخهٔ Node 22 در حال توسعه است؛ هم‌زمانی بالا یا استقرار چند نمونه نیاز به driver/ORM پایدار و database server خواهد داشت.
+
+این ساختار مهاجرت را در مرزهای روشن نگه می‌دارد؛ انتقال به PostgreSQL در این فاز به معنی صرفاً عوض‌کردن connection string نیست، چون repository فعلی SQL مستقیم دارد.

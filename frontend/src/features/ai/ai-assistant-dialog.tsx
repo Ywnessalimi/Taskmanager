@@ -5,6 +5,7 @@ import Image from "next/image"
 import { DialogClose, DialogContent } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
+import { sendAssistantMessage } from "@/lib/api/assistant"
 
 /** گرادینت مشترک دکمه‌ی شناور و آیکون هدر — طبق طرح Figma «هوش مصنوعی کالامارکت». */
 export const AI_GRADIENT = "linear-gradient(145deg, #5A8AF1 9.48%, #D591E9 46.32%, #D490E9 83.87%)"
@@ -15,9 +16,7 @@ type ChatMessage = { id: string; role: "user" | "assistant"; text: string }
  * محتوای مودال «دستیار» — تریگرهای فعالش در مینی‌بار موبایل/دسکتاپ‌اند. واریانت `floatingPanel` در
  * `dialog.tsx`: تمام‌صفحه در موبایل، و از `sm:` به بعد یک پنل شناور همیشه چسبیده به سمت
  * راست فیزیکی صفحه (نه بسته به جهت زبان) با فاصله‌ی ۸ پیکسل از بالا/پایین و ارتفاع کامل
- * بین آن‌ها. چون هنوز هیچ سرویس هوش مصنوعی واقعی وصل نیست، فقط یک پاسخ ثابت
- * (`aiAssistant.mockReply`) بعد از هر پیام کاربر برمی‌گردد — مثل بقیه‌ی این فاز، صرفاً state
- * محلی همین کامپوننت است.
+ * بین آن‌ها. متن گفت‌وگو در state محلی می‌ماند و برای پاسخ به API احراز‌شدهٔ بک‌اند فرستاده می‌شود.
  *
  * ترتیب المان‌های هدر و نوار ورودی عمداً «منطقی» (نه فیزیکی) است — عنوان/آیکون و دکمه‌ی
  * ارسال اول در DOM می‌آیند تا در RTL (پیش‌فرض اپ) سمت راست بنشینند، مطابق قرارداد بقیه‌ی اپ.
@@ -36,18 +35,24 @@ export function AIAssistantDialog() {
     })
   }
 
-  function send() {
+  async function send() {
     const text = draft.trim()
     if (!text || pending) return
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", text }])
+    const nextMessages = [...messages, { id: `u-${Date.now()}`, role: "user" as const, text }]
+    setMessages(nextMessages)
     setDraft("")
     setPending(true)
     scrollToBottom()
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: t("aiAssistant.mockReply") }])
-      setPending(false)
+    try {
+      const reply = await sendAssistantMessage(nextMessages.map(({ role, text: content }) => ({ role, content })))
+      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: reply }])
       scrollToBottom()
-    }, 700)
+    } catch {
+      setMessages((prev) => [...prev, { id: `e-${Date.now()}`, role: "assistant", text: t("aiAssistant.error") }])
+      scrollToBottom()
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -65,7 +70,7 @@ export function AIAssistantDialog() {
         </DialogClose>
       </div>
 
-      <div ref={listRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-5">
+      <div ref={listRef} dir="ltr" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-5">
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <Image
@@ -85,6 +90,7 @@ export function AIAssistantDialog() {
                 className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                   message.role === "user" ? "bg-brand text-text-on-brand" : "bg-bg2 text-foreground"
                 }`}
+                dir="auto"
               >
                 {message.text}
               </p>

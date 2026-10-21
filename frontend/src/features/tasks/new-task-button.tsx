@@ -37,15 +37,15 @@ export function NewTaskButton({ figmaStyle = false, user }: { figmaStyle?: boole
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" sideOffset={8} className="flex w-[218px] flex-col gap-3 rounded-lg px-2 py-4 shadow-none">
       <DropdownMenuItem onClick={() => setOpen(true)} className="h-[21px] gap-2 rounded px-0 py-0 font-medium"><NewTaskAsset name="task-line" />{t("nav.newTask")}</DropdownMenuItem>
-      <DropdownMenuItem disabled title={t("newTask.notAvailable")} className="h-[21px] gap-2 rounded px-0 py-0 font-medium data-disabled:opacity-100"><NewTaskAsset name="folder-add-line" />{t("newTask.newProject")}</DropdownMenuItem>
       <DropdownMenuItem onClick={() => setTicketOpen(true)} className="h-[21px] gap-2 rounded px-0 py-0 font-medium"><NewTaskAsset name="chat-smile-line" />{t("newTask.newRequest")}</DropdownMenuItem>
+      <DropdownMenuItem disabled title={t("newTask.notAvailable")} className="h-[21px] gap-2 rounded px-0 py-0 font-medium data-disabled:opacity-100"><NewTaskAsset name="folder-add-line" />{t("newTask.newProject")}</DropdownMenuItem>
     </DropdownMenuContent>
     </DropdownMenu>
     <Dialog open={open} onOpenChange={setOpen}>
       {open && <NewTaskDialog projects={panel?.projects ?? []} defaultProjectId={projectId} user={user} onDone={() => setOpen(false)} />}
     </Dialog>
     <Dialog open={ticketOpen} onOpenChange={setTicketOpen}>
-      {ticketOpen && <TicketCreateDialog user={user} onDone={() => setTicketOpen(false)} />}
+      {ticketOpen && <TicketCreateDialog user={user} projectId={projectId} projects={panel?.projects} onDone={() => setTicketOpen(false)} />}
     </Dialog>
     </>
   )

@@ -6,7 +6,6 @@ import { OverviewCard } from "@/components/layout/section"
 import { GREGORIAN_MONTHS, GREGORIAN_WEEKDAYS } from "@/components/ui/date-picker-dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useLocale } from "@/components/providers/locale-provider"
-import { MOCK_TODAY } from "@/lib/api/mock-data"
 import type { Task } from "@/lib/api/types"
 import * as jalali from "@/lib/jalali"
 
@@ -38,7 +37,7 @@ export function DeadlineCalendar({ tasks }: { tasks: Task[] }) {
 
   const [cursor, setCursor] = useState<Cursor>(() => {
     if (isFa) {
-      const today = jalali.parseDate(MOCK_TODAY)!
+      const today = jalali.parseDate(jalali.currentJalaliDate())!
       return { year: today.year, month: today.month }
     }
     const now = new Date()
@@ -58,7 +57,7 @@ export function DeadlineCalendar({ tasks }: { tasks: Task[] }) {
 
   function goToday() {
     if (isFa) {
-      const today = jalali.parseDate(MOCK_TODAY)!
+      const today = jalali.parseDate(jalali.currentJalaliDate())!
       setCursor({ year: today.year, month: today.month })
     } else {
       const now = new Date()
@@ -76,7 +75,7 @@ export function DeadlineCalendar({ tasks }: { tasks: Task[] }) {
 
   const todayDay = (() => {
     if (isFa) {
-      const today = jalali.parseDate(MOCK_TODAY)!
+      const today = jalali.parseDate(jalali.currentJalaliDate())!
       return today.year === cursor.year && today.month === cursor.month ? today.day : null
     }
     const now = new Date()

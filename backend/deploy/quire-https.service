@@ -1,0 +1,26 @@
+[Unit]
+Description=Quire HTTPS reverse proxy
+After=network.target quire-web.service quire-cert-sync.service
+Requires=quire-web.service quire-cert-sync.service
+
+[Service]
+Type=simple
+User=quire
+Group=quire
+WorkingDirectory=/opt/quire/live/backend
+Environment=NODE_ENV=production
+Environment=PROXY_HOST=0.0.0.0
+Environment=PROXY_PORT=9444
+Environment=FRONTEND_ORIGIN=http://127.0.0.1:4001
+Environment=TLS_CERT_PATH=/var/lib/quire/tls/fullchain.pem
+Environment=TLS_KEY_PATH=/var/lib/quire/tls/privkey.pem
+ExecStart=/usr/bin/node apps/deployment/https-proxy.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

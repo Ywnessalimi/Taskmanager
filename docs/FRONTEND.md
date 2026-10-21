@@ -5,7 +5,7 @@
 
 ## ۱. تصمیم فاز اول
 
-در فاز اول، **فقط فرانت‌اند به‌طور کامل ساخته می‌شود**. بک‌اند Django (رجوع به [BACKEND.md](./BACKEND.md)) یک API ساده فراهم می‌کند؛ فرانت باید از همان ابتدا در پشت یک لایه‌ی انتزاعی به داده دسترسی داشته باشد (نه فراخوانی مستقیم و پراکنده‌ی fetch در کامپوننت‌ها) تا:
+در فاز فعلی، رابط Next.js از API محلی Node.js + SQLite برای Taskهای پروژه استفاده می‌کند (رجوع به [BACKEND.md](./BACKEND.md)). سایر بخش‌ها می‌توانند تا زمان اتصال API خودشان Mock یا محلی بمانند. فراخوانی API از لایه‌ی متمرکز `lib/api/` عبور می‌کند تا:
 
 - بتوان بخش‌هایی را ابتدا با داده‌ی Mock ساخت و بعداً بدون تغییر UI به API واقعی وصل کرد.
 - مهاجرت بعدی بک‌اند (تغییر مدل داده، افزودن Auth واقعی، ...) حداقل تأثیر را روی کامپوننت‌های UI بگذارد.
@@ -24,7 +24,13 @@
 
 ## ۳. ساختار مسیرها (Routing)
 
-**به‌روزرسانی ناوبری:** `/` به کارتابل `/inbox` هدایت می‌شود تا کارتابل صفحهٔ شروع برنامه باشد. `/projects` ورودی محیط مستقل پروژه‌ها و فهرست همهٔ پروژه‌هاست؛ `/home/projects/[id]` صفحهٔ پروژهٔ انتخاب‌شده است و مسیر ثابت `/home/projects/MyTasks` صفحهٔ تجمیعی «تسک‌های من» را در همان محیط ارائه می‌کند. این مسیر از همان `ProjectNavigator` و `ProjectSectionTabs` استفاده می‌کند؛ در فهرست نماها تسک‌های تخصیص‌یافته به کاربر از همهٔ پروژه‌ها می‌آیند. مسیر قدیمی `/my-tasks` وجود ندارد. مینی‌بار مشترک در `components/navigation` در موبایل پایین و در دسکتاپ سمت شروع (`start`) نمایش داده می‌شود؛ RTL/LTR با `dir` ریشه جابه‌جایی راست/چپ را انجام می‌دهد. پروژه‌ها و AI فعال‌اند؛ مدخل پروفایل نیز به `/account` می‌رود. عنوان داخل هدر پروژه انتخابگر پروژه‌هاست و گزینهٔ «همهٔ پروژه‌ها» به `/home/projects/MyTasks` می‌رود. در نمای پروژه، Board با طرح جدید هماهنگ می‌شود و نماهای دیگر همان پیاده‌سازی قبلی را حفظ می‌کنند.
+در جریان فعلی محیط مستقل پروژه‌ها، `/projects` درخت شرکت ← معاونت ← پروژه را نشان می‌دهد؛ ردیف‌های شرکت و معاونت باز/بسته می‌شوند و پروژه‌های مجاز به صفحهٔ همان پروژه می‌روند. `ProjectRef.memberIds` منبع مجازبودن در دادهٔ نمونه است و لایهٔ `lib/api` پیش از تحویل داده به صفحه یا navigator پروژه‌های غیرمجاز را حذف می‌کند؛ route پروژه نیز دسترسی را دوباره بررسی می‌کند.
+
+**به‌روزرسانی ناوبری و ورود:** `/` به `/login` می‌رود و مسیرهای برنامه فقط با نشست معتبر قابل مشاهده‌اند؛ `/signup` به ورود برمی‌گردد. پس از ورود، کارتابل `/inbox` صفحهٔ شروع است. `/projects` ورودی محیط مستقل پروژه‌هاست؛ `/home/projects/[id]` صفحهٔ پروژه و `/home/projects/MyTasks` صفحهٔ تجمیعی تسک‌های کاربر است. مینی‌بار مشترک در موبایل پایین و در دسکتاپ سمت شروع (`start`) نمایش داده می‌شود؛ RTL/LTR با `dir` ریشه جابه‌جا می‌شود.
+
+در صفحهٔ ورود دسکتاپ، ترتیب پنل فرم بر اساس locale صریح است: فارسی فرم را در راست و Hero را در چپ قرار می‌دهد؛ انگلیسی ترتیب LTR، یعنی Hero چپ و فرم راست، را نگه می‌دارد. محتوای برد دکوراتیو Hero فاصلهٔ عمودی بالا و پایین دارد.
+
+تنظیمات هر سازمان در `/home/organizations/[id]/settings` با چهار بخش General، Members، Properties و Options نمایش داده می‌شود. تصویر سازمان از file input انتخاب و به API فرستاده می‌شود؛ فیلدهای عمومی شامل نام، توضیحات و slug هستند. نقش سفارشی به `/home/organizations/[id]/settings/permissions/[memberId]` می‌رود و مجوزها را با چک‌باکس و API ذخیره می‌کند. نقش مدیر فقط مدیریت دسترسی اعضا را مجاز می‌کند. نام/توضیحات در Overview و درخت نمایش داده می‌شوند و مسیرهای خوانا `/o/[organizationSlug]` و `/o/[organizationSlug]/[projectSlug]` به Overview و پروژه می‌روند؛ مسیرهای شناسه‌محور سازگار باقی می‌مانند. Options شامل Email to Quire، Notifications و Features در یک صفحه است و ناوبری فرعی به هر بخش اسکرول می‌کند.
 
 صفحهٔ پروژه و `/home/projects/MyTasks` از `features/projects/project-section-tabs.tsx` برای یک نوار یکپارچه مطابق Figma node `1710:27099` استفاده می‌کنند: Dashboard، Board، List (Tree)، Calendar، Gantt و «افزودن» صفحهٔ سفارشی. محتوای Dashboard در صفحهٔ MyTasks، Overview شخصی و در پروژه، Overview همان پروژه است؛ نماهای MyTasks از همهٔ پروژه‌ها تسک می‌گیرند. فقط Board این صفحه فهرست تیکت‌ها را هم از ماژول tickets می‌گیرد؛ وضعیت و عنوان تیکت خواندنی‌اند، آواتار سازنده و در صورت ارجاع آواتار تنها ارجاع‌گیرنده نمایش داده می‌شود و ارجاع از منوی کارت قابل تغییر است. آواتارها در سمت راست کارت کمی روی هم می‌افتند. وضعیت تیکت با `TaskStatus` مشترک است؛ ارجاع و اتصال تیکت به تسک در localStorage نمونه‌سازی می‌شوند. هنگام کشیدن تیکت به کارت، تیکت‌های پیوندخورده باقی می‌مانند و جایگاه خاکستری در محل درج نشان داده می‌شود؛ رهاکردن بین تیکت‌ها ترتیب محلی آن‌ها را هم ثبت می‌کند. در `ProjectNavigator`، نوار سه‌پیوندی ثابت بالای فهرست پروژه‌ها ۱۶px پدینگ عمودی دارد. SVGهای نوار پروژه در `public/images/figma/project-tabs/` ذخیره می‌شوند؛ محتوا و رفتار نماهای غیربرد تغییر نمی‌کند. `DesktopHeader` در همهٔ مسیرها طرح node `1710:27098` را نشان می‌دهد؛ عنوان از مسیر می‌آید و در صفحهٔ پروژه، نام پروژه از گزینه‌های واکشی‌شده در layout پیدا می‌شود و منوی انتخاب پروژه دارد. خوشهٔ سمت پایان به ترتیب «جدید»، جداکننده، جست‌وجو، اعلان و آواتار است. SVGهای این هدر در `public/images/figma/project-header/` ذخیره شده‌اند. نشان ستون Board از node `1710:27237` پیروی می‌کند؛ آیکون Figma آن در `public/images/figma/board/` قرار دارد و رنگ/آیکون ستون در state محلی Board نگه داشته می‌شود.
 
@@ -109,7 +115,13 @@ app/
 
 - تمام درخواست‌ها به بک‌اند از یک ماژول متمرکز (مثلاً `lib/api/`) عبور می‌کنند؛ کامپوننت‌ها مستقیماً آدرس API را نمی‌دانند.
 - تایپ‌های TypeScript مربوط به موجودیت‌ها (Task، Project، Organization، User، Notification) باید با فیلدهای مدل بک‌اند (رجوع به [BACKEND.md](./BACKEND.md#۳-مدل-داده)) هماهنگ نگه داشته شوند.
-- آدرس پایه‌ی API از متغیر محیطی خوانده می‌شود تا سوییچ بین Mock/Local/آینده ساده باشد.
+- مرورگر API را از مسیر هم‌مبدأ `/api/v1` صدا می‌زند؛ Next آن را به `QUIRE_API_ORIGIN` (پیش‌فرض `http://127.0.0.1:4000`) بازنویسی می‌کند. درخواست‌ها cookie نشست را همراه دارند.
+- `backend-client.ts` مشترک خطاهای HTTP را تبدیل می‌کند. `projects.ts` و `my-tasks.ts` Taskها را از API می‌خوانند؛ `tasks.ts` ساخت و ویرایش را می‌فرستد؛ `ticket-comments.ts` رکورد Ticket و Activity را می‌خواند/ذخیره می‌کند و کامنت تازه را ثبت می‌کند.
+- صفحه‌ها/کامپوننت‌ها نباید fetch مستقیم یا دسترسی SQLite داشته باشند. ورود، Organization/Division/Project، Task، Ticket، Notification و صفحه‌های پروژه از API/SQLite می‌آیند. بعضی تنظیمات نمای Board و پیوند Ticket به Task هنوز localStorage یا state مرورگر هستند.
+
+### ابزارهای دستیار هوش مصنوعی
+
+`features/ai/ai-assistant-dialog.tsx` پیام‌ها را از طریق `lib/api/assistant.ts` به `/api/v1/assistant/chat` می‌فرستد. کلید Nokod در بک‌اند می‌ماند و تاریخچه فقط در state پنجرهٔ گفتگو است. `features/ai/ai-tools.ts` قرارداد ابزارهای ساخت Task، ساخت Ticket و گزارش را نگه می‌دارد، اما مدل در این نسخه آن‌ها را خودکار اجرا نمی‌کند؛ هر عملیات تغییردهنده باید پس از تأیید کاربر اجرا شود.
 
 ## ۷. قانون مستندسازی ماژول‌ها
 
@@ -120,6 +132,8 @@ app/
 > این بخش با هر تغییر واقعی در کد به‌روزرسانی می‌شود؛ فهرست کامل نیست، فقط چیزی را که واقعاً ساخته شده ثبت می‌کند.
 
 پروژه Next.js با `create-next-app` (TypeScript + Tailwind v4 + App Router + `src/`) در `frontend/` ساخته شده و shadcn/ui (Base UI، پریست Nova، RTL) روی آن Init شده است.
+
+در اجرای توسعه، `next.config.ts` میزبان `127.0.0.1` را در `allowedDevOrigins` مجاز می‌کند؛ مرورگر محلی گاهی با این نام به‌جای `localhost` باز می‌شود و برای دریافت HMR باید هر دو مبدأ هماهنگ باشند.
 
 **کامپوننت‌های نصب‌شده از shadcn** (`src/components/ui/`):
 
@@ -147,8 +161,10 @@ src/app/
   (tabs)/
     layout.tsx          → رندر children + BottomTabBar ثابت در پایین صفحه
     home/page.tsx        → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
-    notifications/page.tsx → getNotifications() + NotificationList
-    account/page.tsx     → Placeholder (شامل دکمه‌ی خروج، Ghost/destructive)
+    notifications/page.tsx → getNotifications(currentUser.name) + NotificationsFullPage
+    tasks/[taskId]/page.tsx → getTask(id) + TaskDetailRoute (مقصد اعلان تخصیص)
+    account/page.tsx     → getCurrentUser() + AccountSettings
+    account/sessions/page.tsx → فهرست نشست‌ها با PageHeader و SessionsList
 src/components/
   navigation/bottom-tab-bar.tsx → ناوبری ۴ تب پایین صفحه (Client Component، بر اساس pathname تب فعال را با رنگ brand مشخص می‌کند؛ از lg به بالا مخفی)
   navigation/sidebar-nav.tsx    → SidebarNav: ناوبری دسکتاپ (hidden lg:flex، ستون کناری راست چون RTL) — عنوان «Quire»
@@ -167,11 +183,11 @@ src/lib/api/
   mock-data.ts       → MOCK_ORGANIZATIONS + MOCK_PROJECTS + MOCK_NOTIFICATIONS (منبع واحد Mock — شناسه‌ها هماهنگ‌اند)
   organizations.ts   → getOrganizations(), getOrganization(id)
   projects.ts         → getProject(id)
-  notifications.ts    → getNotifications()
+  notifications.ts    → getNotifications(recipientName), markNotificationRead(id, recipientName)
   users.ts            → getCurrentUser() (کاربر واردشده؛ تایپ CurrentUser + NotificationPreferences در types.ts)
   my-tasks.ts         → getMyTasks() (فقط «در حال انجام»)، getMyTasksOverview() (همه‌ی وضعیت‌ها)
   calendar.ts         → getToday() (تاریخ «امروز» از لایه‌ی داده می‌آید، نه new Date())
-  tasks.ts            → getTaskFormOptions() (پروژه‌ها + اعضای سازمانشان برای سلکت‌های فرم)، createTask() (فعلاً no-op)
+  tasks.ts            → getTaskFormOptions(), getTask(id), createTask()/updateTask() (API پایدار + هویت سازنده برای اعلان)
 src/components/charts/
   activity-heatmap.tsx    → ActivityHeatmap (گرید فعالیت شبیه گیت‌هاب — پروژه، تسک‌های من، پروفایل کاربر)
   status-donut-chart.tsx  → StatusDonutChart (چارت دایره‌ای چندبخشی SVG بدون کتابخانه‌ی خارجی)
@@ -191,21 +207,22 @@ src/features/organizations/
                                 — مطابق طرح Figma «Home/OrganizationPage»
   members-dialog.tsx         → MembersDialog: مودال مدیریت اعضا (تاگل دسترسی دعوت، افزودن عضو، تغییر نقش/حذف — همه محلی)
 src/features/projects/
-  task-display.tsx        → ثابت‌ها/کامپوننت مشترک نماها: PRIORITY_LABEL/COLOR، STATUS_LABEL، STATUS_COLUMNS، PriorityDot
+  organization-project-tree.tsx → درخت واکنش‌گرای سازمان/معاونت/پروژه برای ورودی /projects
+  task-display.tsx        → ثابت‌ها/کامپوننت مشترک نماها: PRIORITY_LABEL/COLOR، STATUS_LABEL، STATUS_COLUMNS/STATUS_COLUMN_ICON، PriorityDot؛ Inbox فیلتر وضعیت را از همین قرارداد می‌سازد
   project-section-tabs.tsx → نوار یکپارچهٔ پروژه با Dashboard، نماها، و افزودن صفحه
   project-task-list.tsx    → ProjectTaskList (Client): محتوای نمای انتخاب‌شده از ۵ نما (زیر)
   views/table-view.tsx      → TableView: جدول واقعی با هدر ستون و بوردر بین همه‌ی سلول‌ها
-  views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks)
+  views/tree-view.tsx        → TreeView: باز/بسته کردن زیر-تسک‌ها (task.subtasks) + افزودن سریع بعد از هر ردیف سطح‌بالا با ورودی متمرکز
   views/board-view.tsx       → BoardView: کانبان با Drag & Drop واقعی (@dnd-kit) بین ۳ ستون ثابت (وضعیت تسک)
   view-switcher.tsx         → TASK_VIEWS + ViewSwitcher: سوییچر قدیمی نماها (نوار فعال صفحه در ProjectSectionTabs است)
   views/timeline-view.tsx    → TimelineView: ساید‌بار جمع‌شونده‌ی تسک‌ها + تقویم افقی اسکرول‌شونده (مقیاس روزانه/هفتگی/ماهانه، دکمه‌ی «امروز»)
   views/calendar-view.tsx    → CalendarView: تقویم ماهانه با پیمایش بین ماه‌های دارای تسک
-  project-overview.tsx      → ProjectOverview: بازه‌ی زمانی + دکمه‌ی افزودن پیوست (غیرفعال)، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
+  project-overview.tsx      → ProjectOverview: هدر پروژه با متادیتای خط‌به‌خط و انتخاب فایل پیوست، «سلامت پروژه» (SectionBox، ۴ باکس آماری)،
                                پراکندگی وضعیت تسک‌ها (SectionBox + StatusDonutChart)، تقویم سررسیدها (SectionBox، Placeholder ساده)،
                                فعالیت اعضا (SectionBox + ActivityHeatmap)
 src/features/pages/
-  document-page.tsx      → DocumentPage: صفحه‌ی خالی نوشتن متن
-  chat-page.tsx          → ChatPage: صفحه‌ی چت (state محلی، بدون بلادرنگ)
+  document-page.tsx      → DocumentPage: ویرایش عنوان و متن سند پروژه با ذخیره از طریق project-pages API
+  chat-page.tsx          → ChatPage: چت پروژه با پیام‌های ذخیره‌شده در API و واکشی دوره‌ای ۵ثانیه‌ای
 src/features/tasks/
   task-create-form.tsx  → TaskCreateForm (Client): فرم ساخت تسک جدید (عنوان، پروژه، مسئول، سررسید،
                            اولویت، برچسب، توضیحات) — ذخیره فقط شبیه‌سازی است و به صفحه‌ی قبل برمی‌گردد
@@ -224,10 +241,16 @@ src/features/notifications/
 src/app/(tabs)/
   home/page.tsx                     → getOrganizations()/getMyTasks()/getCurrentUser() + HomeGreeting + WorkspaceList
   home/organizations/[id]/page.tsx  → getOrganization(id) + PageHeader + OrganizationOverview؛ اگر id نامعتبر بود پیام «پیدا نشد»
+  home/organizations/[id]/settings/page.tsx → getOrganization(id) + OrganizationSettingsPage؛ تنظیمات عمومی و اعضای سازمان
+  home/organizations/[id]/settings/permissions/[memberId]/page.tsx → ویرایش مجوز سفارشی یک عضو سازمان
+  o/[organizationSlug]/page.tsx → alias خوانای Overview سازمان
+  o/[organizationSlug]/[projectSlug]/page.tsx → alias خوانای صفحهٔ پروژه
   home/projects/[id]/page.tsx       → getProject(id) + ProjectPageHeader + ProjectSectionTabs → Dashboard / ۴ نمای تسک / سند و چت
   home/projects/MyTasks/page.tsx    → getMyTasks()/getMyTasksOverview() + ProjectNavigator + ProjectSectionTabs؛ نمای تجمیعی کاربر
-  notifications/page.tsx            → getNotifications() + NotificationList
+  notifications/page.tsx            → getNotifications(currentUser.name) + NotificationsFullPage
+  tasks/[taskId]/page.tsx            → getTask(id) + workspace جزئیات تسک
   account/page.tsx                  → getCurrentUser() + AccountSettings
+  account/sessions/page.tsx         → عنوان و بازگشت صفحه + SessionsList برای فهرست/لغو نشست‌ها
 src/app/tasks/new/page.tsx          → getTaskFormOptions() + PageHeader + TaskCreateForm (خارج از (tabs)، بدون Bottom Tab Bar)
 src/features/users/user-profile.tsx → UserProfile: پروفایل + سازمان‌ها + ActivityHeatmap
 src/app/users/[id]/page.tsx         → getUserById(id) + PageHeader + UserProfile؛ اگر id نامعتبر بود پیام «پیدا نشد»
@@ -254,15 +277,15 @@ src/components/providers/
 - **`TimelineView` عمداً دو جهت دارد**: ساید‌بار تسک‌ها در جریان RTL صفحه می‌ماند، اما ناحیه‌ی تقویم `dir="ltr"` است تا تاریخ از چپ به راست جلو برود و `scrollLeft` رفتار استاندارد داشته باشد. هدر تاریخ داخل همان کانتینر اسکرول است تا با تقویم هم‌زمان حرکت کند؛ ارتفاع ردیف‌های ساید‌بار (`h-9`) و ردیف خالی زیر عنوان آن (`h-7`) باید دقیقاً با دو ردیف هدر تقویم یکی بماند وگرنه ردیف‌ها از تراز خارج می‌شوند.
 - **`AddTaskFab` با کلاس‌های منطقی (`start-4`) جای‌گذاری شده**، نه `right-4` — چون کل اپ RTL است و `start` همان سمت راست است؛ اگر روزی LTR اضافه شد، دکمه خودبه‌خود به سمت درست می‌رود. ارتفاع `bottom` هم باید بالاتر از `h-14` نوار تب‌ها بماند.
 - **همه‌ی محاسبه‌های تاریخ در `src/lib/jalali.ts` متمرکز است** (`parseDate`, `formatDate`, `toOrdinal`/`fromOrdinal`, `addDays`, `startOfWeek`, `daysInMonth`, `MONTH_NAMES`, `isBefore`). این تقویم **واقعی نیست**: کبیسه ندارد (اسفند همیشه ۲۹ روز، هر سال ۳۶۵ روز) و `weekdayIndex` یک قرارداد داخلی است نه روزِ هفته‌ی واقعی — فقط برای ترتیب، فاصله و چیدمان نسبی معتبر است. `TimelineView` و `CalendarView` هر دو از همین ماژول استفاده می‌کنند (قبلاً هرکدام نسخه‌ی خودشان را داشتند).
-- **«امروز» یک ثابت Mock است** (`MOCK_TODAY` در `mock-data.ts`)، نه تاریخ سیستم — چون تاریخ‌های داده جلالی و دستی‌اند و مقایسه با تاریخ واقعی نتیجه‌ی بی‌معنا می‌دهد.
+- **«امروز» از تاریخ جاری دستگاه در تقویم فارسی به‌دست می‌آید** (`currentJalaliDate` در `src/lib/jalali.ts`)؛ تاریخ‌های تسک همچنان رشته‌های جلالی‌اند.
 - **تخصیص تسک به کاربر با مقایسه‌ی نام انجام می‌شود** چون `Task` هنوز `assigneeId` ندارد؛ با آمدن بک‌اند باید به شناسه تغییر کند.
 - **تاریخ‌ها با رقم لاتین ذخیره می‌شوند** (`"1404/05/10"`)، نه رقم فارسی — چون `Number("۱۰")` در جاوااسکریپت `NaN` می‌دهد و منطق تقویم/Timeline را می‌شکند. اگر جایی نیاز به نمایش رقم فارسی بود، باید در لحظه‌ی نمایش فرمت شود، نه در لایه‌ی داده.
 - **فرمول `mockActivity` در `mock-data.ts` باید ضریب‌های غیرمضرب‌ ۵ روی هر دو پارامتر (index و seed) داشته باشد** — نسخه‌ی اول (`(i*seed+seed)%5`) وقتی seed مضرب ۵ بود (مثلاً ۵) همیشه صفر می‌داد و کل ردیف فعالیت آن عضو طوسی/خالی نشان داده می‌شد. اگر seed جدیدی اضافه می‌کنید حواستان به این تله باشد.
 - **`Timeline`/`Calendar` تاریخ‌ها را با یک تبدیل خطی ساده‌ی خودشان مقایسه می‌کنند** (نه تقویم جلالی واقعی با کبیسه/طول ماه دقیق) — کافی برای موقعیت نسبی، نه برای محاسبه‌ی تقویمی دقیق.
 - رنگ اولویت «بالا» فعلاً از `--error` استفاده می‌کند چون توکن اختصاصی‌اش هنوز در `colors.css` نیست (رجوع به بخش ۵).
-- صفحه‌های افزوده‌شده با دکمه‌ی «+» (سند/چت)، متن سند و پیام‌های چت هم فقط در state مرورگرند و با رفرش پاک می‌شوند؛ چت اتصال بلادرنگ ندارد.
-- افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، خواندن/تایید در `NotificationList`، و ویرایش پروفایل/سوییچ‌های اعلان در `AccountSettings` — همه فقط در state مرورگر است و با رفرش از بین می‌رود؛ هیچ‌کدام API واقعی ندارند.
-- **هنوز Auth واقعی وجود ندارد**: `getCurrentUser()` یک کاربر ثابت (`u1`، سارا احمدی از `org-1`) برمی‌گرداند. صفحه‌های `/login` و `/signup` (رجوع به `src/features/auth/README.md`) هم هر ورودیِ غیرخالی را می‌پذیرند و مستقیم به `/home` می‌روند — هیچ session/کوکی/توکنی ست نمی‌شود؛ دکمه‌ی «خروج» در `AccountSettings` هم فقط به `/login` ناوبری می‌کند، نه پاک‌کردن یک session واقعی. صفحه‌ی اصلی (`src/app/page.tsx`) هم هنوز مستقیم به `/home` ریدایرکت می‌شود، نه `/login` — یعنی این دو صفحه به بقیه‌ی اپ گیت نمی‌زنند، فقط در دسترس‌اند. مسیر `/home/projects/MyTasks` نیز از همان `getCurrentUser()` استفاده می‌کند.
+- صفحه‌های افزودهٔ هر پروژه با `project-pages.ts` در API/SQLite ذخیره می‌شوند؛ عنوان سند در نوار تب هم‌زمان تغییر می‌کند و پیام‌های جدید چت هر ۵ ثانیه برای به‌روزرسانی فهرست/نشان نخوانده واکشی می‌شوند.
+- افزودن پروژه از آکوردئون خانه، افزودن/حذف/تغییر نقش عضو در `MembersDialog`، تغییر وضعیت تسک در `BoardView`، و ویرایش پروفایل/سوییچ‌های اعلان در `AccountSettings` هنوز فقط state مرورگر هستند. اعلان تخصیص Task و خوانده‌شدن آن استثنا هستند و در API/SQLite ذخیره می‌شوند.
+- ورود و خروج نشست‌محور از API/SQLite انجام می‌شوند؛ `getCurrentUser()` کاربر نشست را می‌خواند. حساب اولیه با bootstrap ساخته می‌شود و ثبت‌نام عمومی در نصب تک‌حسابی غیرفعال است. Proxy نشست را برای مسیرهای صفحه‌ای بررسی می‌کند و API اعتبار نهایی نشست را تعیین می‌کند.
 - ردیف‌های تنظیمات حساب که هنوز صفحه‌ی مقصد ندارند (تغییر ایمیل/رمز، راهنما، حریم خصوصی) عمداً غیرفعال و بدون فلش رندر می‌شوند تا کلیک‌پذیر به‌نظر نرسند. **«زبان» و «ظاهر» اما واقعاً کار می‌کنند** (نه Placeholder) — رجوع به بخش ۹.
 - منوی سه‌نقطه‌ی `PageHeader` (افزودن تسک/مایل‌استون/بخش، تنظیمات، حذف) فعلاً فقط UI است؛ آیتم‌ها `onClick` ندارند چون صفحه/فرم مقصدشان هنوز ساخته نشده.
 - **تنها کتابخانه‌ی خارجی UI پروژه تا این لحظه `@dnd-kit` است** (`@dnd-kit/core` + `@dnd-kit/utilities`)، فقط در `views/board-view.tsx` — برای Drag & Drop واقعی روی موبایل/ماوس. تست کامل ژست Drag روی دستگاه واقعی توصیه می‌شود؛ ابزارهای خودکار مرورگر گاهی رویداد Pointer را درست شبیه‌سازی نمی‌کنند.
@@ -291,19 +314,21 @@ src/components/providers/
 - برخلاف زبان، تغییر ظاهر به هیچ محتوای Server Component وابسته نیست (فقط CSS است)، پس `ThemeProvider` (`src/components/providers/theme-provider.tsx`) نیازی به `router.refresh()` ندارد: `setTheme` مستقیم `document.documentElement.dataset.theme` را عوض می‌کند (بازخورد فوری، بدون round-trip به سرور) و هم‌زمان کوکی را برای رندرهای بعدی ذخیره می‌کند.
 - `useTheme()` (`{ theme, setTheme }`) در هر Client Component قابل‌استفاده است.
 
-برای اجرای محلی: `.claude/launch.json` در ریشه‌ی پروژه یک سرور به نام `quire-frontend` تعریف کرده (`npm --prefix frontend run dev`، پورت پیش‌فرض ۳۰۰۰ با `autoPort`). اگر بعد از چند بار ادیت پیاپی فایل‌ها خطاهای عجیب/قدیمی در کنسول مرورگر دیدید (مثل ارجاع به فایلی که قبلاً rename شده)، احتمالاً کش Turbopack کهنه شده — سرور را متوقف کنید، `frontend/.next` را پاک کنید، و دوباره اجرا کنید.
+برای اجرای محلی، هر دو سرویس را اجرا کنید: `npm --prefix backend run dev` (پورت ۴۰۰۰) و `npm --prefix frontend run dev` (پورت ۳۰۰۰). `.claude/launch.json` هر دو را جداگانه تعریف می‌کند. `DATABASE_PATH` و `NEXT_PUBLIC_QUIRE_API_URL` برای تغییر محل SQLite و آدرس API هستند. اگر بعد از چند بار ادیت فایل‌ها خطاهای قدیمی Turbopack دیدید، سرور فرانت را متوقف کنید، `frontend/.next` را پاک کنید و دوباره اجرا کنید.
 
 ### اصلاح نوار پروژه
 
 دکمهٔ جدول فعلاً از نوار پروژه حذف شده است؛ نمای جدول در کد و سایر مصرف‌کنندگان باقی می‌ماند. نشان تب فعال پروژه مشکی (`#141a1a`)، با ارتفاع ۵px و شعاع گوشه‌های بالایی ۴px است.
 
-پیش‌نمایش اعلان هدر مطابق Figma `1723:29972` است: عرض ۳۹۳px محدود به عرض صفحه، گوشهٔ ۱۶px، بدون سایه، نوار فیلتر پروژه و نشان فعال مشکی با گوشه‌های بالایی گرد. دادهٔ اعضا و پروژه‌ها پویاست؛ ردیف‌ها به مقصد اعلان و تنظیمات به حساب کاربری می‌روند. خواندن اعلان تنها در state محلی است.
+پیش‌نمایش اعلان هدر مطابق Figma `1723:29972` است: عرض ۳۹۳px محدود به عرض صفحه، گوشهٔ ۱۶px، بدون سایه، نوار فیلتر پروژه و نشان فعال مشکی با گوشه‌های بالایی گرد. صفحهٔ `/notifications` از همان نمای تب‌بندی‌شده استفاده می‌کند و BottomTabBar به آن لینک می‌دهد. تخصیص Task در بک‌اند اعلان پایدار می‌سازد؛ خواندن اعلان هم در API ذخیره می‌شود. دکمهٔ تنظیمات فقط در پیش‌نمایش هدر دسکتاپ است.
 
 ## معاونت‌ها و ساخت تیکت
 
 `Organization.divisions` گروه‌بندی شرکت ← معاونت ← پروژه است. `Project.divisionId/divisionName` مرجع معاونت پروژه‌اند؛ `Organization.projects` نمای تجمیعی سازگار است. ناوبری پروژه، کارت‌های `/projects`، خانه و نمای شرکت از معاونت‌ها استفاده می‌کنند.
 
-فیچر جدید `frontend/src/features/tickets/` فرم ساخت تیکت را نگه می‌دارد؛ مسیر مستقل `/tickets/new` برای موبایل است و منوی «جدید» دسکتاپ مودال TicketCreateDialog را باز می‌کند. قرارداد داده در `lib/api/tickets.ts` و `types.ts` است. UI از فرم‌های موجود، دیکشنری و توکن‌های مشترک پیروی می‌کند.
+ورودی `/projects` با `features/projects/organization-project-tree.tsx` درخت سازمان/معاونت/پروژه را مطابق Figma `13972:1313` و `13972:1519` رندر می‌کند. دادهٔ سازمان‌ها از `getOrganizations()` و هویت هدر از `getCurrentUser()` می‌آید. در شروع همهٔ سازمان‌ها و معاونت‌ها بسته‌اند؛ ابتدا سازمان و بعد معاونت با گذار نرم CSS باز می‌شود. دکمه‌های تنظیمات و افزودن روی هاور دسکتاپ در سمت چپ ردیف هستند؛ دکمهٔ «معاونت جدید» زیر سازمان بازشده، و دکمهٔ «پروژهٔ جدید» زیر معاونت بازشده است. تنظیمات سازمان/معاونت به Overview سازمان با انتخاب معاونت مناسب می‌رود. فرم ساخت معاونت/پروژه از API استفاده می‌کند. سربرگ پروفایل تمام‌عرض و بدون فاصله از هدر است. انتخاب پروژه به مسیر پویای `/home/projects/[id]` می‌رود. بخش‌های تنظیمات و گزارش در سطوح سازمان، معاونت و پروژه در این صفحه نیستند.
+
+فیچر `frontend/src/features/tickets/` فرم ساخت تیکت و جزئیات Ticket را نگه می‌دارد؛ مسیر مستقل `/tickets/new` برای موبایل است و منوی «جدید» دسکتاپ مودال TicketCreateDialog را باز می‌کند. ساخت از داخل پروژه `projectId` را به فرم و API می‌رساند؛ Board پروژه تیکت‌های همان پروژه را نمایش می‌دهد و تیکت‌های بدون پروژه در برد «تسک‌های من» می‌مانند. فرم پروژه را از فهرست پروژه‌های کاربر می‌گیرد و انتخاب‌گر وضعیت از سه وضعیت و آیکون مشترک Board استفاده می‌کند. ردیف «ارجاع شده» پروفایل اعضای مجاز پروژه را در modal نشان می‌دهد؛ ذخیرهٔ ارجاع از API انجام می‌شود، اعلان پایدار برای گیرنده می‌سازد و Ticket در کارتابل او دیده می‌شود. در موبایل تب «جزئیات بیشتر» پیش‌فرض است و صفحهٔ ساخت تیکت BottomTabBar ندارد؛ پایین فرم فقط نوار انصراف/ثبت تیکت نمایش داده می‌شود. قرارداد داده در `lib/api/ticket-comments.ts` و `types.ts` است. فرم ساخت هدر ندارد و `WorkspaceActionBar` دکمه‌های ثبت تیکت/انصراف را در پایین می‌گذارد؛ کامنت‌نویسی فقط نقش کادر کامنت را دارد.
 
 ## ساخت موبایل
 
@@ -311,11 +336,18 @@ src/components/providers/
 
 ## ساخت خودکار و چیدمان مشترک تسک
 
-صفحهٔ ساخت تسک یک state مشترک دارد: زیر ۱۰۲۴px تمام عرض صفحه است، از ۱۰۲۴px یک قاب دسکتاپ با حداکثر عرض ۱۰۷۲px، جزئیات و فعالیت‌های کنار هم می‌شود. جابه‌جایی اندازه هیچ کامپوننت اطلاعاتی را unmount نمی‌کند. `features/tasks/local-created-tasks.ts` ذخیره/حذف تسک‌های خودکار را در localStorage انجام می‌دهد؛ با محتوای خالی رکورد نمی‌سازد.
+صفحهٔ ساخت تسک یک state مشترک دارد: زیر ۱۰۲۴px تمام عرض صفحه است، از ۱۰۲۴px یک قاب دسکتاپ با حداکثر عرض ۱۰۷۲px دارد. در `/tasks/new` جزئیات و فعالیت در چیدمان تمام‌عرض قرار می‌گیرند؛ نوار `WorkspaceActionBar` دکمه‌های ذخیره/انصراف را نشان می‌دهد و جای BottomTabBar را می‌گیرد. state تا ثبت صریح در حافظهٔ فرم می‌ماند؛ `features/tasks/local-created-tasks.ts` فقط هنگام ذخیرهٔ موفق رکورد را در localStorage می‌نویسد. انصراف بدون ثبت رکورد به صفحهٔ قبل برمی‌گردد.
+
+در نمای List/Tree، دکمهٔ افزودن سریع زیر هر ردیف یک ورودی عنوان متمرکز باز می‌کند؛ Enter تسک را با پروژهٔ جاری در API ذخیره می‌کند و ردیف تازه را همان‌جا درج می‌کند. گروه‌بندی‌های Priority و Assignee در Board به صورت ستون‌های افقی نشان داده می‌شوند و Priority از رنگ‌های `PRIORITY_COLOR` بهره می‌برد.
 
 ## ساخت تیکت مطابق فضای تسک
 
-فیچر tickets یک TicketWorkspace مشترک برای مودال هدر و صفحهٔ `/tickets/new` دارد. از DialogContent(taskWorkspace)، NewTaskAsset، MobileTaskAsset، NewTaskActivity و تب‌های مشترک استفاده می‌کند. زیر ۱۰۲۴px صفحه است؛ در دسکتاپ دو ستون جزئیات/فعالیت و قاب حداکثر ۱۰۷۲px دارد. state فرم مستقل از تغییر اندازه حفظ می‌شود. ذخیرهٔ خودکار و حذف محلی در local-created-tickets.ts است.
+فیچر tickets یک TicketWorkspace مشترک برای مودال هدر و صفحهٔ `/tickets/new` دارد. از DialogContent(taskWorkspace)، NewTaskAsset، MobileTaskAsset، NewTaskActivity و تب‌های مشترک استفاده می‌کند. جزئیات Ticket تا فشردن دکمهٔ ذخیره تغییرات پیش‌نویس‌اند؛ دکمه فقط در حالت dirty فعال است و انصراف بدون ذخیره می‌بندد. فرم ساخت هدر بالایی ندارد و `WorkspaceActionBar` تنها نوار ثابت پایین آن با دکمه‌های ثبت/انصراف است؛ BottomTabBar و padding رزروشدهٔ آن در فرم ساخت حذف شده‌اند. فیلد ارجاع بالای موضوع است و برچسب‌های فیلدها کلاس مشترک رنگ/اندازه دارند؛ کادر کامنت اکشن ثبت ندارد. ذخیره با بستن workspace و Toast شناسه‌دار همراه است؛ حذف نیز پیام شناسه‌دار می‌دهد. اولویت Ticket از مدل مشترک TaskPriority می‌آید. جزئیات Ticket، Follow/Favorite، کامنت و Activity از `ticket-comments.ts` و API/SQLite استفاده می‌کنند؛ فید از قدیمی به جدید مرتب است. در دسکتاپ دو ستون جزئیات/فعالیت و قاب حداکثر ۱۰۷۲px دارد. state فرم مستقل از تغییر اندازه حفظ می‌شود.
 
 ## کارتابل و فضای کاری تسک
-`features/tickets/ticket-inbox.tsx` در `app/(tabs)/inbox` تیکت‌های نمونه و `local-created-tickets` را ترکیب و فیلتر می‌کند. نسخه‌ی موبایل از سربرگ/پروفایل Figma `1838:49884`، فیلتر افقی با آیکون در سمت راست و منوهای عریض‌تر استفاده می‌کند. ناحیهٔ اسکرول کارت‌ها با ارتفاع viewport محدود و بالای BottomTabBar نگه داشته می‌شود. کارت‌ها در ابتدا فهرست عادی‌اند؛ فقط با دست‌کم شش تیکت، وجود overflow واقعی و رسیدن اسکرول به انتهای فهرست، حداکثر شش کارت آخر به پشتهٔ متحرک تبدیل می‌شوند. کلیک کارت به `/inbox/[ticketId]` می‌رود. مسیر جزئیات فعلاً پوسته‌ی ناتمام است و در README همان مسیر ثبت شده است. تاریخچهٔ تسک در بخش فعالیت‌ها می‌ماند و آکوردئون تاریخچه از جزئیات حذف شده است. TaskPanel تنها میزبان Dialog است و NewTaskDialog را برای ساخت/ویرایش تسک مصرف می‌کند. ویژگی recurrence روی Task/NewTaskInput/TaskUpdateInput تاریخ‌های انتخابی و تعداد تکرار را نگه می‌دارد؛ repeat-picker.tsx انتخابگر مشترک موبایل/دسکتاپ است. app/(tabs)/messages از ChatPage استفاده می‌کند.
+`features/tickets/ticket-detail.tsx` جزئیات مشترک Ticket را از `ticket-data.ts` می‌خواند و `TicketWorkspace` را در مسیر `/inbox/[ticketId]` برای مشاهده/ویرایش همان رکورد باز می‌کند. در ناوبری نرم دسکتاپ، slot موازی `@modal` آن را به‌صورت مودال روی مسیر قبلی (Inbox یا Board) نمایش می‌دهد؛ مسیر مستقیم نیز Inbox را پشت همان قاب می‌آورد. در موبایل جزئیات تمام‌صفحه باقی می‌ماند؛ پنل Activities فضای باقیمانده را می‌گیرد و کادر کامنت فشردهٔ Figma `13966:1318` در پایین آن می‌ماند. کارت‌های Inbox و Board به همین شناسه و مسیر می‌روند؛ تغییرات ذخیره‌شده با رویداد محلی بین هر دو نما تازه می‌شوند. فهرست کامل تیکت‌ها در `/inbox` است.
+`features/tickets/ticket-inbox.tsx` در `app/(tabs)/inbox` تیکت‌های SQLite را از API دریافت و فیلتر می‌کند. فیلتر مجوزها در modal چندانتخابی با Checkbox و جداکنندهٔ ردیف‌هاست؛ انتخاب چند مجوز به‌صورت OR اعمال می‌شود. موبایل از سربرگ/پروفایل، فیلتر افقی و کارت‌های Figma `1838:49884` استفاده می‌کند؛ در دسکتاپ هدر داخلی و پس‌زمینهٔ کارت‌ها حذف می‌شوند و TicketInbox حداکثر عرض ۸۰۰px دارد و وسط‌چین است؛ انتخاب کاربر با مودال مرکزی واکنش‌گرا و آواتار انجام می‌شود و فهرست وضعیت از `STATUS_COLUMNS` مشترک با Board می‌آید. ناحیهٔ اسکرول کارت‌ها با ارتفاع viewport محدود و بالای BottomTabBar نگه داشته می‌شود؛ با اسکرول، معرفی پروفایل با انیمیشن جمع می‌شود و فیلترها بالا می‌آیند. همه‌ی کارت‌ها در یک فهرست عادی و بدون پشته یا انیمیشن ورق‌زدن می‌مانند و تراز متن پروفایل/عنوان از جهت زبان پیروی می‌کند. وقتی هیچ تیکتی نیست، تصویر `public/images/empty-mailbox.png` و متن ۱۳px در مرکز تمام فضای فهرست قرار می‌گیرند. کلیک کارت به `/inbox/[ticketId]` می‌رود و همان رکورد مشترک را در TicketWorkspace باز می‌کند. تاریخچهٔ تسک در بخش فعالیت‌ها می‌ماند و آکوردئون تاریخچه از جزئیات حذف شده است. TaskPanel تنها میزبان Dialog است و NewTaskDialog را برای ساخت/ویرایش تسک مصرف می‌کند. `TaskRecurrence` در Task/NewTaskInput/TaskUpdateInput تعداد، نوع فاصلهٔ روزانه/هفتگی/ماهانه و روزهای انتخابی هفته را نگه می‌دارد؛ `repeat-picker.tsx` انتخابگر مشترک موبایل/دسکتاپ است. app/(tabs)/messages از ChatPage استفاده می‌کند.
+
+در مسیر `/projects`، `OrganizationProjectTree` در دسکتاپ حداکثر ۸۰۰px عرض دارد و ارتفاع آن با محتوا تنظیم می‌شود؛ از هدر ۸px فاصله دارد. در موبایل تمام‌عرض باقی می‌ماند. هدر پروفایل در بالای کارت و تمام‌عرض است؛ نشان ساختمان فقط کنار سازمان است و معاونت تصویر ندارد. در `ProjectNavigator`، عنوان سازمان فونت ۱۶px و فلش باز/بستهٔ توپر در سمت راست دارد؛ ردیف معاونت ۸px padding سمت راست دارد. مدیر جاری می‌تواند پروژه را روی معاونت مقصد و معاونت را روی سربرگ سازمان مقصد Drag & Drop کند؛ آیکون دستگیره فقط برای سازمان‌های قابل‌مدیریت نشان داده می‌شود و خطای API کنار فهرست می‌آید.
+
+ویرایش پروفایل در `features/account/` با `PATCH /api/v1/auth/me` ذخیره می‌شود. عکس قبل از ارسال کوچک و فشرده می‌شود؛ `TaskPanelProvider` کاربر ذخیره‌شده را به مینی‌بارها و هدر می‌رساند تا آواتار واقعی نشست در همه‌جا یکسان باشد. ردیف «نشست‌ها» در تنظیمات حساب به `/account/sessions` می‌رود؛ `features/account/sessions-list.tsx` نشست‌های واقعی را از `auth.ts` می‌گیرد و نوع دستگاه، مرورگر، نشست جاری، آخرین فعالیت و کنترل لغو را نشان می‌دهد؛ API هویت نشست جاری را از cookie می‌خواند.

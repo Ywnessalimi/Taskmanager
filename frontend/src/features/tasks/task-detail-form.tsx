@@ -36,6 +36,7 @@ export function TaskDetailForm({
       onSubmit={async (values) => {
         await updateTask({
           id: task.id,
+          projectId: projectId ?? task.projectId,
           title: values.title,
           assigneeNames: values.assigneeNames.length > 0 ? values.assigneeNames : undefined,
           dueDate: values.dueDate || undefined,

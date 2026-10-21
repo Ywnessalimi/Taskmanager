@@ -11,7 +11,7 @@ export default async function LoginPage() {
   const locale = await getLocale()
 
   return (
-    <AuthScreen locale={locale} active="login" heroImage="/images/auth/login-bg.png">
+    <AuthScreen locale={locale} heroImage="/images/auth/login-bg.png">
       <LoginForm />
     </AuthScreen>
   )

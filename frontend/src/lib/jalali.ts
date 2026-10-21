@@ -35,6 +35,17 @@ export function formatDate({ year, month, day }: JalaliDate): string {
   return `${year}/${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}`
 }
 
+/** تاریخ امروز در تقویم فارسی دستگاه، با رقم لاتین و قالب پایدار لایهٔ داده. */
+export function currentJalaliDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-u-ca-persian-nu-latn", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now)
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value)
+  return formatDate({ year: value("year"), month: value("month"), day: value("day") })
+}
+
 /** شماره‌ی مطلق روز (هر سال ۳۶۵ روز) — پایه‌ی همه‌ی مقایسه‌ها و محاسبه‌های فاصله. */
 export function toOrdinal({ year, month, day }: JalaliDate): number {
   let days = year * 365 + day

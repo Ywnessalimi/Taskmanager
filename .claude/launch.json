@@ -9,9 +9,9 @@
       "autoPort": true
     },
     {
-      "name": "quire-frontend-4000",
+      "name": "quire-backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "-p", "4000"],
+      "runtimeArgs": ["--prefix", "backend", "run", "dev"],
       "port": 4000,
       "autoPort": false
     }

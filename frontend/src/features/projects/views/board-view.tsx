@@ -8,7 +8,6 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
-  closestCenter,
   pointerWithin,
   rectIntersection,
   useDraggable,
@@ -40,10 +39,12 @@ import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { useLocale, useT } from "@/components/providers/locale-provider"
 import { readTaskDetails } from "@/features/tasks/local-task-details"
 import { AssigneePickerDialog } from "@/features/tasks/assignee-picker-dialog"
-import { PRIORITY_COLOR, PriorityDot, STATUS_COLUMNS } from "@/features/projects/task-display"
+import { PRIORITY_COLOR, PriorityDot, STATUS_COLUMNS, STATUS_COLUMN_ICON } from "@/features/projects/task-display"
 import type { Member, MyTask, Task, TaskPriority, TicketSubject } from "@/lib/api/types"
 import { getTickets } from "@/features/tickets/ticket-data"
-import { saveLocalTicket, type LocalTicket } from "@/features/tickets/local-created-tickets"
+import type { LocalTicket } from "@/features/tickets/local-created-tickets"
+import { saveTicket } from "@/lib/api/ticket-comments"
+import { getCurrentUser } from "@/lib/api/users"
 import { linkTicketToTask, readTicketTaskLinks, type TicketTaskLinks } from "@/features/tickets/ticket-task-links"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 
@@ -77,7 +78,7 @@ const DEFAULT_COLUMNS: BoardColumn[] = STATUS_COLUMNS.map((column) => ({
   id: column.id,
   label: column.label,
   color: DEFAULT_COLUMN_COLOR[column.id],
-  icon: column.id === "todo" ? "time-line" : column.id === "in-progress" ? "figma-progress" : "checkbox-circle-line",
+  icon: STATUS_COLUMN_ICON[column.id],
 }))
 
 const STATUS_COLUMN_IDS = new Set<string>(STATUS_COLUMNS.map((column) => column.id))
@@ -88,12 +89,12 @@ const TICKET_SUBJECT_LABELS: Record<TicketSubject, TranslationKey> = {
   warehouse: "ticket.warehouse",
 }
 const TICKET_USER_AVATARS: Record<string, string> = {
-  u1: "/avatars/u1.svg",
-  u2: "/avatars/u2.svg",
-  u3: "/avatars/u3.svg",
-  u4: "/avatars/u4.svg",
-  u5: "/avatars/u5.svg",
-  u6: "/avatars/u6.svg",
+  u1: "/avatars/u1.jpg",
+  u2: "/avatars/u2.jpg",
+  u3: "/avatars/u3.jpg",
+  u4: "/avatars/u4.jpg",
+  u5: "/avatars/u5.jpg",
+  u6: "/avatars/u6.jpg",
 }
 
 const boardCollisionDetection: CollisionDetection = (args) => {
@@ -179,6 +180,7 @@ function BoardTicketCard({
   parentTaskId?: string
 }) {
   const t = useT()
+  const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `ticket:${ticket.id}`,
     data: { kind: "ticket", ticketId: ticket.id },
@@ -188,8 +190,10 @@ function BoardTicketCard({
   const assigneeName = assignedMember?.name ?? ticket.assigneeName
   const assigneeAvatar = assignedMember?.avatarUrl ?? ticket.assigneeAvatarUrl
   const avatarSize = compact ? "size-5" : "size-6"
+  const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation()
+    pointerStart.current = { x: event.clientX, y: event.clientY }
     listeners?.onPointerDown?.(event)
   }
 
@@ -200,11 +204,17 @@ function BoardTicketCard({
       {...attributes}
       {...listeners}
       onPointerDown={handlePointerDown}
-      onClick={stop}
+      onClick={(event) => {
+        event.stopPropagation()
+        const start = pointerStart.current
+        pointerStart.current = null
+        if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return
+        router.push(`/inbox/${encodeURIComponent(ticket.id)}`)
+      }}
       data-ticket-drop-id={parentTaskId ? ticket.id : undefined}
       data-ticket-drop-task={parentTaskId}
       aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
-      className={`flex min-w-0 touch-none items-center gap-2 border border-border bg-bg2 text-start text-text2 ${compact ? "rounded-md px-2 py-1" : "rounded-xl px-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+      className={`flex min-w-0 touch-none items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
     >
       <AvatarGroup className="shrink-0 rtl:space-x-reverse">
         <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
@@ -862,7 +872,7 @@ export function BoardView({
 
   useEffect(()=>{
     const refresh=()=>{setTasks(previous=>previous.map(task=>{try{return readTaskDetails(task)}catch{return task}}))}
-    const changed=(event:Event)=>{const task=(event as CustomEvent<Task>).detail;refresh();setOrder(previous=>{const column=Object.keys(previous).find(key=>previous[key].includes(task.id));if(!column||column===task.status||!["todo","in-progress","completed"].includes(column))return previous;return {...previous,[column]:previous[column].filter(id=>id!==task.id),[task.status]:[...(previous[task.status]??[]).filter(id=>id!==task.id),task.id]}})}
+    const changed=(event:Event)=>{const task=(event as CustomEvent<Task>).detail;setTasks(previous=>previous.map(item=>item.id===task.id?task:item));setOrder(previous=>{const column=Object.keys(previous).find(key=>previous[key].includes(task.id));if(!column||column===task.status||!["todo","in-progress","completed"].includes(column))return previous;return {...previous,[column]:previous[column].filter(id=>id!==task.id),[task.status]:[...(previous[task.status]??[]).filter(id=>id!==task.id),task.id]}})}
     refresh()
     window.addEventListener("task-details-changed",changed)
     return()=>window.removeEventListener("task-details-changed",changed)
@@ -871,13 +881,10 @@ export function BoardView({
   useEffect(() => {
     if (!includeTickets) return
     const refresh = () => {
-      try {
-        setTickets(getTickets(locale))
-        setTicketTaskLinks(readTicketTaskLinks())
-      } catch {
+      setTicketTaskLinks(readTicketTaskLinks())
+      void getTickets(locale).then((allTickets) => setTickets(projectId ? allTickets.filter((ticket) => ticket.projectId === projectId) : allTickets.filter((ticket) => !ticket.projectId))).catch(() => {
         setTickets([])
-        setTicketTaskLinks(readTicketTaskLinks())
-      }
+      })
     }
 
     refresh()
@@ -889,7 +896,7 @@ export function BoardView({
       window.removeEventListener("ticket-task-links-changed", refresh)
       window.removeEventListener("storage", refresh)
     }
-  }, [includeTickets, locale])
+  }, [includeTickets, locale, projectId])
 
   const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
   const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
@@ -953,12 +960,18 @@ export function BoardView({
   function updateTicketAssignee(ticketId: string, member?: Member) {
     const ticket = ticketsById.get(ticketId)
     if (!ticket) return
-    void saveLocalTicket(ticketId, {
+    const updated = {
       ...ticket,
       assigneeId: member?.id,
       assigneeName: member?.name,
       assigneeAvatarUrl: member?.avatarUrl,
-    })
+    }
+    void getCurrentUser().then(async user => {
+      const actor = { id: user.id, name: user.name, avatarUrl: user.avatarUrl }
+      await saveTicket(ticketId, ticket, actor)
+      await saveTicket(ticketId, updated, actor)
+      window.dispatchEvent(new Event("tickets-changed"))
+    }).catch(() => undefined)
   }
 
   function updateColumnColor(columnId: string, color: string) {

@@ -1,0 +1,6 @@
+[Unit]
+Description=Copy renewed Radius IP certificate for Quire HTTPS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/quire-sync-certificate.sh

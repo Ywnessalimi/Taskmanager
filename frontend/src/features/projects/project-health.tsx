@@ -4,7 +4,6 @@ import { LineTrendChart, type TrendSeries } from "@/components/charts/line-trend
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useLocale } from "@/components/providers/locale-provider"
 import * as jalali from "@/lib/jalali"
-import { MOCK_TODAY } from "@/lib/api/mock-data"
 import type { ProjectHealth, ProjectHealthTrend } from "@/lib/api/types"
 import type { Locale, TranslationKey } from "@/lib/i18n/dictionary"
 
@@ -43,7 +42,7 @@ function gregorianToday(): Date {
  */
 export function buildDateLabels(locale: Locale, length: number): string[] {
   if (locale === "fa") {
-    const today = jalali.parseDate(MOCK_TODAY)!
+    const today = jalali.parseDate(jalali.currentJalaliDate())!
     return Array.from({ length }, (_, i) => {
       const d = jalali.addDays(today, i - (length - 1))
       return `${d.day} ${jalali.MONTH_NAMES[d.month - 1]}`
@@ -77,17 +76,17 @@ export function ProjectHealthSection({
   healthTrend,
 }: {
   health: ProjectHealth
-  healthTrend: ProjectHealthTrend
+  healthTrend?: ProjectHealthTrend
 }) {
   const { locale, t } = useLocale()
-  const length = healthTrend.active.length
+  const length = healthTrend?.active.length ?? 0
   const xLabels = buildDateLabels(locale, length)
 
-  const series: TrendSeries[] = METRIC_ORDER.map((metric) => ({
+  const series: TrendSeries[] = healthTrend ? METRIC_ORDER.map((metric) => ({
     key: metric,
     colorVar: METRIC_COLOR[metric],
     values: healthTrend[metric],
-  }))
+  })) : []
 
   return (
     <div className="flex flex-col gap-6 rounded-lg border border-border bg-background p-5">
@@ -128,12 +127,12 @@ export function ProjectHealthSection({
                 {health[metric]}
               </p>
             </div>
-            <PercentBadge metric={metric} values={healthTrend[metric]} />
+              {healthTrend && <PercentBadge metric={metric} values={healthTrend[metric]} />}
           </div>
         ))}
       </div>
 
-      <LineTrendChart series={series} xLabels={xLabels} labelEvery={4} />
+      {healthTrend ? <LineTrendChart series={series} xLabels={xLabels} labelEvery={4} /> : <p className="text-xs text-text3">{t("project.healthHistoryUnavailable")}</p>}
     </div>
   )
 }

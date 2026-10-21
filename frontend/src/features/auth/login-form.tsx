@@ -17,6 +17,7 @@ export function LoginForm() {
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const canSubmit = identifier.trim().length > 0 && password.length > 0 && !submitting
 
@@ -24,14 +25,22 @@ export function LoginForm() {
     event.preventDefault()
     if (!canSubmit) return
     setSubmitting(true)
-    await login({ identifier: identifier.trim(), password })
-    router.push("/home")
+    setError(null)
+    try {
+      await login({ identifier: identifier.trim(), password })
+      router.replace("/inbox")
+      router.refresh()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("auth.loginError"))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <form onSubmit={submit} className="flex w-full flex-col items-start gap-4">
       <AuthField
-        label={t("auth.identifierLabel")}
+        label={t("auth.emailLabel")}
         placeholder={t("auth.fieldPlaceholder")}
         value={identifier}
         onChange={(e) => setIdentifier(e.target.value)}
@@ -45,6 +54,7 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         autoComplete="current-password"
       />
+      {error && <p role="alert" className="w-full text-sm text-destructive">{error}</p>}
       <Button
         type="submit"
         disabled={!canSubmit}
@@ -52,12 +62,6 @@ export function LoginForm() {
       >
         {t("auth.loginSubmit")}
       </Button>
-      <button
-        type="button"
-        className="w-full text-center text-sm font-medium text-[color:var(--auth-text-secondary)]"
-      >
-        {t("auth.forgotPassword")}
-      </button>
     </form>
   )
 }

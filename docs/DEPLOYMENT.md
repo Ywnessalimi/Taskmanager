@@ -1,120 +1,60 @@
-# دیپلوی (Deployment)
+# انتشار Quire
 
-> این سند فقط نحوه‌ی اجرای پروژه روی سرور نمایشی را توضیح می‌دهد. معماری کد در [FRONTEND.md](./FRONTEND.md) است.
+## وضعیت استقرار
 
-## وضعیت فعلی
+بک‌اند، Next.js standalone و TLS proxy روی سرور Ubuntu `fastcreate-069773` نصب شده‌اند. سرور با SSH روی پورت `9011` مدیریت می‌شود؛ این پورت برای وب‌سایت نیست. برنامه روی HTTPS پورت `443` گوش می‌دهد، API فقط روی `127.0.0.1:4000` و Next فقط روی `127.0.0.1:4001` در دسترس‌اند.
 
-نسخه‌ی نمایشی فرانت‌اند روی سرور مجازی اوبونتو اجراست:
+آدرس برنامه: `https://2.58.172.162/login`. گواهی TLS معتبر IP روی همان سرور تمدید خودکار می‌شود و timer برنامه نسخهٔ محلی آن را همگام می‌کند. UFW ورودی TCP/443 را برای دسترسی عمومی مجاز می‌کند. پاسخ HTTPS و صفحهٔ ورود از داخل سرور با گواهی معتبر بررسی شده‌اند؛ یک آزمون از بیرون در این محیط پیش از ارسال TLS ClientHello reset شد، پس دسترسی از شبکه‌های عمومی هنوز نیاز به تأیید کاربر دارد.
 
-- آدرس: `http://<SERVER_IP>:8080`
-- مسیر روی سرور: `/opt/quire/app`
-- سرویس: `quire.service` (systemd، با `Restart=on-failure` و فعال بعد از ریبوت)
-- Node: نسخه‌ی ۲۲ از مخزن NodeSource
+نسخه در `/opt/quire/releases/live-20261020` قرار دارد و `/opt/quire/live` به آن اشاره می‌کند. فایل SQLite در `/var/lib/quire/quire.sqlite` است. دیتابیس تازه یک حساب اولیه دارد و جدول‌های سازمان، معاونت، پروژه، تسک، تیکت و اعلان خالی‌اند. سرویس‌های Radius دست‌نخورده مانده‌اند. سرویس منتقل‌شدهٔ `Julioto` حذف شد؛ تنها نسخهٔ پشتیبان کلاستر PostgreSQL آن در `/var/backups/julioto/database-20261020.sql.gz` نگه داشته شده است.
 
-روی همان سرور یک استک داکری دیگر (`julioto-*`) روی پورت‌های ۸۰/۴۴۳ در حال اجراست. این دیپلوی **هیچ تماسی با آن ندارد**: پورت جدا، سرویس جدا، بدون تغییر در nginx یا داکر.
+## سرویس‌ها
 
-## چرا خروجی standalone
+- `quire-api.service`: بک‌اند SQLite روی `127.0.0.1:4000` با کاربر سیستمی `quire`.
+- `quire-web.service`: فرانت standalone روی `127.0.0.1:4001` با کاربر `quire`.
+- `quire-https.service`: TLS proxy روی `0.0.0.0:443`؛ گواهی از نسخهٔ اختصاصی برنامه در `/var/lib/quire/tls/` خوانده می‌شود. سرویس با `CAP_NET_BIND_SERVICE` اجرا می‌شود تا کاربر غیرریشه‌ای `quire` بتواند پورت privileged 443 را bind کند.
+- `quire-cert-sync.timer`: هر پنج دقیقه گواهی تمدیدشدهٔ میزبان را به مسیر برنامه کپی می‌کند؛ proxy تغییر گواهی را خودکار بارگذاری می‌کند.
 
-`frontend/next.config.ts` مقدار `output: "standalone"` دارد. سرور فقط ۲ گیگ رم دارد و یک سرویس واقعی هم روی آن است، پس **بیلد گرفتن روی سرور امن نیست** (احتمال OOM و آسیب به سرویس در حال اجرا). به‌جای آن:
-
-1. بیلد روی ماشین توسعه گرفته می‌شود.
-2. خروجی `.next/standalone` (که سرور Node و فقط وابستگی‌های لازم را در خود دارد) به سرور منتقل می‌شود.
-3. روی سرور نه `npm install` اجرا می‌شود و نه `next build` — فقط `node server.js`.
-
-## دسترسی SSH
-
-اتصال به سرور با **کلید SSH** انجام می‌شود، نه رمز عبور. روی ماشین توسعه یک کلید `ed25519` در `~/.ssh/quire-server` ساخته شده و کلید عمومی‌اش در `/root/.ssh/authorized_keys` سرور نصب است. یک ورودی هم در `~/.ssh/config` اضافه شده تا دستورها کوتاه بمانند:
-
-```
-Host quire
-    HostName <SERVER_IP>
-    Port <SSH_PORT>
-    User root
-    IdentityFile ~/.ssh/quire-server
-    IdentitiesOnly yes
-```
-
-بعد از آن کافی است:
+وضعیت و لاگ:
 
 ```bash
-ssh quire
+systemctl status quire-api quire-web quire-https
+journalctl -u quire-api -n 50
+journalctl -u quire-web -n 50
+journalctl -u quire-https -n 50
 ```
 
-> کلید **خصوصی** (`~/.ssh/quire-server`، بدون پسوند) هرگز جایی فرستاده نمی‌شود؛ فقط فایل `.pub` روی سرورها نصب می‌شود. برای افزودن ماشین دوم، یک کلید جدا برای همان ماشین ساخته شود و کلید عمومی‌اش به `authorized_keys` اضافه شود — کپی‌کردن کلید خصوصی بین دستگاه‌ها کار درستی نیست.
+## به‌روزرسانی برنامه
 
-## مراحل انتشار نسخه‌ی جدید
+بیلد باید روی ماشین توسعه انجام شود؛ سرور کم‌حافظه است و بیلد روی آن اجرا نمی‌شود.
 
 ```bash
-# ۱) بیلد روی ماشین توسعه
 cd frontend
-npm run build
-
-# ۲) ساخت باندل (دقت: نقطه‌ی انتهای مسیر لازم است تا پوشه‌ی مخفی .next هم کپی شود)
-rm -rf /tmp/bundle && mkdir -p /tmp/bundle
-cp -a .next/standalone/. /tmp/bundle/
-cp -a .next/static /tmp/bundle/.next/static
-cp -a public /tmp/bundle/public
-tar czf /tmp/quire.tar.gz -C /tmp/bundle .
-
-# ۳) انتقال و راه‌اندازی مجدد
-ssh quire "systemctl stop quire && rm -rf /opt/quire/app && mkdir -p /opt/quire/app && cat > /opt/quire/quire.tar.gz" < /tmp/quire.tar.gz
-ssh quire "tar xzf /opt/quire/quire.tar.gz -C /opt/quire/app && systemctl start quire && systemctl is-active quire"
+npm run build -- --webpack
+mkdir -p .next/standalone/.next/static
+cp -a .next/static/. .next/standalone/.next/static/
+cp -a public .next/standalone/public
 ```
 
-> **تله‌ی مهم:** `cp -r .next/standalone/*` کار نمی‌کند — گلاب پوسته پوشه‌ی مخفی `.next/standalone/.next` (که BUILD_ID و کد سرور در آن است) را نادیده می‌گیرد و سرور با خطای «Could not find a production build» بالا نمی‌آید. حتماً `cp -a .../.` استفاده شود.
-
-## فایل سرویس
-
-`/etc/systemd/system/quire.service`:
-
-```ini
-[Unit]
-Description=Quire clone (Next.js demo)
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/quire/app
-Environment=NODE_ENV=production
-Environment=PORT=8080
-Environment=HOSTNAME=0.0.0.0
-ExecStart=/usr/bin/node server.js
-Restart=on-failure
-RestartSec=5
-User=root
-
-[Install]
-WantedBy=multi-user.target
-```
-
-دستورهای پرکاربرد:
+باندل باید شامل `frontend/.next/standalone` و کد/مهاجرت‌های `backend/` باشد؛ `backend/data` و فایل SQLite محلی را وارد باندل نکنید. نسخهٔ جدید را در release تازه داخل `/opt/quire/releases/` استخراج کنید، symlink `/opt/quire/live` را جابه‌جا کنید و این سرویس‌ها را restart کنید:
 
 ```bash
-systemctl status quire          # وضعیت
-journalctl -u quire -n 50       # لاگ
-systemctl restart quire         # ری‌استارت
+systemctl restart quire-api quire-web quire-https
 ```
 
-## شبکه
+دادهٔ کاربر در `/var/lib/quire/` مستقل از release می‌ماند. migration تازه هنگام شروع API اعمال می‌شود؛ migration اجراشده را ویرایش نکنید.
 
-فایروال `ufw` فعال است. برای دسترسی عمومی به نسخه‌ی نمایشی یک قانون اضافه شده:
+## حساب نخست
+
+حساب مدیر با `backend/setup-admin.js` و ورودی رمز بدون echo ساخته می‌شود. رمز plain text در فایل‌های پروژه یا تنظیمات systemd ذخیره نمی‌شود. برای نصب فعلی حساب روی دیتابیس خالی ساخته شده است؛ اجرای دوبارهٔ bootstrap روی دیتابیسی که کاربر دارد مجاز نیست.
+
+## پورت عمومی برنامه
+
+برای دسترسی عمومی به برنامه، پورت HTTPS را در UFW باز کنید:
 
 ```bash
-ufw allow 8080/tcp comment "quire demo"
+ufw allow 443/tcp comment "Quire HTTPS"
+ufw delete allow 9444/tcp
 ```
 
-برخلاف ۸۰/۴۴۳ که فقط به رنج آی‌پی‌های Cloudflare باز است، پورت ۸۰۸۰ **برای همه باز است** — چون هدف همین بود که با آی‌پی و پورت به دیگران نشان داده شود.
-
-## نکات امنیتی این دیپلوی
-
-- سرویس فعلاً با کاربر `root` اجرا می‌شود (ساده‌ترین حالت برای یک دمو). برای چیزی جدی‌تر باید یک کاربر بدون امتیاز ساخته شود و `User=` تغییر کند.
-- ترافیک روی HTTP ساده است، نه HTTPS. برای دموی داده‌ی ساختگی مشکلی ندارد؛ اگر روزی داده‌ی واقعی یا لاگین اضافه شد، باید پشت همان nginx/Cloudflare با TLS برود.
-- اپ هنوز احراز هویت ندارد و هرکسی که لینک را داشته باشد همه‌چیز را می‌بیند. داده‌ها Mock و ساختگی‌اند.
-
-## بعد از خاموش‌کردن دمو
-
-```bash
-systemctl disable --now quire
-ufw delete allow 8080/tcp
-rm -rf /opt/quire
-```
+پورت‌های `9011` (SSH)، `9443` (Radius HTTPS)، `8443` و سرویس‌های موجود را برای استقرار Quire تغییر ندهید. 443 تنها مسیر عمومی برنامه است؛ دو سرویس داخلی بک‌اند و Next روی loopback باقی می‌مانند. پورت 9444 دیگر listener یا قانون UFW ندارد.

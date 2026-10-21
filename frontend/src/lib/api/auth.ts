@@ -10,18 +10,26 @@ export type SignupInput = {
   password: string
 }
 
-/**
- * هنوز بک‌اند واقعی Auth وجود ندارد (رجوع به `getCurrentUser` در `users.ts`) — هر ورودی
- * پذیرفته می‌شود و کاربر مستقیم وارد اپ می‌شود. با آمدن بک‌اند Django جایگزین
- * POST /api/auth/login/ می‌شود، بدون تغییر در کامپوننت‌های مصرف‌کننده.
- */
-export async function login(input: LoginInput): Promise<{ ok: true }> {
-  console.info("login (هنوز بررسی نمی‌شود):", input)
-  return { ok: true }
+import { backendRequest } from "./backend-client"
+import type { AuthSession, CurrentUser } from "./types"
+
+export function login(input: LoginInput): Promise<CurrentUser> {
+  return backendRequest<CurrentUser>("/auth/login", { method: "POST", body: JSON.stringify(input) })
 }
 
-/** مشابه `login` — جایگزین POST /api/auth/signup/ خواهد شد. */
-export async function signup(input: SignupInput): Promise<{ ok: true }> {
-  console.info("signup (هنوز ذخیره نمی‌شود):", input)
-  return { ok: true }
+export function logout(): Promise<void> {
+  return backendRequest<void>("/auth/logout", { method: "POST", body: "{}" })
+}
+
+export function getAuthSessions(): Promise<AuthSession[]> {
+  return backendRequest<AuthSession[]>("/auth/sessions")
+}
+
+export function revokeAuthSession(sessionId: string): Promise<void> {
+  return backendRequest<void>(`/auth/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" })
+}
+
+/** Public registration is disabled for the current single-account installation. */
+export async function signup(_input: SignupInput): Promise<never> {
+  throw new Error("ثبت‌نام عمومی غیرفعال است.")
 }

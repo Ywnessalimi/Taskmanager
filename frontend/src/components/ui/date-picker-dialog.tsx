@@ -11,7 +11,6 @@ import {
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useLocale } from "@/components/providers/locale-provider"
 import * as jalali from "@/lib/jalali"
-import { MOCK_TODAY } from "@/lib/api/mock-data"
 
 /** export شده چون `DeadlineCalendar` (نمای‌کلی پروژه) هم به همین تقویم میلادی برای انگلیسی نیاز دارد. */
 export const GREGORIAN_MONTHS = [
@@ -47,11 +46,11 @@ export function DatePickerDialog({
 }) {
   const { locale, t } = useLocale()
   const isFa = locale === "fa"
-  const today = isFa ? MOCK_TODAY : gregorianToday()
+  const today = isFa ? jalali.currentJalaliDate() : gregorianToday()
 
   const [cursor, setCursor] = useState<Cursor>(() => {
     if (isFa) {
-      const parsed = (value && jalali.parseDate(value)) || jalali.parseDate(MOCK_TODAY)!
+      const parsed = (value && jalali.parseDate(value)) || jalali.parseDate(jalali.currentJalaliDate())!
       return { year: parsed.year, month: parsed.month }
     }
     const now = new Date()
@@ -143,7 +142,7 @@ export function DatePickerDialog({
                   <button
                     type="button"
                     onClick={() => onChange(cell.value)}
-                    className={`flex size-8 items-center justify-center rounded-md text-sm ${
+                    className={`flex size-8 items-center justify-center rounded-full text-sm ${
                       cell.value === value
                         ? "bg-brand text-text-on-brand"
                         : cell.value === today

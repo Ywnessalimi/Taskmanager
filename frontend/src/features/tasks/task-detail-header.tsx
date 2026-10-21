@@ -12,7 +12,6 @@ import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import { FollowersDialog } from "@/features/tasks/followers-dialog"
-import { MOCK_CURRENT_USER } from "@/lib/api/mock-data"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import type { TaskFormMemberOption, TaskPriority } from "@/lib/api/types"
 
@@ -49,6 +48,7 @@ export function TaskDetailHeader({
   onFollowersChange,
   isFavorite,
   onFavoriteChange,
+  currentUserName = "",
 }: {
   displayId: string
   priority: TaskPriority
@@ -58,9 +58,10 @@ export function TaskDetailHeader({
   onFollowersChange: (value: string[]) => void
   isFavorite: boolean
   onFavoriteChange: (value: boolean) => void
+  currentUserName?: string
 }) {
   const t = useT()
-  const isFollower = followers.includes(MOCK_CURRENT_USER.name)
+  const isFollower = currentUserName.length > 0 && followers.includes(currentUserName)
 
   return (
     <div className="flex items-center justify-between py-2">

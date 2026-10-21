@@ -2,29 +2,32 @@ import { BottomTabBar } from "@/components/navigation/bottom-tab-bar"
 import { DesktopHeader } from "@/components/navigation/desktop-header"
 import { SidebarNav } from "@/components/navigation/sidebar-nav"
 import { TaskPanelProvider } from "@/components/providers/task-panel-provider"
+import { WorkspaceToast } from "@/components/ui/workspace-toast"
 import { getNotifications } from "@/lib/api/notifications"
 import { getTaskFormOptions } from "@/lib/api/tasks"
 import { getCurrentUser } from "@/lib/api/users"
 
 /**
  * مینی‌بار در موبایل پایین و از `lg` به بالا کنار محتواست؛ با RTL/LTR محل افقی آن
- * خودکار تغییر می‌کند. اعلان‌ها، کاربر و گزینه‌های تسک برای هدر و پنل واکشی می‌شوند.
+ * خودکار تغییر می‌کند. اعلان‌های کاربر، هویت جاری و گزینه‌های تسک برای هدر و پنل واکشی می‌شوند.
  */
-export default async function TabsLayout({ children }: { children: React.ReactNode }) {
-  const [notifications, currentUser, taskFormProjects] = await Promise.all([
-    getNotifications(),
+export default async function TabsLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
+  const [currentUser, taskFormProjects] = await Promise.all([
     getCurrentUser(),
     getTaskFormOptions(),
   ])
+  const notifications = await getNotifications(currentUser.name)
 
   return (
     <TaskPanelProvider projects={taskFormProjects} user={currentUser}>
+      <WorkspaceToast />
       <div className="flex min-h-full flex-1 flex-col lg:flex-row lg:min-h-screen">
         <SidebarNav />
-        <main className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0">
+        <main className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0 has-[[data-no-mobile-nav]]:pb-0">
           <div className="flex w-full flex-1 flex-col">
             <DesktopHeader currentUser={currentUser} notifications={notifications} projects={taskFormProjects} />
             {children}
+            {modal}
           </div>
         </main>
         <BottomTabBar />

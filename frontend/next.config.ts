@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
    * رجوع به docs/DEPLOYMENT.md
    */
   output: "standalone",
+  // The local browser uses 127.0.0.1 while Next starts on localhost.
+  allowedDevOrigins: ["127.0.0.1"],
+  async rewrites() {
+    const backendOrigin = (process.env.QUIRE_API_ORIGIN ?? "http://127.0.0.1:4000").replace(/\/$/, "")
+    return [{ source: "/api/v1/:path*", destination: `${backendOrigin}/api/v1/:path*` }]
+  },
 };
 
 export default nextConfig;

@@ -22,6 +22,9 @@ backend/*.pyc
 backend/.venv/
 backend/venv/
 backend/db.sqlite3
+/backend/data/
+backend/*.sqlite
+backend/*.sqlite-*
 backend/.env*
 backend/staticfiles/
 backend/media/

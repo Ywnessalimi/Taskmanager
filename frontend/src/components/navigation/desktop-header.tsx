@@ -7,8 +7,11 @@ import { useT } from "@/components/providers/locale-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { NewTaskButton } from "@/features/tasks/new-task-button"
+import { HeaderSearch } from "@/components/navigation/header-search"
 import { NotificationsPreviewDialog } from "@/features/notifications/notifications-preview-dialog"
 import type { CurrentUser, Notification, TaskFormProjectOption } from "@/lib/api/types"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { projectPath } from "@/lib/organization-paths"
 
 /**
  * هدر دسکتاپ همهٔ مسیرها مطابق KalaMarket node 1710:27098 است. عنوان بر اساس
@@ -24,6 +27,8 @@ export function DesktopHeader({
   projects: TaskFormProjectOption[]
 }) {
   const t = useT()
+  const taskPanel = useTaskPanel()
+  const activeUser = taskPanel?.user ?? currentUser
   const pathname = usePathname()
   const router = useRouter()
   const projectId = pathname.match(/^\/home\/projects\/([^/]+)(?:\/|$)/)?.[1]
@@ -45,23 +50,21 @@ export function DesktopHeader({
             <span className="truncate">{project?.name}</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            {projects.map((option) => <DropdownMenuItem key={option.id} onClick={() => router.push(`/home/projects/${option.id}`)}>{option.name}</DropdownMenuItem>)}
+            {projects.map((option) => <DropdownMenuItem key={option.id} onClick={() => router.push(projectPath(option))}>{option.name}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
         <span className="truncate text-base text-foreground">{sectionTitle}</span>
       )}
       <div className="flex shrink-0 items-center gap-3">
-        <NewTaskButton figmaStyle user={currentUser} />
+        <NewTaskButton figmaStyle user={activeUser} />
         <Image src="/images/figma/project-header/divider.svg" alt="" width={18} height={1} className="rotate-90" />
-        <span aria-label={t("nav.search")} className="flex size-8 items-center justify-center text-icon2">
-          <Image src="/images/figma/project-header/search.svg" alt="" width={20} height={20} />
-        </span>
-        <NotificationsPreviewDialog notifications={notifications} projects={projects} iconSrc="/images/figma/project-header/notification.svg" />
+        <HeaderSearch projects={projects} />
+        <NotificationsPreviewDialog notifications={notifications} projects={projects} recipientName={activeUser.name} iconSrc="/images/figma/project-header/notification.svg" />
         <Link href="/account" aria-label={t("nav.account")}>
           <Avatar>
-            {currentUser.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />}
-            <AvatarFallback>{currentUser.name.slice(0, 1)}</AvatarFallback>
+            {activeUser.avatarUrl && <AvatarImage src={activeUser.avatarUrl} alt={activeUser.name} />}
+            <AvatarFallback>{activeUser.name.slice(0, 1)}</AvatarFallback>
           </Avatar>
         </Link>
       </div>

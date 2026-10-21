@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useT } from "@/components/providers/locale-provider"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { AIAssistantDialog } from "@/features/ai/ai-assistant-dialog"
 import { cn } from "cn"
@@ -15,6 +16,7 @@ const item = "flex w-full flex-col items-center gap-0.5 text-[11px] leading-4"
 export function SidebarNav() {
   const pathname = usePathname()
   const t = useT()
+  const taskPanel = useTaskPanel()
   const projectsActive = pathname === "/projects" || pathname.includes("/projects/")
   const inboxActive = pathname === "/inbox" || pathname.startsWith("/inbox/")
   const accountActive = pathname === "/account" || pathname.startsWith("/account/")
@@ -29,7 +31,7 @@ export function SidebarNav() {
           <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><RemixIcon name="team-line" className="text-2xl" />{t("miniBar.teams")}</span>
         </div>
         <div className="flex w-full flex-col items-center gap-4 border-t border-[var(--mini-bar-border)] pt-4">
-          <Link href="/account" aria-current={accountActive ? "page" : undefined} className={cn(item, accountActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><Image src="/avatars/u1.svg" alt="" width={24} height={24} className={cn("size-6 rounded-full object-cover", accountActive && "ring-1 ring-white")} />{t("miniBar.profile")}</Link>
+          <Link href="/account" aria-current={accountActive ? "page" : undefined} className={cn(item, accountActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><Avatar className={cn("size-6", accountActive && "ring-1 ring-white")}><AvatarImage src={taskPanel?.user.avatarUrl} alt="" /><AvatarFallback className="text-[10px]">{taskPanel?.user.name.slice(0, 1) ?? "?"}</AvatarFallback></Avatar>{t("miniBar.profile")}</Link>
           <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><RemixIcon name="settings-3-line" className="text-2xl" />{t("miniBar.settings")}</span>
         </div>
       </nav>

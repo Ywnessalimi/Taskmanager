@@ -22,7 +22,7 @@ export default async function MyTasksProjectPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background lg:flex-row">
-      <ProjectNavigator organizations={organizations} activeId="MyTasks" locale={locale} />
+      <ProjectNavigator organizations={organizations} activeId="MyTasks" locale={locale} userId={user.id} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border px-4 lg:hidden">
           <span className="text-base font-semibold">{user.name}</span>

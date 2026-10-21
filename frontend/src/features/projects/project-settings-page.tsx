@@ -20,8 +20,10 @@ import type { TranslationKey } from "@/lib/i18n/dictionary"
 import type { Member, Project } from "@/lib/api/types"
 
 const ROLE_LABEL_KEY: Record<Member["role"], TranslationKey> = {
+  owner: "members.roleAdmin",
   admin: "members.roleAdmin",
   member: "members.roleMember",
+  custom: "members.roleMember",
 }
 
 type OptionKey = "assignees" | "favorite" | "newTags" | "rtl"

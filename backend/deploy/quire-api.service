@@ -1,0 +1,24 @@
+[Unit]
+Description=Quire SQLite API
+After=network.target
+
+[Service]
+Type=simple
+User=quire
+Group=quire
+WorkingDirectory=/opt/quire/live/backend
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=4000
+Environment=DATABASE_PATH=/var/lib/quire/quire.sqlite
+Environment=SESSION_COOKIE_SECURE=true
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/quire
+
+[Install]
+WantedBy=multi-user.target

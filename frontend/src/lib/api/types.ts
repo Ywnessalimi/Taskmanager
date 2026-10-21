@@ -3,7 +3,7 @@
  * رجوع کنید به docs/BACKEND.md بخش «مدل داده» و docs/PRODUCT_OVERVIEW.md بخش «واژه‌نامه».
  */
 
-export type MemberRole = "admin" | "member"
+export type MemberRole = "owner" | "admin" | "member" | "custom"
 
 export type Member = {
   id: string
@@ -11,13 +11,23 @@ export type Member = {
   role: MemberRole
   /** سطح فعالیت روزانه (هر عدد بین ۰ تا ۴) برای ردیف فعالیت این عضو در صفحه‌ی سازمان */
   activity: number[]
-  /** آدرس عکس پروفایل (فعلاً SVG های دست‌ساز در public/avatars، نه عکس واقعی کاربر) */
+  /** آدرس عکس پروفایل عضو؛ در fixtureها پرتره‌ی ساختگی است. */
   avatarUrl?: string
+}
+
+export type OrganizationMember = Omit<Member, "role"> & {
+  role: MemberRole
+  email?: string
+  permissions?: Record<string, boolean>
 }
 
 export type ProjectRef = {
   id: string
   name: string
+  slug?: string
+  organizationSlug?: string
+  /** شناسه‌های اعضایی که در داده‌ی فعلی دسترسی به این پروژه دارند. */
+  memberIds: string[]
   /** درصد پیشرفت (سهم تسک‌های completed از کل تسک‌های پروژه)، برای ردیف پروژه در صفحه‌ی سازمان */
   progress: number
 }
@@ -45,8 +55,8 @@ export type StatusDistribution = {
 export type TaskPriority = "none" | "low" | "medium" | "high" | "urgent"
 export type TaskStatus = "todo" | "in-progress" | "completed"
 
-/** الگوی تکرار تسک — روی «تاریخ» تسک تنظیم می‌شود (رجوع به `DateEditDialog`). */
-export type TaskRecurrence = { dates: string[]; count: number }
+/** الگوی تکرار تسک؛ dates برای سازگاری با رکوردهای قدیمی باقی مانده است. */
+export type TaskRecurrence = { dates: string[]; count: number; frequency?: RepeatOption; interval?: number; weekdays?: number[] }
 
 export type RepeatOption = "none" | "daily" | "weekly" | "monthly"
 
@@ -62,6 +72,8 @@ export type TaskActivityEntry = {
 export type Task = {
   id: string
   displayId: string
+  /** شناسهٔ پروژه در API؛ برای تسک‌های Mock قدیمی ممکن است خالی باشد. */
+  projectId?: string
   title: string
   /** نام‌های مسئولان تسک — یک تسک می‌تواند چند مسئول همزمان داشته باشد. */
   assigneeNames?: string[]
@@ -92,22 +104,26 @@ export type Task = {
 export type Project = {
   id: string
   name: string
+  slug?: string
   organizationId: string
   organizationName: string
+  organizationSlug?: string
   divisionId: string
   divisionName: string
+  /** شناسه‌های اعضای مجاز پروژه؛ منبع فیلتر دسترسی در لایه‌ی داده‌ی فعلی. */
+  memberIds: string[]
   startDate: string
   endDate: string
   /** توضیحات پروژه — اختیاری، مثل `Task.description`؛ وقتی خالی است هدر نمای‌کلی جای‌گزین «افزودن توضیحات» را نشان می‌دهد. */
   description?: string
   health: ProjectHealth
-  healthTrend: ProjectHealthTrend
+  healthTrend?: ProjectHealthTrend
   statusDistribution: StatusDistribution
   tasks: Task[]
   /** سطح فعالیت روزانه برای ActivityHeatmap (هر عدد بین ۰ تا ۴) */
   activity: number[]
   /** اعضای پروژه — از اعضای سازمان مالک پروژه مشتق می‌شود (رجوع به `getProject`)، نه فیلد مستقل Mock */
-  members: Member[]
+  members: OrganizationMember[]
   /** ساعت آخرین به‌روزرسانی نمودار «فعالیت اعضا» به‌صورت ۲۴ساعته "HH:MM" — فعلاً Mock ثابت */
   activityUpdatedAt: string
 }
@@ -122,9 +138,15 @@ export type Division = {
 export type Organization = {
   id: string
   name: string
+  slug?: string
+  description?: string
+  imageUrl?: string
+  preferences?: Record<string, unknown>
+  currentUserRole?: OrganizationMember["role"]
+  currentUserPermissions?: Record<string, boolean>
   /** تاریخ ساخت سازمان (جلالی، رقم لاتین — مثل بقیه‌ی تاریخ‌های این مدل) */
   createdAt: string
-  members: Member[]
+  members: OrganizationMember[]
   divisions: Division[]
   /** نمای تجمیعی پروژه‌های معاونت‌ها برای گزارش‌ها */
   projects: ProjectRef[]
@@ -135,6 +157,7 @@ export type NotificationStatus = "unread" | "read"
 
 export type NotificationTarget =
   | { type: "task"; id: string; label: string; projectId: string }
+  | { type: "ticket"; id: string; label: string; projectId?: string }
   | { type: "project"; id: string; label: string }
   | { type: "organization"; id: string; label: string }
 
@@ -144,6 +167,7 @@ export type NotificationTarget =
  */
 export type NotificationVerb =
   | "taskAssigned"
+  | "ticketAssigned"
   | "taskCommented"
   | "projectJoinRequested"
   | "orgAdminAssigned"
@@ -164,7 +188,7 @@ export type Notification = {
   target: NotificationTarget
   status: NotificationStatus
   requiresApproval: boolean
-  createdAt: RelativeTime
+  createdAt: RelativeTime | string
 }
 
 /** تنظیمات اعلان کاربر — مطابق سوییچ‌های صفحه‌ی «حساب کاربری». */
@@ -220,6 +244,17 @@ export type CurrentUser = {
   attachments: UserAttachment[]
 }
 
+/** A browser session belonging to the signed-in account. The token itself is never returned. */
+export type AuthSession = {
+  id: string
+  deviceType: "mobile" | "tablet" | "desktop" | "unknown"
+  browser: string
+  createdAt: string
+  lastSeenAt: string
+  expiresAt: string
+  isCurrent: boolean
+}
+
 /** تسک تخصیص‌داده‌شده به کاربر، به‌همراه پروژه‌ای که از آن آمده (چون لیست بین‌پروژه‌ای است). */
 export type MyTask = Task & {
   projectId: string
@@ -243,6 +278,7 @@ export type MyTasksOverview = {
 /** ورودی ویرایش یک تسک موجود (پنل جزئیات تسک). فقط فیلدهای قابل‌ویرایش فرم. */
 export type TaskUpdateInput = {
   id: string
+  projectId?: string
   title: string
   assigneeNames?: string[]
   dueDate?: string
@@ -256,6 +292,7 @@ export type TaskUpdateInput = {
   followers: string[]
   isFavorite: boolean
   timeSpentMinutes: number
+  subtasks?: Task[]
 }
 
 /** ورودی ساخت تسک جدید (فرم `features/tasks/TaskCreateForm`). */
@@ -280,6 +317,7 @@ export type NewTaskInput = {
 /** یک گزینه‌ی پروژه در فرم ساخت تسک، به‌همراه اعضایی که می‌توانند مسئول تسک شوند. */
 /** یک عضو قابل‌انتخاب در سلکت «مسئول» فرم ساخت تسک — رجوع به `TaskFormProjectOption`. */
 export type TaskFormMemberOption = {
+  id: string
   name: string
   avatarUrl?: string
 }
@@ -287,6 +325,8 @@ export type TaskFormMemberOption = {
 export type TaskFormProjectOption = {
   id: string
   name: string
+  slug?: string
+  organizationSlug?: string
   organizationName: string
   members: TaskFormMemberOption[]
 }
@@ -294,7 +334,9 @@ export type TaskFormProjectOption = {
 export type TicketSubject = "hr" | "purchasing" | "warehouse" | "general"
 export type TicketStatus = TaskStatus
 export type TicketPermission = "salary-payment" | "purchase" | "warehouse-release" | "other"
+export type TicketPriority = TaskPriority
 export type NewTicketInput = {
+  projectId?: string
   createdById?: string
   createdByName?: string
   createdByAvatarUrl?: string
@@ -306,5 +348,28 @@ export type NewTicketInput = {
   subject: TicketSubject
   status: TicketStatus
   permissionIds: TicketPermission[]
+  priority?: TicketPriority
   description?: string
+  followers?: string[]
+  favorites?: string[]
+}
+
+export type TicketActivity = { id: string; ticketId: string; actorId: string; actorName: string; actorAvatarUrl?: string; kind: "created" | "updated" | "assigned" | "status_changed" | "following" | "favorite" | "comment"; details: Record<string, unknown>; createdAt: string }
+
+export type TicketComment = {
+  id: string
+  ticketId: string
+  authorId: string
+  authorName: string
+  authorAvatarUrl?: string
+  text: string
+  /** Timestamp generated by the API server in ISO 8601 UTC format. */
+  createdAt: string
+}
+
+export type NewTicketCommentInput = {
+  authorId: string
+  authorName: string
+  authorAvatarUrl?: string
+  text: string
 }

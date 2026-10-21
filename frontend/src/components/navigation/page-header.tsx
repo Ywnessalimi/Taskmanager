@@ -32,11 +32,13 @@ export function PageHeader({
   subtitle,
   /** هر آرایه‌ی داخلی یک گروه است؛ بین گروه‌ها جداکننده رسم می‌شود. */
   menu,
+  showBackButton = true,
 }: {
   title: string
   titleContent?: ReactNode
   subtitle?: string
   menu?: PageHeaderMenuItem[][]
+  showBackButton?: boolean
 }) {
   const router = useRouter()
   const { locale, t } = useLocale()
@@ -44,14 +46,14 @@ export function PageHeader({
 
   return (
     <header className="flex min-h-13 items-center gap-1 border-b border-border bg-background px-4 py-2">
-      <button
+      {showBackButton && <button
         type="button"
         onClick={() => router.back()}
         aria-label={t("pageHeader.back")}
         className="flex size-8 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-icon"
       >
         <RemixIcon name={backIcon} className="text-lg" />
-      </button>
+      </button>}
 
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-base font-medium text-foreground">{titleContent ?? title}</h1>

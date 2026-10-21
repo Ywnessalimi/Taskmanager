@@ -1,67 +1,45 @@
-import { isBefore } from "@/lib/jalali"
-import { MOCK_CURRENT_USER, MOCK_MY_ACTIVITY, MOCK_PROJECTS, MOCK_TODAY } from "./mock-data"
-import type { MyTask, MyTasksOverview, Task } from "./types"
+import { currentJalaliDate, isBefore } from "@/lib/jalali"
+import { backendRequest } from "./backend-client"
+import { getCurrentUser } from "./users"
+import type { MyTask, MyTasksOverview, ProjectRef, Task } from "./types"
 
-/**
- * تسک‌های مسیر تجمیعی «تسک‌های من». فعلاً از روی MOCK_PROJECTS محاسبه می‌شود (تخصیص بر اساس نام،
- * چون مدل Mock هنوز assigneeId ندارد). وقتی بک‌اند Django آماده شد، جایگزین
- * GET /api/me/tasks/ می‌شود (رجوع به docs/BACKEND.md بخش ۴) بدون تغییر در کامپوننت‌ها.
- */
-
-/** آیا این تسک (یا یکی از زیرتسک‌هایش) به کاربر تخصیص داده شده؟ */
 function isMine(task: Task, userName: string): boolean {
   return Boolean(task.assigneeNames?.includes(userName))
 }
 
-/** تسک را با نگه‌داشتن فقط زیرتسک‌های خودِ کاربر برمی‌گرداند. */
 function withMySubtasks(task: Task, userName: string): Task {
-  const subtasks = task.subtasks?.filter((sub) => isMine(sub, userName))
+  const subtasks = task.subtasks?.filter((subtask) => isMine(subtask, userName))
   return subtasks && subtasks.length > 0 ? { ...task, subtasks } : { ...task, subtasks: undefined }
 }
 
-/** همه‌ی تسک‌های تخصیص‌داده‌شده به کاربر در همه‌ی پروژه‌ها، بدون فیلتر وضعیت. */
-function allMyTasks(userName: string): MyTask[] {
-  return MOCK_PROJECTS.flatMap((project) =>
-    project.tasks
-      .filter((task) => isMine(task, userName) || task.subtasks?.some((sub) => isMine(sub, userName)))
-      .map((task) => ({
-        ...withMySubtasks(task, userName),
-        projectId: project.id,
-        projectName: project.name,
-      }))
-  )
+async function allMyTasks(): Promise<MyTask[]> {
+  const [user, tasks, projects] = await Promise.all([
+    getCurrentUser(),
+    backendRequest<Task[]>("/tasks"),
+    backendRequest<ProjectRef[]>("/projects"),
+  ])
+  const projectById = new Map(projects.map((project) => [project.id, project]))
+  return tasks.flatMap((task) => {
+    const project = projectById.get(task.projectId ?? "")
+    if (!project || !isMine(task, user.name)) return []
+    return [{ ...withMySubtasks(task, user.name), projectId: project.id, projectName: project.name }]
+  })
 }
 
-/**
- * فهرست نمای تجمیعی «تسک‌های من» — طبق docs/PRODUCT_OVERVIEW.md فقط تسک‌های «در حال انجام» نمایش داده
- * می‌شوند. زیرتسک‌ها برای نمای Tree نگه داشته می‌شوند (بدون فیلتر وضعیت، چون زمینه‌ی تسک والدند).
- */
 export async function getMyTasks(): Promise<MyTask[]> {
-  return allMyTasks(MOCK_CURRENT_USER.name).filter((task) => task.status === "in-progress")
+  return (await allMyTasks()).filter((task) => task.status === "in-progress")
 }
 
-/**
- * داده‌ی تجمیعی Overview. برخلاف لیست، اینجا **همه‌ی** وضعیت‌ها لحاظ می‌شوند —
- * وگرنه نمودار پراکندگی وضعیت و «سلامت» همیشه فقط یک ستون داشتند.
- */
 export async function getMyTasksOverview(): Promise<MyTasksOverview> {
-  const tasks = allMyTasks(MOCK_CURRENT_USER.name)
-
+  const tasks = await allMyTasks()
+  const today = currentJalaliDate()
   const statusDistribution = {
     todo: tasks.filter((task) => task.status === "todo").length,
     inProgress: tasks.filter((task) => task.status === "in-progress").length,
     completed: tasks.filter((task) => task.status === "completed").length,
   }
-
-  const overdue = tasks.filter(
-    (task) => task.status !== "completed" && task.dueDate && isBefore(task.dueDate, MOCK_TODAY)
-  )
-
-  const attentionRequired = tasks.filter(
-    (task) =>
-      task.status !== "completed" &&
-      (task.priority === "urgent" || (task.dueDate ? isBefore(task.dueDate, MOCK_TODAY) : false))
-  )
+  const overdue = tasks.filter((task) => task.status !== "completed" && task.dueDate && isBefore(task.dueDate, today))
+  const attentionRequired = tasks.filter((task) => task.status !== "completed" && (task.priority === "urgent" || overdue.includes(task)))
 
   return {
     attentionRequired,
@@ -69,9 +47,9 @@ export async function getMyTasksOverview(): Promise<MyTasksOverview> {
     health: {
       active: statusDistribution.todo + statusDistribution.inProgress,
       completed: statusDistribution.completed,
-      dueInPeriod: tasks.filter((task) => task.dueDate && !isBefore(task.dueDate, MOCK_TODAY)).length,
+      dueInPeriod: tasks.filter((task) => task.status !== "completed" && task.dueDate && !isBefore(today, task.dueDate)).length,
       overdue: overdue.length,
     },
-    activity: MOCK_MY_ACTIVITY,
+    activity: [],
   }
 }

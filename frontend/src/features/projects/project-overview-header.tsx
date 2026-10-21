@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useRef, useState } from "react"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { MembersDialog } from "@/features/organizations/members-dialog"
 import { t, type Locale } from "@/lib/i18n/dictionary"
@@ -25,6 +28,8 @@ function ProjectCover({ name }: { name: string }) {
  * عمدی با فایل طرح.
  */
 export function ProjectOverviewHeader({ project, locale }: { project: Project; locale: Locale }) {
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [attachments, setAttachments] = useState<string[]>([])
   return (
     <div className="flex items-start gap-4">
       <ProjectCover name={project.name} />
@@ -38,17 +43,9 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <Link
-            href={`/home/organizations/${project.organizationId}`}
-            className="text-brand hover:underline"
-          >
-            {project.organizationName}
-          </Link>
+        <div className="flex flex-col items-start gap-2 text-sm">
+          <Link href={`/home/organizations/${project.organizationId}`} className="text-brand hover:underline">{project.organizationName}</Link>
           <span className="text-text2">{project.divisionName}</span>
-          <span className="h-4 w-px bg-border" />
-          <MembersDialog members={project.members} />
-          <span className="h-4 w-px bg-border" />
           <span
             dir="ltr"
             aria-label={t(locale, "project.timeline")}
@@ -57,6 +54,7 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
             <RemixIcon name="calendar-line" className="text-base" />
             {project.startDate} — {project.endDate}
           </span>
+          <MembersDialog members={project.members} />
         </div>
 
         {project.description ? (
@@ -72,11 +70,14 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
 
         <button
           type="button"
+          onClick={() => fileInput.current?.click()}
           className="flex w-fit items-center gap-1.5 rounded-md py-1.5 text-sm text-text2 hover:text-foreground"
         >
           <RemixIcon name="attachment-line" className="text-base" />
           {t(locale, "project.addAttachment")}
         </button>
+        <input ref={fileInput} type="file" multiple className="hidden" onChange={(event) => { setAttachments((previous) => [...new Set([...previous, ...Array.from(event.target.files ?? []).map((file) => file.name)])]); event.currentTarget.value = "" }} />
+        {attachments.map((name) => <span key={name} className="max-w-full truncate text-xs text-text2">{name}</span>)}
       </div>
     </div>
   )

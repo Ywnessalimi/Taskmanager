@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation"
 import { ProjectPageHeader } from "@/features/projects/project-page-header"
 import { ProjectSectionTabs } from "@/features/projects/project-section-tabs"
 import { ProjectNavigator } from "@/features/projects/project-navigator"
@@ -27,11 +28,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  const isAdmin = project.members.some((member) => member.name === user.name && member.role === "admin")
+  if (project.slug && project.organizationSlug) redirect(`/o/${encodeURIComponent(project.organizationSlug)}/${encodeURIComponent(project.slug)}`)
+
+  const currentMembership = project.members.find((member) => member.id === user.id)
+  const isAdmin = currentMembership?.role === "owner" || currentMembership?.permissions?.editProject === true
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background lg:flex-row">
-      <ProjectNavigator organizations={organizations} activeId={project.id} locale={locale} />
+      <ProjectNavigator organizations={organizations} activeId={project.id} locale={locale} userId={user.id} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border px-4 lg:hidden">
           <span className="text-base font-semibold">{user.name}</span>
@@ -42,6 +46,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             title={project.name}
             subtitle={project.organizationName}
             projectId={project.id}
+            currentUserId={user.id}
             isAdmin={isAdmin}
             organizations={organizations}
           />

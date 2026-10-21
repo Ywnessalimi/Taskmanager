@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { FormEvent } from "react"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
@@ -14,6 +15,8 @@ import {
 } from "@/features/projects/views/board-view"
 import { PriorityDot, STATUS_LABEL } from "@/features/projects/task-display"
 import { TagPickerDialog } from "@/features/tasks/tag-picker-dialog"
+import { createTask } from "@/lib/api/tasks"
+import { useT } from "@/components/providers/locale-provider"
 import type { Task } from "@/lib/api/types"
 
 /** مثل `AssigneeField`/`DateField` در `board-view.tsx` — کلیک روی پیل/آیکون تگ همان `TagPickerDialog` را باز می‌کند. */
@@ -120,7 +123,18 @@ function TreeRow({
  * یک آپدیت بازگشتی یک‌سطحی چون زیر-تسک‌ها حداکثر یک سطح دارند.
  */
 export function TreeView({ tasks: initialTasks, projectId }: { tasks: Task[]; projectId?: string }) {
+  const t = useT()
+  const panel = useTaskPanel()
   const [tasks, setTasks] = useState(initialTasks)
+  const [addingAfter, setAddingAfter] = useState<string | null>(null)
+  const [newTitle, setNewTitle] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [createError, setCreateError] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (addingAfter !== null) inputRef.current?.focus()
+  }, [addingAfter])
 
   function updateTask(taskId: string, patch: Partial<Task>) {
     setTasks((prev) =>
@@ -137,15 +151,61 @@ export function TreeView({ tasks: initialTasks, projectId }: { tasks: Task[]; pr
     )
   }
 
+  function startAdding(afterId: string | null) {
+    if (!projectId) {
+      panel?.openNewTask()
+      return
+    }
+    setNewTitle("")
+    setAddingAfter(afterId)
+  }
+
+  async function saveNewTask(event: FormEvent) {
+    event.preventDefault()
+    const title = newTitle.trim()
+    if (!title || !projectId || !panel || saving) return
+    setSaving(true)
+    setCreateError(false)
+    try {
+      const created = await createTask({ title, projectId, priority: "none", tags: [], status: "todo" }, { id: panel.user.id, name: panel.user.name })
+      setTasks((previous) => {
+        const anchorIndex = addingAfter ? previous.findIndex((task) => task.id === addingAfter) : -1
+        const next = [...previous]
+        next.splice(anchorIndex < 0 ? next.length : anchorIndex + 1, 0, created)
+        return next
+      })
+      setAddingAfter(null)
+      setNewTitle("")
+    } catch {
+      setCreateError(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const quickAddRow = (afterId: string | null) => addingAfter === afterId ? (
+    <form key={`draft-${afterId ?? "end"}`} onSubmit={saveNewTask} className="flex min-h-9 flex-wrap items-center gap-2 border-t border-border px-2">
+      <RemixIcon name="add-line" className="shrink-0 text-base text-text3" />
+      <input ref={inputRef} autoFocus value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setAddingAfter(null) }} placeholder={t("taskForm.titlePlaceholder")} aria-label={t("taskForm.titlePlaceholder")} className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none" />
+      <button type="submit" disabled={!newTitle.trim() || saving} className="text-xs text-link disabled:opacity-50">{saving ? "…" : t("taskForm.submit")}</button>
+      {createError && <span role="alert" className="w-full pb-1 text-xs text-error">{t("newTask.submitError")}</span>}
+    </form>
+  ) : (
+    <button key={`add-${afterId ?? "end"}`} type="button" onClick={() => startAdding(afterId)} className="flex min-h-9 w-full items-center gap-2 border-t border-border px-2 text-start text-sm text-text3 hover:bg-bg2 hover:text-foreground">
+      <RemixIcon name="add-line" className="text-base" />{t("taskForm.quickAdd")}
+    </button>
+  )
+
   if (tasks.length === 0) {
-    return <p className="py-8 text-center text-sm text-text2">تسکی وجود ندارد.</p>
+    return <div className="flex flex-col"><p className="py-8 text-center text-sm text-text2">تسکی وجود ندارد.</p>{quickAddRow(null)}</div>
   }
 
   return (
     <div className="flex flex-col">
       {tasks.map((task, index) => (
-        <div key={task.id} className={index > 0 ? "border-t border-border" : ""}>
-          <TreeRow task={task} depth={0} projectId={projectId} onUpdate={updateTask} />
+        <div key={task.id}>
+          <div className={index > 0 ? "border-t border-border" : ""}><TreeRow task={task} depth={0} projectId={projectId} onUpdate={updateTask} /></div>
+          {quickAddRow(task.id)}
         </div>
       ))}
     </div>

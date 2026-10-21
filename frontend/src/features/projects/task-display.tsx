@@ -12,6 +12,13 @@ export const STATUS_COLUMNS: { id: Task["status"]; label: string }[] = [
   { id: "completed", label: "انجام‌شده" },
 ]
 
+/** آیکون‌های پایه‌ی سه وضعیت Board؛ مصرف‌کننده‌های دیگر وضعیت هم از همین نگاشت استفاده می‌کنند. */
+export const STATUS_COLUMN_ICON: Record<Task["status"], string> = {
+  todo: "time-line",
+  "in-progress": "figma-progress",
+  completed: "checkbox-circle-line",
+}
+
 export const PRIORITY_LABEL: Record<Task["priority"], string> = {
   none: "بدون اولویت",
   low: "کم",

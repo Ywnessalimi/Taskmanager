@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useT } from "@/components/providers/locale-provider"
+import { RemixIcon } from "@/components/ui/remix-icon"
 import { Button } from "@/components/ui/button"
 import { DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
@@ -14,7 +16,8 @@ import { NewTaskActivity } from "./new-task-activity"
 import { NewTaskAsset, type NewTaskAssetName } from "./new-task-assets"
 import { RepeatPicker } from "./repeat-picker"
 import { saveTaskDetails } from "./local-task-details"
-import { createTask } from "@/lib/api/tasks"
+import { showWorkspaceToast } from "@/lib/workspace-toast"
+import { createTask, updateTask } from "@/lib/api/tasks"
 import type { Task, TaskRecurrence, CurrentUser, TaskFormProjectOption, TaskPriority, TaskStatus } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 
@@ -39,7 +42,8 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
   onDone: () => void
 }) {
   const t = useT()
-  const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? "")
+  const router = useRouter()
+  const [projectId, setProjectId] = useState(task?.projectId ?? defaultProjectId ?? projects[0]?.id ?? "")
   const [title, setTitle] = useState(task?.title ?? "")
   const [description, setDescription] = useState(task?.description ?? "")
   const [startDate, setStartDate] = useState(task?.startDate ?? "")
@@ -60,19 +64,44 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
   const [showActivities, setShowActivities] = useState(false)
   const timer = useTaskTimer(minutes, setMinutes)
   const fileInput = useRef<HTMLInputElement>(null)
-  const lastSaved = useRef<string | null>(null)
+  const initialTaskSignature = useRef(task ? JSON.stringify([
+    task.projectId, task.title, task.description ?? "", task.startDate ?? "", task.dueDate ?? "", task.priority, task.status,
+    task.tags ?? [], task.assigneeNames ?? [], task.isFavorite ?? false, task.followers?.includes(user.name) ?? false,
+    task.timeSpentMinutes ?? 0, task.recurrence ?? { dates: [], count: 1 }, task.subtasks?.map(item => item.title) ?? [],
+  ]) : null)
   const project = projects.find((option) => option.id === projectId)
   const selectedPriority = PRIORITIES.find((option) => option.value === priority)!
   const unset = t("newTask.unselected")
 
-  useEffect(()=>{
-    if(!task)return
-    const updated:Task={...task,title,description,startDate,dueDate,priority,status,tags,assigneeNames,isFavorite:favorite,followers:following?[...new Set([...(task.followers??[]),user.name])]:(task.followers??[]).filter(name=>name!==user.name),timeSpentMinutes:minutes,recurrence,subtasks:subtasks.map((name,index)=>({...task.subtasks?.[index],id:task.subtasks?.[index]?.id??`${task.id}-sub-${index}`,displayId:task.subtasks?.[index]?.displayId??"",title:name,priority:task.subtasks?.[index]?.priority??"none",status:task.subtasks?.[index]?.status??"todo"}))}
-    const signature=JSON.stringify(updated)
-    if(lastSaved.current===null){lastSaved.current=signature;return}
-    if(lastSaved.current===signature)return
-    void Promise.resolve().then(()=>{saveTaskDetails(updated);lastSaved.current=signature}).catch(()=>setError(true))
-  },[task,title,description,startDate,dueDate,priority,status,tags,assigneeNames,favorite,following,minutes,recurrence,subtasks,user.name])
+  const currentTaskSignature = JSON.stringify([
+    projectId, title, description, startDate, dueDate, priority, status, tags, assigneeNames, favorite, following,
+    minutes, recurrence, subtasks,
+  ])
+  const hasTaskChanges = Boolean(task && currentTaskSignature !== initialTaskSignature.current)
+
+  async function saveChanges() {
+    if (!task || !hasTaskChanges || submitting || !title.trim() || !projectId) return
+    setSubmitting(true)
+    setError(false)
+    const updated: Task = {
+      ...task, projectId, title: title.trim(), description, startDate, dueDate, priority, status, tags, assigneeNames,
+      isFavorite: favorite,
+      followers: following ? [...new Set([...(task.followers ?? []), user.name])] : (task.followers ?? []).filter(name => name !== user.name),
+      timeSpentMinutes: minutes, recurrence,
+      subtasks: subtasks.map((name, index) => ({ ...task.subtasks?.[index], id: task.subtasks?.[index]?.id ?? `${task.id}-sub-${index}`, displayId: task.subtasks?.[index]?.displayId ?? "", title: name, priority: task.subtasks?.[index]?.priority ?? "none", status: task.subtasks?.[index]?.status ?? "todo" })),
+    }
+    try {
+      const saved = await updateTask({ id: updated.id, projectId: updated.projectId, title: updated.title, description: updated.description, startDate: updated.startDate, dueDate: updated.dueDate, priority: updated.priority, status: updated.status, tags: updated.tags ?? [], assigneeNames: updated.assigneeNames, followers: updated.followers ?? [], isFavorite: updated.isFavorite ?? false, timeSpentMinutes: updated.timeSpentMinutes ?? 0, recurrence: updated.recurrence, repeat: updated.repeat, subtasks: updated.subtasks }, { id: user.id, name: user.name })
+      saveTaskDetails(saved)
+      setError(false)
+      showWorkspaceToast(t("workspace.updated").replace("{id}", task.displayId.replace(/^#/, "")))
+      onDone()
+    } catch {
+      setError(true)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -80,7 +109,8 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
     setSubmitting(true)
     setError(false)
     try {
-      await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map((title) => ({ title })) })
+      await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map((title) => ({ title })) }, { id: user.id, name: user.name })
+      router.refresh()
       onDone()
     } catch {
       setError(true)
@@ -113,7 +143,10 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <DialogClose aria-label={t("taskDetail.close")} className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
+        <div className="flex shrink-0 items-center gap-2">
+          <DialogClose aria-label={t("taskDetail.close")} className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
+          {task && hasTaskChanges && <Button type="button" onClick={saveChanges} disabled={submitting || !title.trim() || !projectId} className="h-8 w-[115px] rounded-lg bg-brand px-1.5 text-xs font-semibold text-white hover:opacity-90">{t("taskDetail.save")}</Button>}
+        </div>
       </div>
       <div className="flex shrink-0 border-b border-border lg:hidden">
         <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`flex-1 py-2 ${!showActivities ? "border-b-2 border-brand" : ""}`}>{t("taskDetail.title")}</button>
@@ -127,8 +160,8 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
               <span className="text-sm text-[var(--task-workspace-muted)]">{task ? task.displayId : t("nav.newTask")}</span>
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled className="flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs text-[var(--task-workspace-secondary)]"><NewTaskAsset name="git-merge-line" />{t("newTask.noMilestone")}</button>
-                <button type="button" aria-pressed={following} onClick={() => setFollowing(!following)} className={`flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs ${following ? "bg-bg2" : ""}`}><NewTaskAsset name="eye-line" />{t(following ? "newTask.following" : "newTask.follow")}</button>
-                <button type="button" aria-label={t("taskDetail.favorite")} aria-pressed={favorite} onClick={() => setFavorite(!favorite)} className={`flex size-8 items-center justify-center rounded-lg border border-border ${favorite ? "bg-bg2" : ""}`}><NewTaskAsset name="heart3-line" /></button>
+                <button type="button" aria-pressed={following} onClick={() => setFollowing(!following)} className={`flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs ${following ? "bg-[#141a1a] text-white" : ""}`}><RemixIcon name={following ? "eye-fill" : "eye-line"} />{t(following ? "newTask.following" : "newTask.follow")}</button>
+                <button type="button" aria-label={t("taskDetail.favorite")} aria-pressed={favorite} onClick={() => setFavorite(!favorite)} className={`flex size-8 items-center justify-center rounded-lg border border-border ${favorite ? "text-error" : ""}`}><RemixIcon name={favorite ? "heart-fill" : "heart-line"} className="text-base" /></button>
               </div>
             </div>
             <div className="flex items-center gap-3 pt-2.5 pb-4">
@@ -144,6 +177,7 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
                 <DatePickerDialog value={startDate} onChange={setStartDate} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="calendar-todo-line" label={t("newTask.startDate")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{startDate || unset}</span></DialogTrigger>} />
                 <DatePickerDialog value={dueDate} onChange={setDueDate} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="calendar-check-line" label={t("newTask.dueDate")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{dueDate || unset}</span></DialogTrigger>} />
                 <AssigneePickerDialog members={project?.members ?? []} assigneeNames={assigneeNames} onChange={setAssigneeNames} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="team-line" label={t("newTask.members")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{assigneeNames.join("، ") || unset}</span></DialogTrigger>} />
+                <RepeatPicker layout="taskWorkspace" value={recurrence} onChange={setRecurrence} />
               </div>
               <div className="flex flex-col gap-3">
                 <DropdownMenu>
@@ -154,7 +188,6 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
                 <div className={FIELD_CLASS}><FieldLabel icon="timer-line" label={t("newTask.timeSpent")} /><button type="button" aria-label={t(timer.running ? "taskDetail.stopTimer" : "taskDetail.startTimer")} aria-pressed={timer.running} onClick={timer.toggle} className={timer.running ? "rounded-full bg-bg2" : ""}><NewTaskAsset name="play-circle-fill" /></button>{(timer.running || minutes > 0) && <span className="text-xs tabular-nums" dir="ltr">{minutes + Math.floor(timer.elapsedSeconds / 60)}:{String(timer.elapsedSeconds % 60).padStart(2, "0")}</span>}</div>
               </div>
             </div>
-            <div className="pb-4"><RepeatPicker value={recurrence} onChange={setRecurrence} /></div>
             <div className="overflow-hidden"><NewTaskAsset name="line11" /></div>
             <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t("taskForm.descriptionPlaceholder")} aria-label={t("taskForm.descriptionPlaceholder")} className="h-25 w-full resize-y bg-transparent pt-2 text-sm outline-none placeholder:text-[var(--task-workspace-muted)]" />
             <div className="border-t border-[var(--task-workspace-border)] py-3">

@@ -28,8 +28,11 @@ import type { Locale, TranslationKey } from "@/lib/i18n/dictionary"
 import type { Theme } from "@/lib/theme"
 import { THEMES } from "@/lib/theme"
 import type { CurrentUser, NotificationPreferences } from "@/lib/api/types"
+import { logout } from "@/lib/api/auth"
 import { ProfileDialog } from "./profile-dialog"
 import { ROW_BASE, SettingsGroup, SettingsLinkRow, SettingsToggleRow } from "./settings-row"
+import { updateCurrentUser } from "@/lib/api/users"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 
 const NOTIFICATION_ROWS: {
   key: keyof NotificationPreferences
@@ -71,7 +74,15 @@ const THEME_LABEL_KEY: Record<Theme, TranslationKey> = {
  */
 export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
   const [user, setUser] = useState(initialUser)
+  const router = useRouter()
   const { locale, setLocale, t } = useLocale()
+  const taskPanel = useTaskPanel()
+
+  async function saveProfile(patch: Pick<CurrentUser, "name" | "email" | "bio" | "avatarUrl">) {
+    const savedUser = await updateCurrentUser(patch)
+    setUser(savedUser)
+    taskPanel?.updateUser(savedUser)
+  }
 
   function toggleNotification(key: keyof NotificationPreferences) {
     setUser((prev) => ({
@@ -91,7 +102,7 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
           <p className="truncate text-base font-medium text-foreground">{user.name}</p>
           {user.bio && <p className="truncate text-xs text-text2">{user.bio}</p>}
         </div>
-        <ProfileDialog user={user} onSave={(patch) => setUser((prev) => ({ ...prev, ...patch }))} />
+        <ProfileDialog user={user} onSave={saveProfile} />
       </section>
 
       <section className="flex flex-col gap-2">
@@ -99,6 +110,11 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
         <SettingsGroup>
           <SettingsLinkRow icon="mail-line" label={t("account.changeEmail")} value={user.email} />
           <SettingsLinkRow icon="lock-password-line" label={t("account.changePassword")} />
+          <SettingsLinkRow
+            icon="computer-line"
+            label={t("account.sessionsTitle")}
+            onClick={() => router.push("/account/sessions")}
+          />
           <LanguagePickerRow locale={locale} onChange={setLocale} />
           <AppearancePickerRow />
         </SettingsGroup>
@@ -192,14 +208,21 @@ function AppearancePickerRow() {
   )
 }
 
-/**
- * خروج یک اکشن برگشت‌ناپذیر است، پس قبل از اجرا تایید گرفته می‌شود. چون هنوز Auth واقعی
- * (و session ای برای پاک کردن) وجود ندارد، تاییدِ خروج فقط به `/login` هدایت می‌کند —
- * رجوع به `src/features/auth/README.md`.
- */
 function LogoutDialog() {
   const { t } = useLocale()
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+
+  async function confirmLogout() {
+    setError(null)
+    try {
+      await logout()
+      router.replace("/login")
+      router.refresh()
+    } catch {
+      setError(t("auth.logoutError"))
+    }
+  }
 
   return (
     <Dialog>
@@ -215,8 +238,9 @@ function LogoutDialog() {
           <DialogTitle>{t("account.logout")}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-text2">{t("account.logoutConfirmBody")}</p>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-start gap-2">
-          <DialogClose render={<Button variant="destructive" />} onClick={() => router.push("/login")}>
+          <DialogClose render={<Button variant="destructive" />} onClick={() => void confirmLogout()}>
             {t("account.logoutConfirm")}
           </DialogClose>
           <DialogClose render={<Button variant="ghost" />}>{t("account.cancel")}</DialogClose>

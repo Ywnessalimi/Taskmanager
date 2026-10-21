@@ -1,37 +1,51 @@
-import { MOCK_ORGANIZATIONS, MOCK_PROJECTS } from "./mock-data"
-import type { NewTaskInput, TaskFormProjectOption, TaskUpdateInput } from "./types"
+import { BackendApiError, backendRequest } from "./backend-client"
+import { getCurrentUser } from "./users"
+import type { NewTaskInput, ProjectRef, Task, TaskFormProjectOption, TaskUpdateInput } from "./types"
 
 /**
- * گزینه‌های سلکت‌های فرم ساخت تسک: هر پروژه به‌همراه اعضای سازمانی که به آن پروژه دسترسی
- * دارند (طبق docs/PRODUCT_OVERVIEW.md مسئول تسک از میان اعضای همان سازمان انتخاب می‌شود).
- * وقتی بک‌اند آماده شد، جایگزین GET /api/projects/ + اعضای هر پروژه می‌شود.
+ * گزینه‌های فرم ساخت تسک از داده‌های مرجع فعلی ساخته می‌شوند: هر پروژه به‌همراه اعضای سازمانی
+ * که طبق docs/PRODUCT_OVERVIEW.md می‌توانند مسئول تسک شوند.
  */
 export async function getTaskFormOptions(): Promise<TaskFormProjectOption[]> {
-  return MOCK_PROJECTS.map((project) => {
-    const organization = MOCK_ORGANIZATIONS.find((org) => org.id === project.organizationId)
-    return {
-      id: project.id,
-      name: project.name,
-      organizationName: project.organizationName,
-      members: organization?.members.map((member) => ({ name: member.name, avatarUrl: member.avatarUrl })) ?? [],
-    }
-  })
+  const [projects, user] = await Promise.all([
+    backendRequest<Array<ProjectRef & { organizationName: string }>>("/projects"),
+    getCurrentUser(),
+  ])
+  return projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    slug: project.slug,
+    organizationSlug: project.organizationSlug,
+    organizationName: project.organizationName,
+    members: [{ id: user.id, name: user.name, avatarUrl: user.avatarUrl }],
+  }))
 }
 
 /**
- * ساخت تسک — عمداً هیچ‌جا ذخیره نمی‌شود. داده‌ی Mock در ماژول ثابت است و نوشتن در آن، حالتِ
- * سرور را بین رفرش‌ها نگه نمی‌دارد و فقط توهم ذخیره‌سازی می‌ساخت. وقتی بک‌اند Django آماده شد،
- * این تابع به POST /api/tasks/ وصل می‌شود (رجوع به docs/BACKEND.md بخش ۴).
+ * ساخت Task پایدار از طریق API نسخهٔ ۱.
  */
-export async function createTask(input: NewTaskInput): Promise<void> {
-  console.info("createTask (هنوز ذخیره نمی‌شود):", input)
+export async function createTask(input: NewTaskInput, actor?: { id: string; name: string }): Promise<Task> {
+  return backendRequest<Task>("/tasks", { method: "POST", body: JSON.stringify({ ...input, ...(actor ? { actorId: actor.id, actorName: actor.name } : {}) }) })
 }
 
 /**
- * ویرایش تسک — مثل `createTask` فعلاً جایی ذخیره نمی‌شود؛ پنل جزئیات تسک تغییرها را در
- * state خودش نگه می‌دارد و با بستن پنل از بین می‌روند. با آمدن بک‌اند به PATCH /api/tasks/<id>/
- * وصل می‌شود.
+ * ویرایش Task پایدار از طریق API نسخهٔ ۱.
  */
-export async function updateTask(input: TaskUpdateInput): Promise<void> {
-  console.info("updateTask (هنوز ذخیره نمی‌شود):", input)
+export async function updateTask(input: TaskUpdateInput, actor?: { id: string; name: string }): Promise<Task> {
+  const { id, ...patch } = input
+  return backendRequest<Task>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(actor ? { actorId: actor.id, actorName: actor.name } : {}) }) })
+}
+
+export async function getTask(id: string): Promise<Task | undefined> {
+  try {
+    return await backendRequest<Task>(`/tasks/${encodeURIComponent(id)}`)
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) return undefined
+    throw error
+  }
+}
+
+/** حذف Task پایدار از API نسخهٔ ۱. */
+export async function deleteTask(id: string): Promise<void> {
+  return backendRequest<void>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" })
 }

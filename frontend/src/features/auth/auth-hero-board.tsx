@@ -49,12 +49,12 @@ const HERO_COLUMNS: HeroColumn[] = [
     cards: [
       {
         title: "صفحه مشتریان",
-        assignee: { name: "ماهین رضایی", avatars: ["/avatars/u2.svg"] },
+        assignee: { name: "ماهین رضایی", avatars: ["/avatars/u2.jpg"] },
         icons: ["file-text-line", "calendar-todo-fill", "arrow-up-double-line"],
       },
       {
         title: "ساخت بخش تیکت",
-        assignee: { name: "دو کاربر", avatars: ["/avatars/u3.svg", "/avatars/u4.svg"] },
+        assignee: { name: "دو کاربر", avatars: ["/avatars/u3.jpg", "/avatars/u4.jpg"] },
         tags: [
           { label: "۱ فایل", icon: "file-text-line", variant: "success" },
           { label: "خیلی فوری", icon: "arrow-up-double-line", variant: "error" },
@@ -82,7 +82,7 @@ const HERO_COLUMNS: HeroColumn[] = [
       },
       {
         title: "اتصال به API خرید",
-        assignee: { name: "ماهین رضایی", avatars: ["/avatars/u2.svg"] },
+        assignee: { name: "ماهین رضایی", avatars: ["/avatars/u2.jpg"] },
         icons: ["file-text-line", "calendar-todo-fill", "arrow-up-double-line"],
       },
     ],

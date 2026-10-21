@@ -1,0 +1,25 @@
+[Unit]
+Description=Quire Next.js application
+After=network.target quire-api.service
+Requires=quire-api.service
+
+[Service]
+Type=simple
+User=quire
+Group=quire
+WorkingDirectory=/opt/quire/live/app
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=4001
+Environment=QUIRE_API_ORIGIN=http://127.0.0.1:4000
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/quire/live/app/.next/cache
+
+[Install]
+WantedBy=multi-user.target

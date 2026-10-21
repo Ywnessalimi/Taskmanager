@@ -9,14 +9,60 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
 import { STATUS_KEY, VERB_KEY, formatRelativeTime, targetHref } from "./notification-format"
+import { markNotificationRead } from "@/lib/api/notifications"
 import type { Notification, TaskFormProjectOption } from "@/lib/api/types"
 
-/** پیش‌نمایش Figma 1723:29972، با فیلتر پروژه و خواندن محلی اعلان‌ها. */
-export function NotificationsPreviewDialog({ notifications, projects = [], iconSrc }: { notifications: Notification[]; projects?: TaskFormProjectOption[]; iconSrc?: string }) {
+function NotificationRows({ notifications, projects, recipientName, readIds, setReadIds, closePopover = false }: { notifications: Notification[]; projects: TaskFormProjectOption[]; recipientName: string; readIds: string[]; setReadIds: (update: (ids: string[]) => string[]) => void; closePopover?: boolean }) {
+  const t = useT()
+  const isUnread = (n: Notification) => n.status === "unread" && !readIds.includes(n.id)
+  return <>
+    {notifications.map((notification, index) => {
+      const projectId = notification.target.type === "task" || notification.target.type === "ticket" ? notification.target.projectId : notification.target.type === "project" ? notification.target.id : undefined
+      const project = projects.find((option) => option.id === projectId)
+      const member = projects.flatMap((option) => option.members).find((person) => person.name === notification.actorName)
+      const row = <Link key={notification.id} href={targetHref(notification.target)} onClick={() => { if (notification.status === "unread") { setReadIds((ids) => [...ids, notification.id]); void markNotificationRead(notification.id, recipientName).catch(() => {}) } }} className={`flex min-h-16 w-full items-center gap-4 py-2 text-start hover:bg-bg2 ${index < notifications.length - 1 ? "border-b border-border" : ""}`}>
+        <Avatar className="size-8 shrink-0"><AvatarImage src={member?.avatarUrl} /><AvatarFallback>{notification.actorName?.slice(0, 1) ?? "?"}</AvatarFallback></Avatar>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <p className="text-sm leading-5 text-foreground"><span className="font-semibold">{notification.actorName}</span> {t(VERB_KEY[notification.verb])}{notification.verb === "taskStatusChanged" && notification.verbStatus && <> {t(STATUS_KEY[notification.verbStatus])}</>} <span className="font-semibold">{notification.target.label}</span></p>
+          <p className="flex flex-wrap items-center gap-2 text-sm leading-5 text-text3"><span>{formatRelativeTime(t, notification.createdAt)}</span><Image src="/images/figma/notifications/separator.svg" alt="" width={4} height={4} /><span>{project?.name ?? notification.target.label}</span></p>
+        </div>
+        <span className="flex w-7 shrink-0 justify-center">{isUnread(notification) && <Image src="/images/figma/notifications/unread.svg" alt="" width={12} height={12} />}</span>
+      </Link>
+      return closePopover ? <PopoverClose key={notification.id} nativeButton={false} render={row} /> : row
+    })}
+    {notifications.length === 0 && <p className="py-6 text-center text-sm text-text2">{t("notifications.empty")}</p>}
+  </>
+}
+
+/** نمای کامل صفحه از همان فهرست و فیلترهای پیش‌نمایش هدر استفاده می‌کند. */
+export function NotificationsFullPage({ notifications, projects = [], recipientName }: { notifications: Notification[]; projects?: TaskFormProjectOption[]; recipientName: string }) {
   const t = useT()
   const [readIds, setReadIds] = useState<string[]>([])
   const [filter, setFilter] = useState("all")
-  const projectOf = (n: Notification) => n.target.type === "task" ? n.target.projectId : n.target.type === "project" ? n.target.id : undefined
+  const projectOf = (n: Notification) => n.target.type === "task" || n.target.type === "ticket" ? n.target.projectId : n.target.type === "project" ? n.target.id : undefined
+  const groups = projects.filter((project) => notifications.some((n) => projectOf(n) === project.id))
+  const visible = notifications.filter((n) => filter === "all" || projectOf(n) === filter)
+  return <section className="flex min-h-0 flex-1 flex-col bg-background">
+    <h1 className="px-4 py-4 text-base font-semibold">{t("notifications.title")}</h1>
+    <Tabs value={filter} onValueChange={(value) => setFilter(value as string)} className="min-h-0 flex-1 gap-0">
+      <div className="flex h-12 shrink-0 items-center gap-4 border-y border-border px-4">
+        <TabsList variant="line" className="h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
+          {[{ id: "all", name: t("notifications.viewAll") }, ...groups.map((project) => ({ id: project.id, name: project.name }))].map((group) => <TabsTrigger key={group.id} value={group.id} className="h-full flex-none rounded-none border-0 px-0 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]">{group.name}</TabsTrigger>)}
+        </TabsList>
+      </div>
+      <TabsContent value={filter} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <NotificationRows notifications={visible} projects={projects} recipientName={recipientName} readIds={readIds} setReadIds={setReadIds} />
+      </TabsContent>
+    </Tabs>
+  </section>
+}
+
+/** پیش‌نمایش Figma 1723:29972، با فیلتر پروژه و خواندن محلی اعلان‌ها. */
+export function NotificationsPreviewDialog({ notifications, projects = [], iconSrc, recipientName }: { notifications: Notification[]; projects?: TaskFormProjectOption[]; iconSrc?: string; recipientName: string }) {
+  const t = useT()
+  const [readIds, setReadIds] = useState<string[]>([])
+  const [filter, setFilter] = useState("all")
+  const projectOf = (n: Notification) => n.target.type === "task" || n.target.type === "ticket" ? n.target.projectId : n.target.type === "project" ? n.target.id : undefined
   const groups = projects.filter((project) => notifications.some((n) => projectOf(n) === project.id))
   const visible = notifications.filter((n) => filter === "all" || projectOf(n) === filter)
   const isUnread = (n: Notification) => n.status === "unread" && !readIds.includes(n.id)
@@ -41,21 +87,7 @@ export function NotificationsPreviewDialog({ notifications, projects = [], iconS
             </PopoverClose>
           </div>
           <TabsContent value={filter} className="max-h-[min(480px,60vh)] overflow-y-auto px-4 pb-4">
-            {visible.map((notification, index) => {
-              const project = projects.find((option) => option.id === projectOf(notification))
-              const member = projects.flatMap((option) => option.members).find((person) => person.name === notification.actorName)
-              return (
-                <PopoverClose key={notification.id} nativeButton={false} render={<Link href={targetHref(notification.target)} onClick={() => setReadIds((ids) => [...ids, notification.id])} className={`flex min-h-16 w-full items-center gap-4 py-2 text-start hover:bg-bg2 ${index < visible.length - 1 ? "border-b border-border" : ""}`} />}>
-                  <Avatar className="size-8 shrink-0"><AvatarImage src={member?.avatarUrl} /><AvatarFallback>{notification.actorName?.slice(0, 1) ?? "?"}</AvatarFallback></Avatar>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <p className="text-sm leading-5 text-foreground"><span className="font-semibold">{notification.actorName}</span> {t(VERB_KEY[notification.verb])}{notification.verb === "taskStatusChanged" && notification.verbStatus && <> {t(STATUS_KEY[notification.verbStatus])}</>} <span className="font-semibold">{notification.target.label}</span></p>
-                    <p className="flex flex-wrap items-center gap-2 text-sm leading-5 text-text3"><span>{formatRelativeTime(t, notification.createdAt)}</span><Image src="/images/figma/notifications/separator.svg" alt="" width={4} height={4} /><span>{project?.name ?? notification.target.label}</span></p>
-                  </div>
-                  <span className="flex w-7 shrink-0 justify-center">{isUnread(notification) && <Image src="/images/figma/notifications/unread.svg" alt="" width={12} height={12} />}</span>
-                </PopoverClose>
-              )
-            })}
-            {visible.length === 0 && <p className="py-6 text-center text-sm text-text2">{t("notifications.empty")}</p>}
+            <NotificationRows notifications={visible} projects={projects} recipientName={recipientName} readIds={readIds} setReadIds={setReadIds} closePopover />
           </TabsContent>
         </Tabs>
       </PopoverContent>

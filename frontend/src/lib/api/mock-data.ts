@@ -55,6 +55,7 @@ const PROJ3_HEALTH: ProjectHealth = { active: 2, completed: 10, dueInPeriod: 1, 
 export const MOCK_PROJECTS: Omit<Project, "members">[] = [
   {
     id: "proj-1",
+    memberIds: ["u1", "u2", "u4"],
     name: "بازطراحی وب‌سایت",
     organizationId: "org-1",
     divisionId: "division-1",
@@ -114,6 +115,7 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
   },
   {
     id: "proj-2",
+    memberIds: ["u2", "u3"],
     name: "اپلیکیشن موبایل",
     organizationId: "org-1",
     divisionId: "division-3",
@@ -138,6 +140,7 @@ export const MOCK_PROJECTS: Omit<Project, "members">[] = [
   },
   {
     id: "proj-3",
+    memberIds: ["u1", "u5", "u6"],
     name: "کمپین تبلیغاتی بهار",
     organizationId: "org-2",
     divisionId: "division-2",
@@ -163,7 +166,7 @@ function projectRefs(organizationId: string, divisionId?: string): ProjectRef[] 
   return MOCK_PROJECTS.filter((p) => p.organizationId === organizationId && (!divisionId || p.divisionId === divisionId)).map((p) => {
     const { todo, inProgress, completed } = p.statusDistribution
     const total = todo + inProgress + completed
-    return { id: p.id, name: p.name, progress: total > 0 ? Math.round((completed / total) * 100) : 0 }
+    return { id: p.id, name: p.name, memberIds: p.memberIds, progress: total > 0 ? Math.round((completed / total) * 100) : 0 }
   })
 }
 
@@ -173,15 +176,15 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
     name: "شرکت نوین‌ساز",
     createdAt: "1402/01/11",
     members: [
-      { id: "u1", name: "سارا احمدی", role: "admin", activity: mockMemberActivity(2), avatarUrl: "/avatars/u1.svg" },
-      { id: "u2", name: "علی رضایی", role: "member", activity: mockMemberActivity(3), avatarUrl: "/avatars/u2.svg" },
-      { id: "u3", name: "مریم کریمی", role: "member", activity: mockMemberActivity(5), avatarUrl: "/avatars/u3.svg" },
+      { id: "u1", name: "سارا احمدی", role: "admin", activity: mockMemberActivity(2), avatarUrl: "/avatars/u1.jpg" },
+      { id: "u2", name: "علی رضایی", role: "member", activity: mockMemberActivity(3), avatarUrl: "/avatars/u2.jpg" },
+      { id: "u3", name: "مریم کریمی", role: "member", activity: mockMemberActivity(5), avatarUrl: "/avatars/u3.jpg" },
       {
         id: "u4",
         name: "حسین یوسفی‌نژاد اصفهانی",
         role: "member",
         activity: mockMemberActivity(7),
-        avatarUrl: "/avatars/u4.svg",
+        avatarUrl: "/avatars/u4.jpg",
       },
     ],
     divisions: [
@@ -196,8 +199,9 @@ export const MOCK_ORGANIZATIONS: Organization[] = [
     name: "تیم طراحی آبی",
     createdAt: "1402/03/20",
     members: [
-      { id: "u5", name: "نگار ملکی", role: "admin", activity: mockMemberActivity(4), avatarUrl: "/avatars/u5.svg" },
-      { id: "u6", name: "امیر صادقی", role: "member", activity: mockMemberActivity(6), avatarUrl: "/avatars/u6.svg" },
+      { id: "u1", name: "سارا احمدی", role: "member", activity: mockMemberActivity(2), avatarUrl: "/avatars/u1.jpg" },
+      { id: "u5", name: "نگار ملکی", role: "admin", activity: mockMemberActivity(4), avatarUrl: "/avatars/u5.jpg" },
+      { id: "u6", name: "امیر صادقی", role: "member", activity: mockMemberActivity(6), avatarUrl: "/avatars/u6.jpg" },
     ],
     divisions: [{ id: "division-2", organizationId: "org-2", name: "معاونت بازاریابی", projects: projectRefs("org-2") }],
     projects: projectRefs("org-2"),
@@ -288,7 +292,7 @@ export const MOCK_CURRENT_USER: CurrentUser = {
   name: "سارا احمدی",
   email: "sara.ahmadi@example.com",
   bio: "طراح محصول در شرکت نوین‌ساز",
-  avatarUrl: "/avatars/u1.svg",
+  avatarUrl: "/avatars/u1.jpg",
   notifications: {
     taskAssigned: true,
     taskComments: true,

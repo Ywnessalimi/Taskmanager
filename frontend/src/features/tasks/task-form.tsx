@@ -85,6 +85,7 @@ export function TaskForm({
   submitLabelKey,
   onSubmit,
   onCancel,
+  currentUserName,
 }: {
   projects: TaskFormProjectOption[]
   /** تسک موجود؛ اگر داده شود فرم در حالت ویرایش است. */
@@ -93,6 +94,7 @@ export function TaskForm({
   submitLabelKey: TranslationKey
   onSubmit: (values: TaskFormValues) => Promise<void> | void
   onCancel: () => void
+  currentUserName?: string
 }) {
   const t = useT()
   const isEdit = Boolean(task)
@@ -196,6 +198,7 @@ export function TaskForm({
             onFollowersChange={setFollowers}
             isFavorite={isFavorite}
             onFavoriteChange={setIsFavorite}
+            currentUserName={currentUserName}
           />
         )}
 

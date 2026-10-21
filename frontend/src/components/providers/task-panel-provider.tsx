@@ -8,6 +8,7 @@ export type TaskPanelState = { kind: "new" } | { kind: "detail"; task: Task } | 
 
 type TaskPanelContextValue = {
   user: CurrentUser
+  updateUser: (user: CurrentUser) => void
   panel: TaskPanelState
   /** گزینه‌های پروژه/اعضا برای فرم — یک‌بار در لایه‌ی `(tabs)` واکشی می‌شود. */
   projects: TaskFormProjectOption[]
@@ -29,14 +30,16 @@ export function TaskPanelProvider({
   children: React.ReactNode
 }) {
   const [panel, setPanel] = useState<TaskPanelState>(null)
+  const [currentUser, setCurrentUser] = useState(user)
 
   const openNewTask = useCallback(() => setPanel({ kind: "new" }), [])
   const openTaskDetail = useCallback((task: Task) => setPanel({ kind: "detail", task }), [])
   const close = useCallback(() => setPanel(null), [])
+  const updateUser = useCallback((nextUser: CurrentUser) => setCurrentUser(nextUser), [])
 
   const value = useMemo(
-    () => ({ user, panel, projects, openNewTask, openTaskDetail, close }),
-    [user, panel, projects, openNewTask, openTaskDetail, close]
+    () => ({ user: currentUser, updateUser, panel, projects, openNewTask, openTaskDetail, close }),
+    [currentUser, updateUser, panel, projects, openNewTask, openTaskDetail, close]
   )
 
   return <TaskPanelContext.Provider value={value}>{children}</TaskPanelContext.Provider>
