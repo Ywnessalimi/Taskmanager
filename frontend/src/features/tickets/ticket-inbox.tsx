@@ -22,6 +22,7 @@ import {
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MobileCreateMenu } from "@/features/tasks/mobile-create-menu"
+import { TicketCreateDialog } from "@/features/tickets/ticket-create-form"
 import { STATUS_COLUMNS, STATUS_COLUMN_ICON } from "@/features/projects/task-display"
 import type { LocalTicket } from "./local-created-tickets"
 import { getInboxTickets } from "./ticket-data"
@@ -195,6 +196,7 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
   const [profileCollapsed, setProfileCollapsed] = useState(false)
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false)
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
+  const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const searchInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -220,9 +222,20 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
     if (searchOpen) searchInput.current?.focus()
   }, [searchOpen])
 
-  const owners = Array.from(
-    new Map(tickets.map((ticket) => [ticket.createdById ?? user.id, ticket.createdByName ?? user.name])).entries(),
-  )
+  const ownerNames = new Map<string, string>()
+  const ownerAvatars = new Map<string, string | undefined>()
+  for (const ticket of tickets) {
+    const participants = [
+      { id: ticket.createdById ?? user.id, name: ticket.createdByName ?? user.name, avatarUrl: ticket.createdByAvatarUrl },
+      { id: ticket.assigneeId, name: ticket.assigneeName, avatarUrl: ticket.assigneeAvatarUrl },
+    ]
+    for (const participant of participants) {
+      if (!participant.id || participant.id === user.id || !participant.name) continue
+      ownerNames.set(participant.id, participant.name)
+      if (participant.avatarUrl) ownerAvatars.set(participant.id, participant.avatarUrl)
+    }
+  }
+  const owners = Array.from(ownerNames.entries())
   const statusOptions: [string, string][] = STATUS_COLUMNS.map(({ id }) => [id, t(statuses[id])] as [string, string])
   const subjectOptions: [string, string][] = [
     ["general", t(subjects.general)],
@@ -239,7 +252,7 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
   const filtered = tickets.filter((ticket) =>
     (status === "all" || ticket.status === status)
     && (subject === "all" || ticket.subject === subject)
-    && (owner === "all" || (ticket.createdById ?? user.id) === owner)
+    && (owner === "all" || ticket.createdById === owner || ticket.assigneeId === owner)
     && (selectedPermissions.length === 0 || selectedPermissions.some((selected) => ticket.permissionIds.includes(selected as keyof typeof permissions)))
     && `${ticket.title} ${ticket.description ?? ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   ).sort((a, b) => {
@@ -359,7 +372,7 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
               return (
                 <button key={id} type="button" aria-pressed={selectedOwner} onClick={() => { setOwner(id); setOwnerDialogOpen(false) }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-start transition-colors hover:bg-bg2 ${selectedOwner ? "bg-bg2" : ""}`}>
                   <Avatar className="size-10 shrink-0 rounded-full">
-                    {id === user.id && user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={name} />}
+                    {ownerAvatars.get(id) && <AvatarImage src={ownerAvatars.get(id)} alt={name} />}
                     <AvatarFallback>{name.slice(0, 1)}</AvatarFallback>
                   </Avatar>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
@@ -395,6 +408,9 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={createTicketOpen} onOpenChange={setCreateTicketOpen}>
+        {createTicketOpen && <TicketCreateDialog user={user} onDone={() => setCreateTicketOpen(false)} />}
+      </Dialog>
 
       <section className="mx-auto flex h-[calc(100dvh-5rem)] max-h-[calc(100dvh-5rem)] w-full max-w-[800px] min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--project-surface)] lg:h-[calc(100dvh-3.5rem)] lg:max-h-[calc(100dvh-3.5rem)] lg:bg-transparent">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--task-workspace-border)] bg-background px-4 lg:hidden">
@@ -431,9 +447,9 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
                 <p className="truncate text-sm leading-5 text-[var(--task-workspace-muted)]">{t("inbox.welcome")}</p>
               </div>
             </div>
-            <Link href="/account" aria-label={t("account.editProfileTitle")} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--task-workspace-text)] text-white">
-              <RemixIcon name="edit-2-fill" className="text-xl" />
-            </Link>
+            <button type="button" onClick={() => setCreateTicketOpen(true)} aria-label={t("ticket.title")} title={t("newTask.newRequest")} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--task-workspace-text)] text-white">
+              <RemixIcon name="add-line" className="text-xl" />
+            </button>
           </div>
         </div>
 

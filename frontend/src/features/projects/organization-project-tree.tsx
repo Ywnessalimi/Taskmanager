@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
@@ -29,6 +29,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
   const [createError, setCreateError] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const draggedItem = useRef<{ kind: "project"; id: string; organizationId: string } | { kind: "division"; id: string; organizationId: string } | null>(null)
 
   function hasPermission(organizationId: string, permission: string) {
@@ -42,8 +43,10 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
 
   function beginDrag(event: React.DragEvent, item: NonNullable<typeof draggedItem.current>) {
     draggedItem.current = item
+    setDraggedItemId(item.id)
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", `${item.kind}:${item.id}`)
+    event.dataTransfer.setDragImage(event.currentTarget, event.currentTarget.clientWidth / 2, event.currentTarget.clientHeight / 2)
   }
 
   async function finishDrop(operation: () => Promise<unknown>) {
@@ -55,6 +58,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
       setMoveError(cause instanceof Error ? cause.message : t("projects.moveFailed"))
     } finally {
       draggedItem.current = null
+      setDraggedItemId(null)
       setDropTarget(null)
     }
   }
@@ -165,26 +169,25 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                 <div
                   onDragOver={(event) => handleOrganizationDragOver(event, organization.id)}
                   onDrop={(event) => handleOrganizationDrop(event, organization.id)}
-                  className={`flex min-h-9 items-center justify-between gap-3 rounded-md ${dropTarget === `organization:${organization.id}` ? "bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
+                  className={`flex min-h-9 items-center justify-between gap-3 rounded-md transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `organization:${organization.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
                 >
                   <button
                     type="button"
                     aria-label={`${organizationOpen ? t("projects.collapse") : t("projects.expand")} ${organizationName}`}
                     aria-expanded={organizationOpen}
                     onClick={() => setOpenOrganizations((current) => toggle(current, organization.id))}
-                    className="flex min-w-0 flex-1 items-center justify-start gap-1 text-start text-base font-medium text-foreground"
+                    className="flex min-w-0 flex-1 items-center justify-start gap-2 text-start text-base font-medium text-foreground"
                   >
                     <RemixIcon name="arrow-down-s-fill" className={`shrink-0 text-base transition-transform ${organizationOpen ? "" : "rotate-90"}`} />
-                    <span className="truncate">{organizationName}</span>
                     <span className="relative grid size-6 shrink-0 place-items-center overflow-hidden rounded-lg bg-bg2 text-text2" aria-hidden="true">{organization.imageUrl && organization.preferences?.showSidebarIcon === true ? <Image src={organization.imageUrl} alt="" fill sizes="24px" unoptimized className="object-cover" /> : <RemixIcon name="building-4-line" className="text-base" />}</span>
+                    <span className="min-w-0 truncate">{organizationName}</span>
                   </button>
+                  <div className="ms-auto flex shrink-0 items-center gap-1">
+                    <Link draggable={false} href={organizationPath(organization)} aria-label={`${organizationName} — ${t("projects.openOrganization")}`} title={t("projects.openOrganization")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-sm" /></Link>
+                    <Link draggable={false} href={`/home/organizations/${organization.id}/settings`} aria-label={`${t("projects.settings")} — ${organizationName}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-sm" /></Link>
+                    {hasPermission(organization.id, "createDivision") && <button type="button" draggable={false} aria-label={`${t("projects.addDivision")} — ${organizationName}`} title={t("projects.addDivision")} onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })} className="grid size-6 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="add-line" className="text-sm" /></button>}
+                  </div>
                 </div>
-                <div className="absolute left-0 top-1 z-10 hidden items-center gap-1 opacity-0 transition-opacity duration-200 group-hover/org:opacity-100 group-focus-within/org:opacity-100 lg:flex">
-                  <Link href={organizationPath(organization)} aria-label={`${organizationName} — ${t("projects.openOrganization")}`} className="grid size-5 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-sm" /></Link>
-                  <Link href={`/home/organizations/${organization.id}/settings`} aria-label={`${t("projects.settings")} — ${organizationName}`} className="grid size-5 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-sm" /></Link>
-                  {hasPermission(organization.id, "createDivision") && <button type="button" aria-label={`${t("projects.addDivision")} — ${organizationName}`} onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })} className="grid size-5 place-items-center rounded bg-[var(--bg-tertiary,#f5f5f5)] p-[2px]"><span className="flex size-4 items-center justify-center"><Image src="/images/figma/projects/add-team-plus.svg" alt="" width={8.4} height={8.4} /></span></button>}
-                </div>
-
                 <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${organizationOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                   <div className="min-h-0 overflow-hidden">
                     <div className="mt-1 flex flex-col gap-3">
@@ -195,46 +198,48 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                         key={division.id}
                         onDragOver={(event) => handleDivisionDragOver(event, organization.id, division.id)}
                         onDrop={(event) => handleDivisionDrop(event, organization.id, division.id)}
-                        className={`group/division relative rounded-md ${dropTarget === `division:${division.id}` ? "bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
+                        className={`group/division relative rounded-md transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `division:${division.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
                       >
-                        <button
-                          type="button"
-                          aria-expanded={divisionOpen}
-                          onClick={() => setOpenDivisions((current) => toggle(current, division.id))}
-                          className="flex min-h-8 w-full items-center gap-2 ps-2 text-start"
-                        >
-                          <RemixIcon name="arrow-down-s-line" className={`shrink-0 text-base text-icon2 transition-transform ${divisionOpen ? "" : "rotate-90"}`} />
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{division.name}</span>
-                        </button>
-                        {canManage(organization.id) && <button
-                          type="button"
-                          draggable
-                          aria-label={t("projects.moveDivision")}
+                        <div
+                          draggable={canManage(organization.id)}
                           onDragStart={(event) => beginDrag(event, { kind: "division", id: division.id, organizationId: organization.id })}
-                          onDragEnd={() => { draggedItem.current = null; setDropTarget(null) }}
-                          className="absolute left-7 top-1 grid size-6 cursor-grab place-items-center rounded text-icon2 opacity-0 hover:bg-bg2 group-hover/division:opacity-100 group-focus-within/division:opacity-100 active:cursor-grabbing"
-                        ><RemixIcon name="draggable" className="text-sm" /></button>}
-                        <div className="absolute left-14 top-0 z-10 hidden items-center gap-1 opacity-0 transition-opacity duration-200 group-hover/division:opacity-100 group-focus-within/division:opacity-100 lg:flex">
-                          <Link href={`/home/organizations/${organization.id}?divisionId=${encodeURIComponent(division.id)}`} aria-label={`${t("projects.settings")} — ${division.name}`} className="grid size-5 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-sm" /></Link>
-                          {hasPermission(organization.id, "createProject") && <button type="button" aria-label={`${t("projects.addProject")} — ${division.name}`} onClick={() => setCreateTarget({ kind: "project", organizationId: organization.id, divisionId: division.id })} className="grid size-5 place-items-center rounded bg-[var(--bg-tertiary,#f5f5f5)] p-[2px]"><span className="flex size-4 items-center justify-center"><Image src="/images/figma/projects/add-team-plus.svg" alt="" width={8.4} height={8.4} /></span></button>}
+                          onDragEnd={() => { draggedItem.current = null; setDraggedItemId(null); setDropTarget(null) }}
+                          className={`group/division-header flex min-h-8 items-center gap-1 rounded-md transition-opacity duration-150 ${canManage(organization.id) ? "cursor-grab active:cursor-grabbing" : ""} ${draggedItemId === division.id ? "opacity-45" : ""}`}
+                        >
+                          <button
+                            type="button"
+                            draggable={false}
+                            aria-expanded={divisionOpen}
+                            onClick={() => setOpenDivisions((current) => toggle(current, division.id))}
+                            className="flex min-w-0 flex-1 items-center gap-2 rounded-md ps-2 text-start"
+                          >
+                            <RemixIcon name="arrow-down-s-line" className={`shrink-0 text-base text-icon2 transition-transform ${divisionOpen ? "" : "rotate-90"}`} />
+                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{division.name}</span>
+                          </button>
+                          <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/division-header:opacity-100 lg:group-focus-within/division-header:opacity-100">
+                            <Link draggable={false} href={`/home/organizations/${organization.id}?divisionId=${encodeURIComponent(division.id)}`} aria-label={`${t("projects.settings")} — ${division.name}`} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-sm" /></Link>
+                            {hasPermission(organization.id, "createProject") && <button type="button" draggable={false} aria-label={`${t("projects.addProject")} — ${division.name}`} onClick={() => setCreateTarget({ kind: "project", organizationId: organization.id, divisionId: division.id })} className="grid size-7 place-items-center rounded bg-[var(--bg-tertiary,#f5f5f5)] text-icon2 hover:bg-bg2 hover:text-foreground"><Image src="/images/figma/projects/add-team-plus.svg" alt="" width={12} height={12} /></button>}
+                          </div>
                         </div>
                         <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${divisionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                           <div className="min-h-0 overflow-hidden">
                             <div className="me-3 ms-3 flex flex-col border-s border-border ps-3 pt-1">
                           {division.projects.map((project, index) => (
-                            <div key={project.id} className="flex min-h-[28px] items-center gap-1">
-                              <Link href={projectPath({ ...project, organizationSlug: organization.slug })} className={`flex min-w-0 flex-1 items-center gap-2 text-sm hover:text-foreground ${index === 0 ? "font-medium text-foreground" : "text-text2"}`}>
+                            <div
+                              key={project.id}
+                              draggable={canManage(organization.id)}
+                              onDragStart={(event) => beginDrag(event, { kind: "project", id: project.id, organizationId: organization.id })}
+                              onDragEnd={() => { draggedItem.current = null; setDraggedItemId(null); setDropTarget(null) }}
+                              className={`group/project flex min-h-8 items-center gap-1 rounded-md transition-opacity duration-150 ${canManage(organization.id) ? "cursor-grab active:cursor-grabbing" : ""} ${draggedItemId === project.id ? "opacity-45" : ""}`}
+                            >
+                              <Link href={projectPath({ ...project, organizationSlug: organization.slug })} draggable={false} className={`flex min-w-0 flex-1 items-center gap-2 rounded-md text-sm hover:text-foreground ${index === 0 ? "font-medium text-foreground" : "text-text2"}`}>
                                 <RemixIcon name="list-check-2" className="shrink-0 text-base text-icon2" />
                                 <span className="min-w-0 flex-1 truncate">{project.name}</span>
                               </Link>
-                              {canManage(organization.id) && <button
-                                type="button"
-                                draggable
-                                aria-label={t("projects.moveProject")}
-                                onDragStart={(event) => beginDrag(event, { kind: "project", id: project.id, organizationId: organization.id })}
-                                onDragEnd={() => { draggedItem.current = null; setDropTarget(null) }}
-                                className="grid size-6 shrink-0 cursor-grab place-items-center rounded text-icon2 opacity-0 hover:bg-bg2 group-hover/division:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
-                              ><RemixIcon name="draggable" className="text-sm" /></button>}
+                              <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/project:opacity-100 lg:group-focus-within/project:opacity-100">
+                                <Link draggable={false} href={projectPath({ ...project, organizationSlug: organization.slug })} aria-label={`${project.name} — ${t("projects.openProject")}`} title={t("projects.openProject")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-sm" /></Link>
+                                <Link draggable={false} href={`/home/projects/${encodeURIComponent(project.id)}/settings`} aria-label={`${t("projects.settings")} — ${project.name}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-sm" /></Link>
+                              </div>
                             </div>
                           ))}
                               {hasPermission(organization.id, "createProject") && <button
@@ -251,14 +256,6 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                       </div>
                     )
                   })}
-                      {hasPermission(organization.id, "createDivision") && <button
-                        type="button"
-                        onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })}
-                        className="flex min-h-8 w-full items-center gap-2 text-start text-sm text-text2 hover:text-foreground"
-                      >
-                        <RemixIcon name="add-line" className="shrink-0 text-base text-icon2" />
-                        <span>{t("projects.addDivision")}</span>
-                      </button>}
                     </div>
                   </div>
                 </div>
@@ -269,15 +266,18 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
         </div>
       </section>
       <Dialog open={Boolean(createTarget)} onOpenChange={(open) => { if (!open) { setCreateTarget(null); setNewName("") } }}>
-        <DialogContent variant="center" className="max-w-sm">
+        <DialogContent variant="center" showCloseButton={false} className="max-w-sm">
+          <div className="flex items-center justify-end gap-2">
+            <Button type="submit" form="organization-project-create-form" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button>
+            <DialogClose aria-label={t("taskDetail.close")} className="grid size-7 place-items-center rounded-lg bg-bg2"><RemixIcon name="close-line" className="text-base" /></DialogClose>
+          </div>
           <DialogHeader>
             <DialogTitle>{t(createTarget?.kind === "organization" ? "projects.addOrganization" : createTarget?.kind === "division" ? "projects.addDivision" : "projects.addProject")}</DialogTitle>
             <DialogDescription>{t(createTarget?.kind === "organization" ? "projects.addOrganizationDescription" : createTarget?.kind === "division" ? "projects.addDivisionDescription" : "projects.addProjectDescription")}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={createItem} className="flex flex-col gap-4">
+          <form id="organization-project-create-form" onSubmit={createItem} className="flex flex-col gap-4">
             <input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} aria-label={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} placeholder={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring" />
             {createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}
-            <Button type="submit" disabled={!newName.trim()}>{t("projects.create")}</Button>
           </form>
         </DialogContent>
       </Dialog>

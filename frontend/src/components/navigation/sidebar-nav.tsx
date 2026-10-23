@@ -32,7 +32,6 @@ export function SidebarNav() {
         </div>
         <div className="flex w-full flex-col items-center gap-4 border-t border-[var(--mini-bar-border)] pt-4">
           <Link href="/account" aria-current={accountActive ? "page" : undefined} className={cn(item, accountActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><Avatar className={cn("size-6", accountActive && "ring-1 ring-white")}><AvatarImage src={taskPanel?.user.avatarUrl} alt="" /><AvatarFallback className="text-[10px]">{taskPanel?.user.name.slice(0, 1) ?? "?"}</AvatarFallback></Avatar>{t("miniBar.profile")}</Link>
-          <span aria-disabled="true" className={cn(item, "text-[var(--mini-bar-muted)]")}><RemixIcon name="settings-3-line" className="text-2xl" />{t("miniBar.settings")}</span>
         </div>
       </nav>
     </aside>

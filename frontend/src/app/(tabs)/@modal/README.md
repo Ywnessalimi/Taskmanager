@@ -5,3 +5,6 @@
 وابستگی‌ها: `features/tickets/ticket-detail.tsx` و slot `modal` در `app/(tabs)/layout.tsx`.
 
 مصرف‌کننده‌ها: پیوند تیکت در Inbox و کارت‌های تیکت در Board؛ مسیر مستقیم `/inbox/[ticketId]` نیز صفحهٔ اصلی خودش را دارد.
+
+
+مسیرهای جزئیات hierarchy نیز به همین slot متصل‌اند: (.)o/[organizationSlug] و (.)home/organizations/[id] برای سازمان/معاونت. مسیر شناسه‌محور (.)home/projects/[id] جزئیات پروژه را در WorkspaceRouteModal باز می‌کند. مسیر خوانای `/o/[organizationSlug]/[projectSlug]` صفحهٔ مستقل پروژه است و از این slot استفاده نمی‌کند. WorkspaceRouteModal قاب taskWorkspace را فراهم می‌کند.

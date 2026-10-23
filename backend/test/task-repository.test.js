@@ -49,7 +49,7 @@ test("migration and seed run once for a persistent database", () => {
     openDatabase({ path, seed: true }).close()
     const database = openDatabase({ path, seed: true })
     assert.equal(database.prepare("SELECT count(*) AS count FROM tasks").get().count, 6)
-    assert.equal(database.prepare("SELECT count(*) AS count FROM schema_migrations").get().count, 2)
+    assert.equal(database.prepare("SELECT count(*) AS count FROM schema_migrations").get().count, 12)
     database.close()
   } finally {
     rmSync(directory, { recursive: true, force: true })

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
@@ -9,13 +10,35 @@ type RepeatPickerLayout = "default" | "taskWorkspace"
 const OPTIONS: RepeatOption[] = ["none", "daily", "weekly", "monthly"]
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"]
 const EVERY_KEY = { daily: "repeat.everyDaily", weekly: "repeat.everyWeekly", monthly: "repeat.everyMonthly" } as const
+type RepeatFrequency = keyof typeof EVERY_KEY
 
 export function RepeatPicker({ value, onChange, layout = "default" }: { value: TaskRecurrence; onChange: (value: TaskRecurrence) => void; layout?: RepeatPickerLayout }) {
   const t = useT()
   const frequency = value.frequency ?? "none"
   const interval = Math.max(1, value.interval ?? 1)
   const weekdays = value.weekdays ?? []
+  const [intervals, setIntervals] = useState<Record<RepeatFrequency, number>>(() => ({
+    daily: value.frequency === "daily" ? Math.max(1, value.interval ?? 1) : 1,
+    weekly: value.frequency === "weekly" ? Math.max(1, value.interval ?? 1) : 1,
+    monthly: value.frequency === "monthly" ? Math.max(1, value.interval ?? 1) : 1,
+  }))
+  useEffect(() => {
+    if (frequency === "none") return
+    setIntervals((current) => current[frequency] === interval ? current : { ...current, [frequency]: interval })
+  }, [frequency, interval])
   const update = (next: Partial<TaskRecurrence>) => onChange({ ...value, dates: [], ...next })
+  const updateFrequency = (option: RepeatOption) => {
+    update({
+      frequency: option,
+      interval: option === "none" ? 1 : intervals[option],
+      weekdays: option === "weekly" ? weekdays : [],
+    })
+  }
+  const updateInterval = (option: RepeatFrequency, nextInterval: number) => {
+    const next = Math.max(1, Math.floor(nextInterval || 1))
+    setIntervals((current) => ({ ...current, [option]: next }))
+    update({ frequency: option, interval: next, weekdays: option === "weekly" ? weekdays : [] })
+  }
   const label = frequency === "none" ? t("repeat.none") : t(`repeat.${frequency}` as "repeat.daily")
 
   return (
@@ -43,25 +66,25 @@ export function RepeatPicker({ value, onChange, layout = "default" }: { value: T
           </label>
         </div>
         <div role="radiogroup" aria-label={t("dateEdit.repeat")} className="flex flex-col gap-1 p-4">
-          {OPTIONS.map((option) => (
-            <label key={option} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 text-sm ${frequency === option ? "bg-bg2" : "hover:bg-bg2"}`}>
-              <input type="radio" name="task-repeat-frequency" value={option} checked={frequency === option} onChange={() => update({ frequency: option, interval: option === "none" ? 1 : interval, weekdays: option === "weekly" ? weekdays : [] })} className="size-4 accent-brand" />
+          {OPTIONS.map((option) => <div key={option} className={option === "weekly" && frequency === "weekly" ? "border-b border-border pb-2" : undefined}>
+            <label className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 text-sm ${frequency === option ? "bg-bg2" : "hover:bg-bg2"}`}>
+              <input type="radio" name="task-repeat-frequency" value={option} checked={frequency === option} onChange={() => updateFrequency(option)} className="size-4 accent-brand" />
               {option === "none" ? t("repeat.none") : <>
                 <span>{t(EVERY_KEY[option]).split("{count}")[0]}</span>
-                <input aria-label={t(EVERY_KEY[option]).replace("{count}", "")} type="number" min={1} step={1} value={interval} onFocus={() => update({ frequency: option })} onChange={(event) => update({ frequency: option, interval: Math.max(1, Math.floor(Number(event.target.value) || 1)) })} className="h-8 w-14 rounded-none border-0 border-b border-border bg-transparent px-1 text-center outline-none focus:border-brand" />
+                <input aria-label={t(EVERY_KEY[option]).replace("{count}", "")} type="number" min={1} step={1} value={intervals[option]} onFocus={() => update({ frequency: option, interval: intervals[option] })} onChange={(event) => updateInterval(option, Number(event.target.value))} className="h-8 w-14 rounded-none border-0 border-b border-border bg-transparent px-1 text-center outline-none focus:border-brand" />
                 <span>{t(EVERY_KEY[option]).split("{count}")[1]}</span>
               </>}
             </label>
-          ))}
-          {frequency === "weekly" && <div className="flex justify-between gap-2 px-2 pb-2 pt-1" dir="ltr">
-            {WEEK_DAYS.map((day, index) => {
-              const selected = weekdays.includes(index)
-              return <button key={index} type="button" aria-label={t(`repeat.weekday${index}` as "repeat.weekday0")} aria-pressed={selected} onClick={() => {
-                const next = selected ? weekdays.filter((item) => item !== index) : [...weekdays, index].sort()
-                update(next.length === 7 ? { frequency: "daily", interval: 1, weekdays: [] } : { weekdays: next })
-              }} className={`size-9 rounded-full border text-xs font-medium ${selected ? "border-brand text-brand" : "border-border text-text2"}`}>{day}</button>
-            })}
-          </div>}
+            {option === "weekly" && frequency === "weekly" && <div className="flex justify-between gap-2 px-2 pt-2" dir="ltr">
+              {WEEK_DAYS.map((day, index) => {
+                const selected = weekdays.includes(index)
+                return <button key={index} type="button" aria-label={t(`repeat.weekday${index}` as "repeat.weekday0")} aria-pressed={selected} onClick={() => {
+                  const next = selected ? weekdays.filter((item) => item !== index) : [...weekdays, index].sort()
+                  update(next.length === 7 ? { frequency: "daily", interval: 1, weekdays: [] } : { weekdays: next })
+                }} className={`size-9 rounded-full border text-xs font-medium ${selected ? "border-brand text-brand" : "border-border text-text2"}`}>{day}</button>
+              })}
+            </div>}
+          </div>)}
         </div>
       </DialogContent>
     </Dialog>

@@ -3,7 +3,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 }
 
-function hashPassword(password, salt = randomBytes(16)) {
+export function hashPassword(password, salt = randomBytes(16)) {
   const hash = scryptSync(password, salt, 64, SCRYPT_OPTIONS)
   return `scrypt$${salt.toString("base64url")}$${hash.toString("base64url")}`
 }

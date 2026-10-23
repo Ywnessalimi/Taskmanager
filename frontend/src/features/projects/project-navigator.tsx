@@ -15,6 +15,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
   const router = useRouter()
   const [moveError, setMoveError] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const draggedItem = useRef<{ kind: "project"; id: string; organizationId: string } | { kind: "division"; id: string; organizationId: string } | null>(null)
   const activeProject = organizations.flatMap((organization) => organization.projects).find((project) => project.id === activeId)
   const isMyTasks = activeId === "MyTasks"
@@ -29,8 +30,10 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
 
   function beginDrag(event: React.DragEvent, item: NonNullable<typeof draggedItem.current>) {
     draggedItem.current = item
+    setDraggedItemId(item.id)
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", `${item.kind}:${item.id}`)
+    event.dataTransfer.setDragImage(event.currentTarget, event.currentTarget.clientWidth / 2, event.currentTarget.clientHeight / 2)
   }
 
   async function finishDrop(operation: () => Promise<unknown>) {
@@ -42,6 +45,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
       setMoveError(cause instanceof Error ? cause.message : t(locale, "projects.moveFailed"))
     } finally {
       draggedItem.current = null
+      setDraggedItemId(null)
       setDropTarget(null)
     }
   }
@@ -89,6 +93,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
 
   function endDrag() {
     draggedItem.current = null
+    setDraggedItemId(null)
     setDropTarget(null)
   }
 
@@ -107,7 +112,10 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
     </details>
     <aside className="hidden w-52 shrink-0 flex-col border-e border-border bg-[var(--project-surface)] lg:flex">
       <nav className="flex flex-col gap-3 border-b border-border px-4 py-4">
-        {[{href:myTasksHref,label:"nav.myTasks",icon:"tasks"},{href:"/notifications",label:"projectNav.notifications",icon:"notifications"},{href:"/messages",label:"nav.messages",icon:"messages"}].map(item => <Link key={item.href} href={item.href} aria-current={item.href === myTasksHref && isMyTasks ? "page" : undefined} className={`flex items-center gap-2 px-1 text-xs leading-normal font-medium ${item.href === myTasksHref && isMyTasks ? "text-foreground" : "text-[#595959] hover:text-foreground"}`}><Image src={`/images/figma/project-navigation/${item.icon}.svg`} width={16} height={16} alt="" />{t(locale,item.label as "nav.myTasks")}</Link>)}
+        <Link href={myTasksHref} aria-current={isMyTasks ? "page" : undefined} className={`flex items-center gap-2 px-1 text-xs leading-normal font-medium ${isMyTasks ? "text-foreground" : "text-[#595959] hover:text-foreground"}`}>
+          <Image src="/images/figma/project-navigation/tasks.svg" width={16} height={16} alt="" />
+          {t(locale, "nav.myTasks")}
+        </Link>
       </nav>
       <nav aria-label={t(locale, "projects.all")} className="flex flex-col gap-4 overflow-y-auto p-3">
         {moveError && <p role="alert" className="text-xs text-destructive">{moveError}</p>}
@@ -116,28 +124,26 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
             <summary
               onDragOver={(event) => onOrganizationDragOver(event, organization.id)}
               onDrop={(event) => onOrganizationDrop(event, organization.id)}
-              className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-1 text-base font-medium text-foreground ${dropTarget === `organization:${organization.id}` ? "bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
+              className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-1 text-base font-medium text-foreground transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `organization:${organization.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
             ><RemixIcon name="arrow-down-s-fill" className="shrink-0 text-base" /><span className="truncate">{organization.name}</span></summary>
             <div className="flex flex-col gap-1">
               {organization.divisions.map((division) => (
-                <details key={division.id} open className={`group/navdivision rounded-md ps-2 ${dropTarget === `division:${division.id}` ? "bg-blue-50 outline outline-1 outline-blue-500" : ""}`}>
+                <details key={division.id} open className={`group/navdivision rounded-md ps-2 transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `division:${division.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}>
                   <summary
                     draggable={canManage(organization.id)}
                     onDragOver={(event) => onDivisionDragOver(event, organization.id, division.id)}
                     onDrop={(event) => onDivisionDrop(event, organization.id, division.id)}
                     onDragStart={(event) => beginDrag(event, { kind: "division", id: division.id, organizationId: organization.id })}
                     onDragEnd={endDrag}
-                    className="flex min-h-7 cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs text-text2"
+                    className={`flex min-h-7 cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs text-text2 transition-opacity duration-150 ${draggedItemId === division.id ? "opacity-45" : ""}`}
                   >
                     <RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /><span className="min-w-0 flex-1 truncate">{division.name}</span>
-                    {canManage(organization.id) && <RemixIcon name="draggable" className="shrink-0 text-sm text-icon2" />}
                   </summary>
                   <div className="flex flex-col ps-2">{division.projects.map((project) => (
                     <div key={project.id} className="flex min-h-8 items-center gap-1">
-                      <Link href={projectPath({ ...project, organizationSlug: organization.slug })} aria-current={project.id === activeId ? "page" : undefined} className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-sm ${project.id === activeId ? "bg-background font-semibold text-foreground" : "text-text2 hover:bg-background"}`}>
+                      <Link href={projectPath({ ...project, organizationSlug: organization.slug })} draggable={canManage(organization.id)} onDragStart={(event) => beginDrag(event, { kind: "project", id: project.id, organizationId: organization.id })} onDragEnd={endDrag} aria-current={project.id === activeId ? "page" : undefined} className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-sm transition-opacity duration-150 ${project.id === activeId ? "bg-background font-semibold text-foreground" : "text-text2 hover:bg-background"} ${draggedItemId === project.id ? "opacity-45" : ""}`}>
                         <RemixIcon name="list-check-2" className="shrink-0 text-base" /><span className="truncate">{project.name}</span>
                       </Link>
-                      {canManage(organization.id) && <button type="button" draggable aria-label={t(locale, "projects.moveProject")} onDragStart={(event) => { event.stopPropagation(); beginDrag(event, { kind: "project", id: project.id, organizationId: organization.id }) }} onDragEnd={endDrag} className="grid size-6 shrink-0 cursor-grab place-items-center rounded text-icon2 hover:bg-background active:cursor-grabbing"><RemixIcon name="draggable" className="text-sm" /></button>}
                     </div>
                   ))}</div>
                 </details>

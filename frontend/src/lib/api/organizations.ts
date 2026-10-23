@@ -1,5 +1,18 @@
 import { BackendApiError, backendRequest } from "./backend-client"
-import type { Organization, OrganizationMember } from "./types"
+import type { Organization, OrganizationActivity, OrganizationMember } from "./types"
+
+export function getOrganizationActivity(organizationId: string, { limit = 15, before }: { limit?: number; before?: number } = {}) {
+  const query = new URLSearchParams({ limit: String(limit) })
+  if (before !== undefined) query.set("before", String(before))
+  return backendRequest<OrganizationActivity[]>(`/organizations/${encodeURIComponent(organizationId)}/activity?${query}`)
+}
+
+export function createOrganizationComment(organizationId: string, text: string) {
+  return backendRequest<OrganizationActivity>(`/organizations/${encodeURIComponent(organizationId)}/activity`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  })
+}
 
 export function getOrganizations(): Promise<Organization[]> {
   return backendRequest<Organization[]>("/organizations")
@@ -62,6 +75,13 @@ export function createProject(divisionId: string, name: string) {
   return backendRequest<{ id: string; name: string; organizationId: string; divisionId: string }>(`/divisions/${encodeURIComponent(divisionId)}/projects`, {
     method: "POST",
     body: JSON.stringify({ name }),
+  })
+}
+
+export function updateProjectSettings(projectId: string, settings: { name: string; description: string }) {
+  return backendRequest<{ id: string; name: string; description?: string }>(`/projects/${encodeURIComponent(projectId)}/settings`, {
+    method: "PATCH",
+    body: JSON.stringify(settings),
   })
 }
 

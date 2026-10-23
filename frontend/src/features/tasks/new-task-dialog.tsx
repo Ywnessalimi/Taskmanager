@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
@@ -9,15 +9,16 @@ import { DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/compon
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PriorityDot } from "@/features/projects/task-display"
+import { readTaskBoardColumnAssignments, writeTaskBoardColumnAssignment } from "@/features/projects/board-column-storage"
 import { AssigneePickerDialog } from "./assignee-picker-dialog"
 import { TagPickerDialog } from "./tag-picker-dialog"
 import { useTaskTimer } from "./time-tracking"
 import { NewTaskActivity } from "./new-task-activity"
 import { NewTaskAsset, type NewTaskAssetName } from "./new-task-assets"
 import { RepeatPicker } from "./repeat-picker"
+import { TaskStatusPicker } from "./task-status-picker"
 import { saveTaskDetails } from "./local-task-details"
-import { showWorkspaceToast } from "@/lib/workspace-toast"
-import { createTask, updateTask } from "@/lib/api/tasks"
+import { createTask, getTask, updateTask } from "@/lib/api/tasks"
 import type { Task, TaskRecurrence, CurrentUser, TaskFormProjectOption, TaskPriority, TaskStatus } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 
@@ -33,13 +34,45 @@ function FieldLabel({ icon, label }: { icon: NewTaskAssetName; label: string }) 
   return <span className="flex w-30 shrink-0 items-center gap-1.5 text-[13px] text-[var(--task-workspace-muted)]"><NewTaskAsset name={icon} /><span>{label}</span></span>
 }
 
-/** فرم مستقل ساخت تسک در قاب Figma 1722:29819؛ پروژهٔ جاری پیش‌فرض است و پس از بستن reset می‌شود. */
-export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }: {
+/** یک قاب مشترک برای تسک و زیرتسک؛ جابه‌جایی بین آن‌ها قاب مودال را نمی‌بندد. */
+export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task, initialSubtaskId }: {
   projects: TaskFormProjectOption[]
   defaultProjectId?: string
   user: CurrentUser
   task?: Task
+  initialSubtaskId?: string
   onDone: () => void
+}) {
+  const [rootTask, setRootTask] = useState(task)
+  const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(initialSubtaskId ?? null)
+  const subtask = activeSubtaskId ? rootTask?.subtasks?.find((item) => item.id === activeSubtaskId) : undefined
+  const activeTask = subtask && rootTask ? { ...subtask, projectId: rootTask.projectId } : rootTask
+
+  return <TaskWorkspaceEditor
+    key={activeSubtaskId ?? rootTask?.id ?? "new"}
+    projects={projects}
+    defaultProjectId={defaultProjectId}
+    user={user}
+    onDone={onDone}
+    task={activeTask}
+    parentTask={subtask ? rootTask : undefined}
+    onRootUpdated={setRootTask}
+    onOpenSubtask={setActiveSubtaskId}
+    onBackToParent={() => setActiveSubtaskId(null)}
+  />
+}
+
+/** فرم ساخت/ویرایش در قاب Figma 1722:29819. */
+function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, parentTask, onRootUpdated, onOpenSubtask, onBackToParent }: {
+  projects: TaskFormProjectOption[]
+  defaultProjectId?: string
+  user: CurrentUser
+  task?: Task
+  parentTask?: Task
+  onDone: () => void
+  onRootUpdated: (task: Task) => void
+  onOpenSubtask: (id: string) => void
+  onBackToParent: () => void
 }) {
   const t = useT()
   const router = useRouter()
@@ -56,31 +89,52 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
   const [following, setFollowing] = useState(task?.followers?.includes(user.name) ?? false)
   const [minutes, setMinutes] = useState(task?.timeSpentMinutes ?? 0)
   const [files, setFiles] = useState<string[]>([])
-  const [subtasks, setSubtasks] = useState<string[]>(task?.subtasks?.map(item=>item.title) ?? [])
+  const [subtasks, setSubtasks] = useState<Task[]>(task?.subtasks ?? [])
   const [subtaskTitle, setSubtaskTitle] = useState("")
+  const [columnOverride, setColumnOverride] = useState<{ projectId: string; id: string } | null>(null)
   const [recurrence,setRecurrence]=useState<TaskRecurrence>(task?.recurrence ?? {dates:[],count:1})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(false)
+  const [failedSignature, setFailedSignature] = useState<string | null>(null)
   const [showActivities, setShowActivities] = useState(false)
   const timer = useTaskTimer(minutes, setMinutes)
   const fileInput = useRef<HTMLInputElement>(null)
-  const initialTaskSignature = useRef(task ? JSON.stringify([
+  const [savedTaskSignature, setSavedTaskSignature] = useState(() => task ? JSON.stringify([
     task.projectId, task.title, task.description ?? "", task.startDate ?? "", task.dueDate ?? "", task.priority, task.status,
     task.tags ?? [], task.assigneeNames ?? [], task.isFavorite ?? false, task.followers?.includes(user.name) ?? false,
-    task.timeSpentMinutes ?? 0, task.recurrence ?? { dates: [], count: 1 }, task.subtasks?.map(item => item.title) ?? [],
+    task.timeSpentMinutes ?? 0, task.recurrence ?? { dates: [], count: 1 }, task.subtasks ?? [],
   ]) : null)
   const project = projects.find((option) => option.id === projectId)
   const selectedPriority = PRIORITIES.find((option) => option.value === priority)!
   const unset = t("newTask.unselected")
 
+  const initialColumnId = useSyncExternalStore(
+    (notify) => {
+      window.addEventListener("quire:task-board-columns-changed", notify)
+      window.addEventListener("storage", notify)
+      return () => {
+        window.removeEventListener("quire:task-board-columns-changed", notify)
+        window.removeEventListener("storage", notify)
+      }
+    },
+    () => {
+      const assignment = task && projectId ? readTaskBoardColumnAssignments()[task.id] : undefined
+      return assignment?.projectId === projectId ? assignment.columnId : task?.status ?? "todo"
+    },
+    () => task?.status ?? "todo",
+  )
+  const selectedColumnId = columnOverride?.projectId === projectId ? columnOverride.id : initialColumnId
+
   const currentTaskSignature = JSON.stringify([
     projectId, title, description, startDate, dueDate, priority, status, tags, assigneeNames, favorite, following,
     minutes, recurrence, subtasks,
   ])
-  const hasTaskChanges = Boolean(task && currentTaskSignature !== initialTaskSignature.current)
+  const hasTaskChanges = Boolean(task && (currentTaskSignature !== savedTaskSignature || selectedColumnId !== initialColumnId))
 
   async function saveChanges() {
-    if (!task || !hasTaskChanges || submitting || !title.trim() || !projectId) return
+    if (!task) return false
+    if (!hasTaskChanges) return true
+    if (submitting || !title.trim() || !projectId) return false
     setSubmitting(true)
     setError(false)
     const updated: Task = {
@@ -88,20 +142,49 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
       isFavorite: favorite,
       followers: following ? [...new Set([...(task.followers ?? []), user.name])] : (task.followers ?? []).filter(name => name !== user.name),
       timeSpentMinutes: minutes, recurrence,
-      subtasks: subtasks.map((name, index) => ({ ...task.subtasks?.[index], id: task.subtasks?.[index]?.id ?? `${task.id}-sub-${index}`, displayId: task.subtasks?.[index]?.displayId ?? "", title: name, priority: task.subtasks?.[index]?.priority ?? "none", status: task.subtasks?.[index]?.status ?? "todo" })),
+      ...(parentTask ? {} : { subtasks }),
     }
     try {
-      const saved = await updateTask({ id: updated.id, projectId: updated.projectId, title: updated.title, description: updated.description, startDate: updated.startDate, dueDate: updated.dueDate, priority: updated.priority, status: updated.status, tags: updated.tags ?? [], assigneeNames: updated.assigneeNames, followers: updated.followers ?? [], isFavorite: updated.isFavorite ?? false, timeSpentMinutes: updated.timeSpentMinutes ?? 0, recurrence: updated.recurrence, repeat: updated.repeat, subtasks: updated.subtasks }, { id: user.id, name: user.name })
+      const latest = await getTask(parentTask?.id ?? task.id)
+      if (!latest) throw new Error("Task not found")
+      if (parentTask && !latest.subtasks?.some((item) => item.id === updated.id)) throw new Error("Subtask not found")
+      const root = parentTask
+        ? { ...latest, subtasks: latest.subtasks?.map((item) => item.id === updated.id ? updated : item) ?? [] }
+        : {
+          ...updated,
+          subtasks: [
+            ...(latest.subtasks ?? []).filter((item) => !(task.subtasks ?? []).some((visible) => visible.id === item.id)),
+            ...subtasks,
+          ],
+        }
+      const saved = await updateTask({ id: root.id, projectId: root.projectId, title: root.title, description: root.description, startDate: root.startDate, dueDate: root.dueDate, priority: root.priority, status: root.status, tags: root.tags ?? [], assigneeNames: root.assigneeNames, followers: root.followers ?? [], isFavorite: root.isFavorite ?? false, timeSpentMinutes: root.timeSpentMinutes ?? 0, recurrence: root.recurrence, repeat: root.repeat, subtasks: root.subtasks }, { id: user.id, name: user.name })
       saveTaskDetails(saved)
+      onRootUpdated(saved)
+      if (selectedColumnId === "todo" || selectedColumnId === "in-progress" || selectedColumnId === "completed") {
+        writeTaskBoardColumnAssignment(task.id)
+      } else {
+        writeTaskBoardColumnAssignment(task.id, { projectId, columnId: selectedColumnId })
+      }
+      setSavedTaskSignature(currentTaskSignature)
+      setFailedSignature(null)
       setError(false)
-      showWorkspaceToast(t("workspace.updated").replace("{id}", task.displayId.replace(/^#/, "")))
-      onDone()
+      return true
     } catch {
       setError(true)
+      setFailedSignature(`${currentTaskSignature}:${selectedColumnId}`)
+      return false
     } finally {
       setSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (!task || !hasTaskChanges || submitting || !title.trim() || !projectId || failedSignature === `${currentTaskSignature}:${selectedColumnId}`) return
+    const timeout = window.setTimeout(() => { void saveChanges() }, 650)
+    return () => window.clearTimeout(timeout)
+    // saveChanges uses the form snapshot captured by this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task, currentTaskSignature, selectedColumnId, hasTaskChanges, submitting, title, projectId, failedSignature])
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -109,7 +192,10 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
     setSubmitting(true)
     setError(false)
     try {
-      await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map((title) => ({ title })) }, { id: user.id, name: user.name })
+      const created = await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map(({ title }) => ({ title })) }, { id: user.id, name: user.name })
+      if (selectedColumnId !== "todo" && selectedColumnId !== "in-progress" && selectedColumnId !== "completed") {
+        writeTaskBoardColumnAssignment(created.id, { projectId, columnId: selectedColumnId })
+      }
       router.refresh()
       onDone()
     } catch {
@@ -120,7 +206,14 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
 
   function addSubtask() {
     if (!subtaskTitle.trim()) return
-    setSubtasks((previous) => [...previous, subtaskTitle.trim()])
+    setSubtasks((previous) => [...previous, {
+      id: crypto.randomUUID(),
+      displayId: task ? `${task.displayId}-${Math.max(0, ...previous.map((item) => Number(item.displayId.split("-").at(-1)) || 0)) + 1}` : "",
+      projectId,
+      title: subtaskTitle.trim(),
+      priority: "none",
+      status: "todo",
+    }])
     setSubtaskTitle("")
   }
 
@@ -132,8 +225,12 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
           <span className="size-6 shrink-0 rounded-lg bg-[var(--task-workspace-soft)]" />
           <span className="hidden truncate text-sm sm:inline">{project?.organizationName}</span>
           <NewTaskAsset name="line25" className="rotate-[61.7deg]" />
+          {parentTask && <>
+            <button type="button" onClick={() => { void saveChanges().then((saved) => { if (saved) onBackToParent() }) }} className="max-w-40 truncate text-xs text-brand hover:underline" title={parentTask.title}>{parentTask.title}</button>
+            <NewTaskAsset name="line25" className="rotate-[61.7deg]" />
+          </>}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex min-w-0 items-center gap-1 text-[var(--task-workspace-secondary)]" aria-label={t("taskForm.project")}>
+            <DropdownMenuTrigger disabled={Boolean(parentTask)} className="flex min-w-0 items-center gap-1 text-[var(--task-workspace-secondary)]" aria-label={t("taskForm.project")}>
               <NewTaskAsset name="list-check3" /><span className="max-w-64 truncate">{project?.name ?? t("taskForm.project")}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
@@ -144,17 +241,17 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
           </DropdownMenu>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <DialogClose aria-label={t("taskDetail.close")} className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
-          {task && hasTaskChanges && <Button type="button" onClick={saveChanges} disabled={submitting || !title.trim() || !projectId} className="h-8 w-[115px] rounded-lg bg-brand px-1.5 text-xs font-semibold text-white hover:opacity-90">{t("taskDetail.save")}</Button>}
+          {!task && <Button type="submit" form="task-workspace-form" disabled={!title.trim() || !projectId || submitting} className="h-8 min-w-20 rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:opacity-90">{t("workspace.register")}</Button>}
+          <DialogClose aria-label={t("taskDetail.close")} onClick={() => { if (task && hasTaskChanges) void saveChanges() }} className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
         </div>
       </div>
       <div className="flex shrink-0 border-b border-border lg:hidden">
         <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`flex-1 py-2 ${!showActivities ? "border-b-2 border-brand" : ""}`}>{t("taskDetail.title")}</button>
         <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`flex-1 py-2 ${showActivities ? "border-b-2 border-brand" : ""}`}>{t("newTask.activities")}</button>
       </div>
-      {task && error && <p role="alert" className="p-2 text-error">{t("newTask.submitError")}</p>}
+      {error && <p role="alert" className="p-2 text-error">{t("newTask.submitError")}</p>}
       <div className="flex min-h-0 flex-1">
-        <form onSubmit={submit} className={`${showActivities ? "hidden lg:flex" : "flex"} min-w-0 flex-1 flex-col`}>
+        <form id="task-workspace-form" onSubmit={submit} className={`${showActivities ? "hidden lg:flex" : "flex"} min-w-0 flex-1 flex-col`}>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 sm:px-6">
             <div className="flex min-h-13 items-center justify-between gap-2 pt-3">
               <span className="text-sm text-[var(--task-workspace-muted)]">{task ? task.displayId : t("nav.newTask")}</span>
@@ -165,10 +262,7 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
               </div>
             </div>
             <div className="flex items-center gap-3 pt-2.5 pb-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger aria-label={t("newTask.status")} className="flex items-center gap-1"><NewTaskAsset name="frame122" />{status !== "todo" && <span className="text-xs text-text2">{t(status === "completed" ? "status.completed" : "status.inProgress")}</span>}</DropdownMenuTrigger>
-                <DropdownMenuContent><DropdownMenuRadioGroup value={status} onValueChange={(value) => setStatus(value as TaskStatus)}><DropdownMenuRadioItem value="todo">{t("status.todo")}</DropdownMenuRadioItem><DropdownMenuRadioItem value="in-progress">{t("status.inProgress")}</DropdownMenuRadioItem><DropdownMenuRadioItem value="completed">{t("status.completed")}</DropdownMenuRadioItem></DropdownMenuRadioGroup></DropdownMenuContent>
-              </DropdownMenu>
+              <TaskStatusPicker projectId={projectId} projectName={project?.name} selectedColumnId={selectedColumnId} onSelect={(columnId, baseStatus) => { setColumnOverride({ projectId, id: columnId }); if (baseStatus) setStatus(baseStatus) }} />
               <input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("taskForm.titlePlaceholder")} aria-label={t("taskForm.titlePlaceholder")} className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:text-[var(--task-workspace-muted)]" />
             </div>
             {!project && <p className="py-2 text-text2">{t("taskForm.noProjects")}</p>}
@@ -195,19 +289,18 @@ export function NewTaskDialog({ projects, defaultProjectId, user, onDone, task }
               <input ref={fileInput} type="file" multiple className="hidden" onChange={(event) => setFiles((previous) => [...new Set([...previous, ...Array.from(event.target.files ?? []).map((file) => file.name)])])} />
               {files.map((file) => <button key={file} type="button" onClick={() => setFiles((previous) => previous.filter((name) => name !== file))} aria-label={`${t("newTask.removeAttachment")} ${file}`} className="mt-2 block max-w-full truncate rounded bg-bg2 px-2 py-1 text-xs">{file} ×</button>)}
             </div>
-            <details className="border-y border-[var(--task-workspace-border)]">
+            {!parentTask && <details className="border-y border-[var(--task-workspace-border)]">
               <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-[var(--task-workspace-muted)]"><NewTaskAsset name="git-branch-line" />{t("taskDetail.subtasks")}<NewTaskAsset name="arrow-down-sline" className="ms-auto" /></summary>
               <div className="pb-3">
-                {subtasks.map((item, index) => <div key={`${index}-${item}`} className="flex items-center gap-2 py-2"><span className="size-3 rounded-full border border-border" /><span>{item}</span><button type="button" className="ms-auto" aria-label={t("newTask.removeSubtask")} onClick={() => setSubtasks((previous) => previous.filter((_, i) => i !== index))}>×</button></div>)}
+                {subtasks.map((item) => <div key={item.id} className="flex items-center gap-2 border-b border-border/50 py-1 last:border-b-0">
+                  <span className="size-3 shrink-0 rounded-full border border-border" />
+                  <button type="button" onClick={() => { void saveChanges().then((saved) => { if (saved) onOpenSubtask(item.id) }) }} className="min-w-0 flex-1 truncate rounded-md px-1 py-1.5 text-start text-sm hover:bg-bg2">{item.title}</button>
+                  <button type="button" className="shrink-0 rounded-md px-2 text-text3 hover:bg-bg2" aria-label={`${t("newTask.removeSubtask")} ${item.title}`} onClick={() => setSubtasks((previous) => previous.filter((candidate) => candidate.id !== item.id))}>×</button>
+                </div>)}
                 <div className="flex gap-2"><input value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addSubtask() } }} placeholder={t("newTask.subtaskPlaceholder")} aria-label={t("newTask.subtaskPlaceholder")} className="min-w-0 flex-1 rounded border border-border px-2 py-1 outline-none" /><Button type="button" variant="ghost" onClick={addSubtask} disabled={!subtaskTitle.trim()}>{t("projectTabs.add")}</Button></div>
               </div>
-            </details>
+            </details>}
           </div>
-          {!task && <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-[var(--task-workspace-border)] p-3">
-            {error && <p role="alert" className="me-auto text-xs text-error">{t("newTask.submitError")}</p>}
-            <Button type="button" variant="ghost" onClick={onDone}>{t("taskForm.cancel")}</Button>
-            <Button type="submit" disabled={!title.trim() || !projectId || submitting} className="bg-[var(--mini-bar-bg)] text-white">{t("taskForm.submit")}</Button>
-          </footer>}
         </form>
         <div className={`${showActivities ? "flex" : "hidden lg:flex"} min-h-0 flex-1 flex-col lg:flex-none`}>
           <NewTaskActivity user={user} members={project?.members ?? []} following={following} onFollowingChange={setFollowing} />

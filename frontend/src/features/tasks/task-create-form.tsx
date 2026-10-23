@@ -29,7 +29,7 @@ export function TaskCreateForm({
   return (
     <TaskForm
       projects={projects}
-      submitLabelKey="taskForm.submit"
+      submitLabelKey="workspace.register"
       onCancel={finish}
       onSubmit={async (values) => {
         await createTask({

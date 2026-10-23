@@ -87,9 +87,9 @@ export type Task = {
   status: TaskStatus
   /** برچسب‌های تسک (Tag) — فعلاً فقط در فرم ساخت تسک ست می‌شود و هیچ نمایی آن را نشان نمی‌دهد */
   tags?: string[]
-  /** توضیحات تسک — فعلاً فقط در فرم ساخت تسک ست می‌شود (صفحه‌ی جزئیات تسک هنوز وجود ندارد) */
+  /** توضیحات تسک یا زیرتسک، قابل ویرایش در جزئیات مشترک. */
   description?: string
-  /** زیر-تسک‌ها (Sublist) — فقط برای نمای Tree استفاده می‌شود، حداکثر یک سطح در مدل فعلی */
+  /** زیرتسک‌ها در جزئیات تسک مادر و نمای Tree دیده می‌شوند؛ حداکثر یک سطح در مدل فعلی. */
   subtasks?: Task[]
   /** نام اعضایی که این تسک را دنبال می‌کنند — مثل `assigneeNames` با نام مچ می‌شود، نه id. */
   followers?: string[]
@@ -151,6 +151,22 @@ export type Organization = {
   /** نمای تجمیعی پروژه‌های معاونت‌ها برای گزارش‌ها */
   projects: ProjectRef[]
   taskCount: number
+}
+
+export type OrganizationActivityKind = "task_created" | "task_status_changed" | "comment"
+
+export type OrganizationActivity = {
+  id: string
+  /** SQLite rowid used as a stable cursor while older pages load. */
+  cursor: number
+  organizationId: string
+  actorId: string
+  actorName: string
+  actorAvatarUrl?: string
+  taskId?: string
+  kind: OrganizationActivityKind
+  details: { title?: string; from?: TaskStatus; to?: TaskStatus; text?: string }
+  createdAt: string
 }
 
 export type NotificationStatus = "unread" | "read"

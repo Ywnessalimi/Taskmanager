@@ -15,7 +15,8 @@ import {
 } from "@/features/projects/views/board-view"
 import { PriorityDot, STATUS_LABEL } from "@/features/projects/task-display"
 import { TagPickerDialog } from "@/features/tasks/tag-picker-dialog"
-import { createTask } from "@/lib/api/tasks"
+import { createTask, getTask, updateTask as persistTask } from "@/lib/api/tasks"
+import { saveTaskDetails } from "@/features/tasks/local-task-details"
 import { useT } from "@/components/providers/locale-provider"
 import type { Task } from "@/lib/api/types"
 
@@ -42,18 +43,79 @@ function TagsField({ tags, onChange }: { tags: string[]; onChange: (value: strin
 
 function TreeRow({
   task,
+  parentTask,
   depth,
   projectId,
   onUpdate,
 }: {
   task: Task
+  parentTask?: Task
   depth: number
   projectId?: string
   onUpdate: (taskId: string, patch: Partial<Task>) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [addingSubtask, setAddingSubtask] = useState(false)
+  const [subtaskTitle, setSubtaskTitle] = useState("")
+  const [savingSubtask, setSavingSubtask] = useState(false)
+  const [subtaskError, setSubtaskError] = useState(false)
+  const subtaskInputRef = useRef<HTMLInputElement>(null)
+  const t = useT()
   const panel = useTaskPanel()
   const hasChildren = Boolean(task.subtasks && task.subtasks.length > 0)
+
+  useEffect(() => {
+    if (addingSubtask) subtaskInputRef.current?.focus()
+  }, [addingSubtask])
+
+  async function saveNewSubtask(event: FormEvent) {
+    event.preventDefault()
+    const title = subtaskTitle.trim()
+    if (!title || parentTask || !panel || savingSubtask) return
+    setSavingSubtask(true)
+    setSubtaskError(false)
+    try {
+      const latest = await getTask(task.id)
+      if (!latest) throw new Error("Parent task not found")
+      const subtasks = latest.subtasks ?? []
+      const nextNumber = Math.max(0, ...subtasks.map((item) => Number(item.displayId.split("-").at(-1)) || 0)) + 1
+      const saved = await persistTask({
+        id: latest.id,
+        projectId: latest.projectId,
+        title: latest.title,
+        description: latest.description,
+        startDate: latest.startDate,
+        dueDate: latest.dueDate,
+        priority: latest.priority,
+        status: latest.status,
+        tags: latest.tags ?? [],
+        assigneeNames: latest.assigneeNames,
+        followers: latest.followers ?? [],
+        isFavorite: latest.isFavorite ?? false,
+        timeSpentMinutes: latest.timeSpentMinutes ?? 0,
+        recurrence: latest.recurrence,
+        repeat: latest.repeat,
+        subtasks: [...subtasks, {
+          id: crypto.randomUUID(),
+          displayId: `${latest.displayId}-${nextNumber}`,
+          projectId: latest.projectId,
+          title,
+          priority: "none",
+          status: "todo",
+          tags: [],
+        }],
+      }, { id: panel.user.id, name: panel.user.name })
+      onUpdate(task.id, { subtasks: saved.subtasks })
+      saveTaskDetails(saved)
+      setOpen(true)
+      setAddingSubtask(false)
+      setSubtaskTitle("")
+    } catch {
+      setSubtaskError(true)
+    } finally {
+      setSavingSubtask(false)
+    }
+  }
 
   /** ردیف فعلاً انتخاب‌شده در پنل — تا کاربر بداند پنل کنار دستش مال کدام تسک است. */
   const selected = panel?.panel?.kind === "detail" && panel.panel.task.id === task.id
@@ -62,7 +124,7 @@ function TreeRow({
     <div>
       <div
         className={`flex items-center gap-2 ${selected ? "bg-bg2" : ""}`}
-        style={{ paddingInlineStart: depth * 20 }}
+        style={{ paddingInlineStart: depth * 16 }}
       >
         {hasChildren ? (
           <button
@@ -83,11 +145,10 @@ function TreeRow({
         {/* کلیک روی خود ردیف پنل جزئیات تسک را باز می‌کند (نه ناوبری به صفحه‌ی دیگر). */}
         <button
           type="button"
-          onClick={() => panel?.openTaskDetail(task)}
-          className="flex min-w-0 flex-1 items-center gap-2 py-2 text-start"
+          onClick={() => panel?.openTaskDetail(task, parentTask)}
+          className="flex min-w-0 flex-1 items-center gap-2 py-2.5 text-start"
         >
           <PriorityDot priority={task.priority} />
-          <span className="w-12 shrink-0 text-xs text-text3">{task.displayId}</span>
           <span className="min-w-0 flex-1 truncate text-sm text-foreground">{task.title}</span>
           <span className="shrink-0 text-xs text-text2">{STATUS_LABEL[task.status]}</span>
         </button>
@@ -97,17 +158,27 @@ function TreeRow({
         <AssigneeField
           task={task}
           projectId={projectId}
+          avatarOnly
           onChange={(names) => onUpdate(task.id, { assigneeNames: names.length > 0 ? names : undefined })}
         />
+        {!parentTask && <button type="button" onClick={() => { setSubtaskError(false); setAddingSubtask(true); setOpen(true) }} aria-label={t("taskForm.addSubtask")} title={t("taskForm.addSubtask")} className={fieldIconTriggerClass}>
+          <RemixIcon name="git-branch-line" className="text-base" />
+        </button>}
       </div>
 
       {hasChildren && open && (
         <div className="border-t border-border">
           {task.subtasks!.map((subtask) => (
-            <TreeRow key={subtask.id} task={subtask} depth={depth + 1} projectId={projectId} onUpdate={onUpdate} />
+            <TreeRow key={subtask.id} task={subtask} parentTask={task} depth={depth + 1} projectId={projectId} onUpdate={onUpdate} />
           ))}
         </div>
       )}
+      {!parentTask && addingSubtask && <form onSubmit={saveNewSubtask} className="flex min-h-9 flex-wrap items-center gap-2 border-t border-border pe-2" style={{ paddingInlineStart: 16 }}>
+        <RemixIcon name="git-branch-line" className="shrink-0 text-base text-text3" />
+        <input ref={subtaskInputRef} value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { setAddingSubtask(false); setSubtaskTitle("") } }} placeholder={t("newTask.subtaskPlaceholder")} aria-label={t("newTask.subtaskPlaceholder")} className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none" />
+        <button type="submit" disabled={!subtaskTitle.trim() || savingSubtask} className="text-xs text-link disabled:opacity-50">{savingSubtask ? "…" : t("workspace.register")}</button>
+        {subtaskError && <span role="alert" className="w-full pb-1 text-xs text-error">{t("taskForm.subtaskError")}</span>}
+      </form>}
     </div>
   )
 }
@@ -135,6 +206,15 @@ export function TreeView({ tasks: initialTasks, projectId }: { tasks: Task[]; pr
   useEffect(() => {
     if (addingAfter !== null) inputRef.current?.focus()
   }, [addingAfter])
+
+  useEffect(() => {
+    const syncSavedTask = (event: Event) => {
+      const saved = (event as CustomEvent<Task>).detail
+      setTasks((previous) => previous.map((task) => task.id === saved.id ? saved : task))
+    }
+    window.addEventListener("task-details-changed", syncSavedTask)
+    return () => window.removeEventListener("task-details-changed", syncSavedTask)
+  }, [])
 
   function updateTask(taskId: string, patch: Partial<Task>) {
     setTasks((prev) =>
@@ -205,9 +285,9 @@ export function TreeView({ tasks: initialTasks, projectId }: { tasks: Task[]; pr
       {tasks.map((task, index) => (
         <div key={task.id}>
           <div className={index > 0 ? "border-t border-border" : ""}><TreeRow task={task} depth={0} projectId={projectId} onUpdate={updateTask} /></div>
-          {quickAddRow(task.id)}
         </div>
       ))}
+      {quickAddRow(tasks[tasks.length - 1].id)}
     </div>
   )
 }

@@ -9,6 +9,6 @@
 
 ## وابستگی‌ها و مصرف‌کنندگان
 
-- `ProjectSectionTabs` از `lib/api/project-pages.ts` برای ذخیرهٔ سند و چت SQLite استفاده می‌کند؛ نام فرستنده از کاربر جاری می‌آید. مسیر عمومی `/messages` بدون `projectId` همچنان محلی است.
-- `ProjectSectionTabs` در `features/projects` این صفحه‌ها را در پروژه و `/home/projects/MyTasks` نشان می‌دهد؛ `src/app/(tabs)/messages/page.tsx` هم از `ChatPage` برای مسیر `/messages` استفاده می‌کند.
+- `ProjectSectionTabs` از `lib/api/project-pages.ts` برای ذخیرهٔ سند و چت SQLite استفاده می‌کند؛ نام فرستنده از کاربر جاری می‌آید. چت فقط در زمینهٔ پروژه و «تسک‌های من» در دسترس است.
+- `ProjectSectionTabs` در `features/projects` این صفحه‌ها را در پروژه و `/home/projects/MyTasks` نشان می‌دهد؛ صفحهٔ عمومی `/messages` حذف شده است.
 - برای هر پروژه فقط یک سند و یک چت ساخته می‌شود؛ API `project_pages` این محدودیت را هم در پایگاه داده اعمال می‌کند. پیام‌های تازه برای badge نارنجی نخوانده هر پنج ثانیه بررسی می‌شوند (بدون WebSocket).

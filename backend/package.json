@@ -10,6 +10,7 @@
     "dev": "node --env-file-if-exists=.env.local server.js",
     "start": "node --env-file-if-exists=.env.local server.js",
     "setup:admin": "node setup-admin.js",
+    "seed:demo": "node seed-demo.js",
     "test": "node --test"
   }
 }

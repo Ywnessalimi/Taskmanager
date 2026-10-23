@@ -45,10 +45,13 @@ import { getTickets } from "@/features/tickets/ticket-data"
 import type { LocalTicket } from "@/features/tickets/local-created-tickets"
 import { saveTicket } from "@/lib/api/ticket-comments"
 import { getCurrentUser } from "@/lib/api/users"
-import { linkTicketToTask, readTicketTaskLinks, type TicketTaskLinks } from "@/features/tickets/ticket-task-links"
+import { linkTicketToTask, readTicketTaskLinks, unlinkTicketFromTask, type TicketTaskLinks } from "@/features/tickets/ticket-task-links"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
+import { PROJECT_BOARD_BASE_COLUMNS, readProjectBoardColumns, readTaskBoardColumnAssignments, writeProjectBoardColumns, writeTaskBoardColumnAssignment, type StoredBoardColumn } from "@/features/projects/board-column-storage"
+import { backendRequest } from "@/lib/api/backend-client"
+import { showWorkspaceToast } from "@/lib/workspace-toast"
 
-type BoardColumn = { id: string; label: string; color: string; icon: string }
+type BoardColumn = StoredBoardColumn & { projectId?: string; projectName?: string }
 
 const COLUMN_ICONS = [
   { id: "figma-progress", label: "board.iconProgress" },
@@ -99,8 +102,11 @@ const TICKET_USER_AVATARS: Record<string, string> = {
 
 const boardCollisionDetection: CollisionDetection = (args) => {
   if (args.active.data.current?.kind === "ticket") {
-    const taskTargets = args.droppableContainers.filter((container) => container.data.current?.kind === "ticket-target")
-    return pointerWithin({ ...args, droppableContainers: taskTargets })
+    const ticketDropTargets = args.droppableContainers.filter((container) => {
+      const kind = container.data.current?.kind
+      return kind === "ticket-target" || kind === "column"
+    })
+    return pointerWithin({ ...args, droppableContainers: ticketDropTargets })
   }
   const taskTargets = args.droppableContainers.filter((container) => container.data.current?.kind !== "ticket-target")
   return rectIntersection({ ...args, droppableContainers: taskTargets })
@@ -131,6 +137,26 @@ function buildInitialOrder(tasks: Task[]): Record<string, string[]> {
   for (const task of tasks) {
     order[task.status] ??= []
     order[task.status].push(task.id)
+  }
+  return order
+}
+
+function buildOrderForColumns(
+  tasks: Task[],
+  columns: BoardColumn[],
+  assignments: ReturnType<typeof readTaskBoardColumnAssignments>,
+  fallbackProjectId?: string,
+): Record<string, string[]> {
+  const order: Record<string, string[]> = Object.fromEntries(columns.map((column) => [column.id, []]))
+  for (const task of tasks) {
+    const assignment = assignments[task.id]
+    const taskProjectId = resolveProjectId(task, fallbackProjectId)
+    const assignedColumn = assignment && assignment.projectId === taskProjectId
+      ? columns.find((column) => column.id === assignment.columnId && (!column.projectId || column.projectId === taskProjectId))
+      : undefined
+    const columnId = assignedColumn?.id ?? task.status
+    order[columnId] ??= []
+    order[columnId].push(task.id)
   }
   return order
 }
@@ -214,7 +240,8 @@ function BoardTicketCard({
       data-ticket-drop-id={parentTaskId ? ticket.id : undefined}
       data-ticket-drop-task={parentTaskId}
       aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
-      className={`flex min-w-0 touch-none items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+      data-board-card
+      className={`flex min-w-0 touch-pan-x items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
     >
       <AvatarGroup className="shrink-0 rtl:space-x-reverse">
         <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
@@ -332,7 +359,7 @@ function PriorityField({ value, onChange }: { value: TaskPriority; onChange: (va
 }
 
 /** کلیک روی پیل/آیکون مسئول مودال چندانتخابی مسئولان را باز می‌کند — لیست اعضا از `TaskPanelProvider` (همان گزینه‌های فرم تسک) می‌آید. */
-export function AssigneeField({ task, projectId, onChange }: { task: Task; projectId?: string; onChange: (names: string[]) => void }) {
+export function AssigneeField({ task, projectId, onChange, avatarOnly = false }: { task: Task; projectId?: string; onChange: (names: string[]) => void; avatarOnly?: boolean }) {
   const t = useT()
   const panel = useTaskPanel()
   const resolvedProjectId = resolveProjectId(task, projectId)
@@ -345,7 +372,19 @@ export function AssigneeField({ task, projectId, onChange }: { task: Task; proje
       assigneeNames={assigneeNames}
       onChange={onChange}
       trigger={
-        assigneeNames.length > 1 ? (
+        avatarOnly && assigneeNames.length > 0 ? (
+          <DialogTrigger onPointerDown={stop} onClick={stop} className="flex w-fit shrink-0 items-center" aria-label={`${t("taskForm.assign")}: ${assigneeNames.join("، ")}`}>
+            <AvatarGroup className="-space-x-1 rtl:space-x-reverse">
+              {assigneeNames.map((name) => {
+                const member = members.find((candidate) => candidate.name === name)
+                return <Avatar key={name} size="sm" title={name}>
+                  {member?.avatarUrl && <AvatarImage src={member.avatarUrl} alt={name} />}
+                  <AvatarFallback className="text-[10px]">{name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+              })}
+            </AvatarGroup>
+          </DialogTrigger>
+        ) : assigneeNames.length > 1 ? (
           <DialogTrigger onPointerDown={stop} onClick={stop} className="flex w-fit shrink-0 items-center" aria-label={t("taskForm.assign")}>
             <AvatarGroup>
               {assigneeNames.slice(0, 3).map((name) => {
@@ -505,7 +544,8 @@ function SortableTaskCard({
       {...attributes}
       {...listeners}
       onClick={() => panel?.openTaskDetail(task)}
-      className={`flex touch-none flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
+      data-board-card
+      className={`flex touch-pan-x flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
@@ -578,7 +618,7 @@ function Column({
   onAddCustomColor: (color: string) => void
   figmaStyle?: boolean
 }) {
-  const { setNodeRef } = useDroppable({ id: column.id })
+  const { setNodeRef } = useDroppable({ id: column.id, data: { kind: "column", columnId: column.id } })
   const t = useT()
   const itemCount = taskIds.length + ticketIds.length
   const columnLabel = column.id === "todo" ? t("status.todo") : column.id === "in-progress" ? t("status.inProgress") : column.id === "completed" ? t("status.completed") : column.id === "cancelled" ? t("board.cancelled") : column.label
@@ -599,7 +639,7 @@ function Column({
               style={{ backgroundColor: column.color }}
             >
               <ColumnIcon icon={column.icon} />
-              <span className="truncate text-xs font-bold">{columnLabel}</span>
+              <span className="truncate text-xs font-bold">{columnLabel}{column.projectName && <span className="ms-1 font-medium opacity-80">· {column.projectName}</span>}</span>
               <span className="flex h-[21px] min-w-5 shrink-0 items-center justify-center rounded-[16px] bg-white px-1.5 py-1 text-xs font-semibold leading-[13px] text-black">{itemCount}</span>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-3">
@@ -840,12 +880,14 @@ function AddColumnTile({
 export function BoardView({
   tasks: initialTasks,
   projectId,
+  projectName,
   figmaStyle = false,
   includeTickets = false,
   ticketAssignees = [],
 }: {
   tasks: Task[]
   projectId?: string
+  projectName?: string
   figmaStyle?: boolean
   includeTickets?: boolean
   ticketAssignees?: Member[]
@@ -855,28 +897,81 @@ export function BoardView({
   const [tasks, setTasks] = useState(initialTasks)
   const [tickets, setTickets] = useState<LocalTicket[]>([])
   const [ticketTaskLinks, setTicketTaskLinks] = useState<TicketTaskLinks>({})
-  const [columns, setColumns] = useState<BoardColumn[]>(() => figmaStyle ? [
-    { id: "todo", label: "در انتظار", color: "var(--project-status-blue)", icon: "time-line" },
-    { id: "in-progress", label: "در حال انجام", color: "var(--project-status-green)", icon: "figma-progress" },
-    { id: "completed", label: "انجام‌شده", color: "var(--project-status-blue)", icon: "checkbox-circle-line" },
-    { id: "cancelled", label: "لغو شده", color: "var(--project-status-red)", icon: "pause-circle-line" },
-  ] : DEFAULT_COLUMNS)
+  const [columns, setColumns] = useState<BoardColumn[]>(() => figmaStyle ? PROJECT_BOARD_BASE_COLUMNS : DEFAULT_COLUMNS)
   const [customColors, setCustomColors] = useState<string[]>([])
   const [order, setOrder] = useState<Record<string, string[]>>(() => ({ ...buildInitialOrder(initialTasks), ...(figmaStyle ? { cancelled: [] } : {}) }))
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
   const [ticketTargetTaskId, setTicketTargetTaskId] = useState<string | null>(null)
   const [ticketTargetIndex, setTicketTargetIndex] = useState<number | null>(null)
-  const nextColumnId = useRef(1)
+  const dragStartOrder = useRef<Record<string, string[]>>({})
+  const boardPan = useRef<{ pointerId: number; x: number; scrollLeft: number; dragging: boolean } | null>(null)
   const panel = useTaskPanel()
+  const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
+  const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
+  const tasksByIdRef = useRef(tasksById)
+  const initialTasksSignature = JSON.stringify(initialTasks.map((task) => [
+    task.id,
+    task.status,
+    resolveProjectId(task, projectId),
+    (task as Partial<MyTask>).projectName ?? "",
+  ]))
+  const initialTasksRef = useRef(initialTasks)
+
+  useEffect(() => {
+    initialTasksRef.current = initialTasks
+  }, [initialTasks])
+
+  useEffect(() => {
+    tasksByIdRef.current = tasksById
+  }, [tasksById])
+
+  useEffect(() => {
+    const baseColumns: BoardColumn[] = figmaStyle ? PROJECT_BOARD_BASE_COLUMNS : DEFAULT_COLUMNS
+    const projects = projectId
+      ? [{ id: projectId, name: projectName ?? "" }]
+      : Array.from(new Map(initialTasksRef.current.flatMap((task) => {
+        const id = resolveProjectId(task)
+        return id ? [[id, (task as Partial<MyTask>).projectName ?? ""] as const] : []
+      })).entries()).map(([id, name]) => ({ id, name }))
+    const customColumns = projects.flatMap(({ id, name }) => readProjectBoardColumns(id).map((column) => ({
+      ...column,
+      projectId: id,
+      ...(projectId ? {} : { projectName: name }),
+    })))
+    const nextColumns = [...baseColumns, ...customColumns]
+    setColumns(nextColumns)
+    setTasks(initialTasksRef.current)
+    setOrder(buildOrderForColumns(initialTasksRef.current, nextColumns, readTaskBoardColumnAssignments(), projectId))
+  }, [figmaStyle, initialTasksSignature, projectId, projectName])
 
   useEffect(()=>{
     const refresh=()=>{setTasks(previous=>previous.map(task=>{try{return readTaskDetails(task)}catch{return task}}))}
-    const changed=(event:Event)=>{const task=(event as CustomEvent<Task>).detail;setTasks(previous=>previous.map(item=>item.id===task.id?task:item));setOrder(previous=>{const column=Object.keys(previous).find(key=>previous[key].includes(task.id));if(!column||column===task.status||!["todo","in-progress","completed"].includes(column))return previous;return {...previous,[column]:previous[column].filter(id=>id!==task.id),[task.status]:[...(previous[task.status]??[]).filter(id=>id!==task.id),task.id]}})}
+    const changed=(event:Event)=>{
+      const task=(event as CustomEvent<Task>).detail
+      const previousTask = tasksByIdRef.current.get(task.id)
+      tasksByIdRef.current = new Map(tasksByIdRef.current).set(task.id, task)
+      setTasks(previous=>previous.map(item=>item.id===task.id?task:item))
+      if(previousTask && previousTask.status !== task.status){
+        const assignment = readTaskBoardColumnAssignments()[task.id]
+        if (assignment) writeTaskBoardColumnAssignment(task.id)
+        setOrder(previous=>{
+          const column=Object.keys(previous).find(key=>previous[key].includes(task.id))
+          if(!column||column===task.status)return previous
+          return {...previous,[column]:previous[column].filter(id=>id!==task.id),[task.status]:[...(previous[task.status]??[]).filter(id=>id!==task.id),task.id]}
+        })
+      }
+    }
     refresh()
     window.addEventListener("task-details-changed",changed)
     return()=>window.removeEventListener("task-details-changed",changed)
   },[])
+
+  useEffect(() => {
+    const refreshOrder = () => setOrder(buildOrderForColumns(tasksByIdRef.current.size ? [...tasksByIdRef.current.values()] : initialTasksRef.current, columns, readTaskBoardColumnAssignments(), projectId))
+    window.addEventListener("quire:task-board-columns-changed", refreshOrder)
+    return () => window.removeEventListener("quire:task-board-columns-changed", refreshOrder)
+  }, [columns, projectId])
 
   useEffect(() => {
     if (!includeTickets) return
@@ -898,8 +993,6 @@ export function BoardView({
     }
   }, [includeTickets, locale, projectId])
 
-  const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
-  const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
   const { attachedTicketsByTask, attachedTicketIds } = useMemo(() => {
     const byTask = new Map<string, Array<{ ticket: LocalTicket; index: number }>>()
     const attachedIds = new Set<string>()
@@ -957,6 +1050,28 @@ export function BoardView({
     setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)))
   }
 
+  async function updateTaskStatus(taskId: string, status: Task["status"], previousOrder: Record<string, string[]>) {
+    const previous = tasksById.get(taskId)
+    if (!previous) return
+    const previousAssignment = readTaskBoardColumnAssignments()[taskId]
+    writeTaskBoardColumnAssignment(taskId)
+    if (previous.status === status) return
+    setTasks((items) => items.map((task) => task.id === taskId ? { ...task, status } : task))
+    try {
+      const saved = await backendRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      })
+      setTasks((items) => items.map((task) => task.id === taskId ? { ...task, ...saved } : task))
+      window.dispatchEvent(new CustomEvent("task-details-changed", { detail: saved }))
+    } catch (error) {
+      setTasks((items) => items.map((task) => task.id === taskId ? previous : task))
+      if (previousAssignment) writeTaskBoardColumnAssignment(taskId, previousAssignment)
+      setOrder(previousOrder)
+      showWorkspaceToast(error instanceof Error ? error.message : "تغییر وضعیت تسک انجام نشد.")
+    }
+  }
+
   function updateTicketAssignee(ticketId: string, member?: Member) {
     const ticket = ticketsById.get(ticketId)
     if (!ticket) return
@@ -974,12 +1089,37 @@ export function BoardView({
     }).catch(() => undefined)
   }
 
+  function updateTicketStatus(ticketId: string, status: LocalTicket["status"]) {
+    const ticket = ticketsById.get(ticketId)
+    if (!ticket || ticket.status === status) return
+    const updated = { ...ticket, status }
+    setTickets((previous) => previous.map((item) => item.id === ticketId ? updated : item))
+    void getCurrentUser().then(async (user) => {
+      await saveTicket(ticketId, updated, { id: user.id, name: user.name, avatarUrl: user.avatarUrl })
+      window.dispatchEvent(new Event("tickets-changed"))
+    }).catch(() => {
+      setTickets((previous) => previous.map((item) => item.id === ticketId ? ticket : item))
+    })
+  }
+
   function updateColumnColor(columnId: string, color: string) {
-    setColumns((prev) => prev.map((column) => (column.id === columnId ? { ...column, color } : column)))
+    const next = columns.map((column) => (column.id === columnId ? { ...column, color } : column))
+    setColumns(next)
+    persistProjectColumns(next)
   }
 
   function updateColumnIcon(columnId: string, icon: string) {
-    setColumns((prev) => prev.map((column) => (column.id === columnId ? { ...column, icon } : column)))
+    const next = columns.map((column) => (column.id === columnId ? { ...column, icon } : column))
+    setColumns(next)
+    persistProjectColumns(next)
+  }
+
+  function persistProjectColumns(next: BoardColumn[]) {
+    const projectIds = new Set(next.flatMap((column) => column.projectId ? [column.projectId] : []))
+    if (projectId) projectIds.add(projectId)
+    for (const id of projectIds) {
+      writeProjectBoardColumns(id, next.filter((column) => column.projectId === id).map(({ id: columnId, label, color, icon }) => ({ id: columnId, label, color, icon })))
+    }
   }
 
   function addCustomColor(color: string) {
@@ -988,6 +1128,7 @@ export function BoardView({
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id))
+    dragStartOrder.current = order
     setTicketTargetTaskId(null)
     setTicketTargetIndex(null)
   }
@@ -995,7 +1136,8 @@ export function BoardView({
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
     if (active.data.current?.kind === "ticket") {
-      setDragOverColumnId(null)
+      const columnId = over?.data.current?.kind === "column" ? String(over.data.current.columnId) : null
+      setDragOverColumnId(columnId)
       const taskId = over?.data.current?.kind === "ticket-target" ? String(over.data.current.taskId) : null
       const ticketId = String(active.data.current.ticketId)
       setTicketTargetTaskId(taskId)
@@ -1045,6 +1187,15 @@ export function BoardView({
       if (taskId && ticketsById.has(ticketId)) {
         const index = getTicketInsertionIndex(taskId, ticketId, active.rect.current.translated)
         setTicketTaskLinks(linkTicketToTask(ticketId, taskId, index, ticketTaskLinks))
+      } else if (over?.data.current?.kind === "column" && ticketsById.has(ticketId)) {
+        const columnId = String(over.data.current.columnId)
+        const targetColumn = columns.find((column) => column.id === columnId)
+        if (targetColumn?.projectId) {
+          showWorkspaceToast(`ستون «${targetColumn.label}» متعلق به پروژهٔ «${targetColumn.projectName ?? projectName ?? ""}» است و برای تیکت بدون پروژه قابل استفاده نیست.`)
+        } else if (STATUS_COLUMN_IDS.has(columnId)) {
+          setTicketTaskLinks(unlinkTicketFromTask(ticketId, ticketTaskLinks))
+          updateTicketStatus(ticketId, columnId as LocalTicket["status"])
+        }
       }
       return
     }
@@ -1056,6 +1207,17 @@ export function BoardView({
     const container = findContainer(order, overId)
     if (!container) return
 
+    const targetColumn = columns.find((column) => column.id === container)
+    const task = tasksById.get(activeTaskId)
+    if (!task) return
+    const taskProjectId = resolveProjectId(task, projectId)
+    if (targetColumn?.projectId && targetColumn.projectId !== taskProjectId) {
+      setOrder(dragStartOrder.current)
+      const taskProjectName = (task as Partial<MyTask>).projectName ?? projectName ?? ""
+      showWorkspaceToast(`ستون «${targetColumn.label}» در پروژهٔ «${taskProjectName}» وجود ندارد.`)
+      return
+    }
+
     setOrder((prev) => {
       const items = prev[container]
       const activeIndex = items.indexOf(activeTaskId)
@@ -1065,14 +1227,44 @@ export function BoardView({
     })
 
     if (STATUS_COLUMN_IDS.has(container)) {
-      updateTask(activeTaskId, { status: container as Task["status"] })
+      void updateTaskStatus(activeTaskId, container as Task["status"], dragStartOrder.current)
+    } else if (taskProjectId) {
+      writeTaskBoardColumnAssignment(activeTaskId, { projectId: taskProjectId, columnId: container })
     }
   }
 
   function createColumn(label: string, color: string, icon: string) {
-    const id = `custom-${nextColumnId.current++}`
-    setColumns((prev) => [...prev, { id, label, color, icon }])
+    const id = `custom-${projectId ?? "workspace"}-${crypto.randomUUID()}`
+    const next = [...columns, { id, label, color, icon, ...(projectId ? { projectId } : {}) }]
+    setColumns(next)
+    persistProjectColumns(next)
     setOrder((prev) => ({ ...prev, [id]: [] }))
+  }
+
+  function startBoardPan(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse" || event.button !== 0 || activeId) return
+    const target = event.target as Element
+    if (target.closest("[data-board-card], button, a, input, textarea, select, [role='button']")) return
+    boardPan.current = { pointerId: event.pointerId, x: event.clientX, scrollLeft: event.currentTarget.scrollLeft, dragging: false }
+  }
+
+  function moveBoardPan(event: React.PointerEvent<HTMLDivElement>) {
+    const pan = boardPan.current
+    if (!pan || pan.pointerId !== event.pointerId) return
+    const distance = event.clientX - pan.x
+    if (!pan.dragging && Math.abs(distance) < 5) return
+    if (!pan.dragging) {
+      pan.dragging = true
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }
+    event.preventDefault()
+    event.currentTarget.scrollLeft = pan.scrollLeft - distance
+  }
+
+  function stopBoardPan(event: React.PointerEvent<HTMLDivElement>) {
+    if (boardPan.current?.pointerId !== event.pointerId) return
+    boardPan.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
   return (
@@ -1090,7 +1282,7 @@ export function BoardView({
         setTicketTargetIndex(null)
       }}
     >
-      <div data-slot="board-scroll" className={figmaStyle ? "-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto pb-2"}>
+      <div data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto touch-pan-x px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto touch-pan-x pb-2"}>
       <div className={figmaStyle ? "flex w-max min-w-full gap-6 overflow-visible py-2" : "flex w-max min-w-full gap-4"}>
         {columns.map((column) => (
           <Column
@@ -1109,7 +1301,7 @@ export function BoardView({
             ticketTargetIndex={ticketTargetIndex}
             projectId={projectId}
             isDragOver={dragOverColumnId === column.id}
-            onAddTask={() => { if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/tasks/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`); else panel?.openNewTask() }}
+            onAddTask={() => { if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/tasks/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`); else panel?.openNewTask(projectId) }}
             onUpdateTask={updateTask}
             onColorChange={(color) => updateColumnColor(column.id, color)}
             onIconChange={(icon) => updateColumnIcon(column.id, icon)}
@@ -1118,7 +1310,7 @@ export function BoardView({
             figmaStyle={figmaStyle}
           />
         ))}
-        <AddColumnTile onCreate={createColumn} customColors={customColors} onAddCustomColor={addCustomColor} figmaStyle={figmaStyle} />
+        {projectId && <AddColumnTile onCreate={createColumn} customColors={customColors} onAddCustomColor={addCustomColor} figmaStyle={figmaStyle} />}
       </div>
       </div>
 

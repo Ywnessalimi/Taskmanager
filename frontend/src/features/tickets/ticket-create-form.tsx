@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMe
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NewTaskAsset } from "@/features/tasks/new-task-assets"
 import { MobileTaskAsset } from "@/features/tasks/mobile-task-assets"
-import { WorkspaceActionBar } from "@/components/ui/workspace-action-bar"
+import { Button } from "@/components/ui/button"
 import { displayId, showWorkspaceToast } from "@/lib/workspace-toast"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { NewTaskActivity } from "@/features/tasks/new-task-activity"
@@ -56,9 +56,10 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
   const [following, setFollowing] = useState(ticket?.followers?.includes(user.id) ?? false), [favorite, setFavorite] = useState(ticket?.favorites?.includes(user.id) ?? false), [tab, setTab] = useState("details")
   const canComment = Boolean(ticket || title.trim())
   const [files, setFiles] = useState<TicketAttachment[]>([]), [error, setError] = useState(false), [isSubmitting, setIsSubmitting] = useState(false)
+  const [failedSignature, setFailedSignature] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null), attachmentUrls = useRef<string[]>([]), id = useRef<string>(ticket?.id ?? crypto.randomUUID()), removed = useRef(false)
   useEffect(() => () => attachmentUrls.current.forEach((url) => URL.revokeObjectURL(url)), [])
-  const initialSignature = useRef(ticket ? JSON.stringify([ticket.title, ticket.subject, ticket.status, ticket.projectId ?? "", ticket.assigneeId ?? "", ticket.permissionIds, ticket.description ?? "", ticket.priority ?? "none", ticket.followers?.includes(user.id) ?? false, ticket.favorites?.includes(user.id) ?? false]) : null)
+  const [initialSignature, setInitialSignature] = useState(() => ticket ? JSON.stringify([ticket.title, ticket.subject, ticket.status, ticket.projectId ?? "", ticket.assigneeId ?? "", ticket.permissionIds, ticket.description ?? "", ticket.priority ?? "none", ticket.followers?.includes(user.id) ?? false, ticket.favorites?.includes(user.id) ?? false]) : null)
   const availableProjects = projects.length ? projects : taskPanel?.projects ?? []
   const candidateMembers = selectedProjectId
     ? availableProjects.find((project) => project.id === selectedProjectId)?.members ?? []
@@ -76,7 +77,7 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
     followers: following ? [user.id] : [], favorites: favorite ? [user.id] : [],
   }
   const currentSignature = JSON.stringify([title, subject, status, selectedProjectId, selectedAssigneeId, permissions, description, priority, following, favorite])
-  const hasChanges = ticket ? currentSignature !== initialSignature.current : Boolean(title.trim() || description.trim())
+  const hasChanges = ticket ? currentSignature !== initialSignature : Boolean(title.trim() || description.trim())
   const commentStore = useMemo(() => {
     if (!canComment) return undefined
     const ticketId = id.current
@@ -84,11 +85,11 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
       list: () => listTicketComments(ticketId),
       create: (text: string) => createTicketComment(ticketId, { authorId: user.id, authorName: user.name, authorAvatarUrl: user.avatarUrl, text }),
     }
-  }, [ticket?.id, canComment, user.id, user.name, user.avatarUrl])
+  }, [canComment, user.id, user.name, user.avatarUrl])
   const activityStore = useMemo(() => ticket ? { list: async () => {
     await saveTicket(ticket.id, { ...ticket, followers: ticket.followers ?? [], favorites: ticket.favorites ?? [] }, { id: user.id, name: user.name, avatarUrl: user.avatarUrl })
     return listTicketActivity(ticket.id)
-  } } : undefined, [ticket?.id])
+  } } : undefined, [ticket, user.id, user.name, user.avatarUrl])
   async function remove() {
     try { if (ticket) await deleteLocalTicket(ticket.id); removed.current = true; if (ticket) showWorkspaceToast(t("workspace.deleted").replace("{id}", displayId(ticket.id))); onDone() }
     catch { setError(true) }
@@ -126,25 +127,37 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
     id.current ??= crypto.randomUUID()
     try {
       await saveLocalTicket(id.current, currentInput)
-      if (ticket) initialSignature.current = currentSignature
+      if (ticket) setInitialSignature(currentSignature)
+      setFailedSignature(null)
       setError(false)
-      showWorkspaceToast(t(ticket ? "workspace.updated" : "workspace.created").replace("{id}", displayId(id.current)))
-      onDone()
+      if (!ticket) {
+        showWorkspaceToast(t("workspace.created").replace("{id}", displayId(id.current)))
+        onDone()
+      }
     } catch {
       setError(true)
+      setFailedSignature(currentSignature)
     } finally {
       setIsSubmitting(false)
     }
   }
   const saveDisabled = !title.trim() || Boolean(ticket && !hasChanges)
 
+  useEffect(() => {
+    if (!ticket || !hasChanges || !title.trim() || isSubmitting || failedSignature === currentSignature) return
+    const timeout = window.setTimeout(() => { void submit() }, 650)
+    return () => window.clearTimeout(timeout)
+    // submit uses the form snapshot captured by this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket, currentSignature, hasChanges, title, isSubmitting, failedSignature])
+
   return <div className="flex h-full min-h-0 flex-col text-[var(--task-workspace-text)]">
-    <header className={`flex h-14 shrink-0 items-center justify-between border-b border-[var(--task-workspace-border)] px-4 lg:h-11 lg:px-2 ${ticket ? "" : "hidden lg:flex"}`}>
-      {ticket && <button type="button" aria-label={t("taskDetail.close")} onClick={onDone} className="grid size-9 place-items-center text-[var(--task-workspace-text)] lg:hidden"><MobileTaskAsset name="back" className="ltr:rotate-180" /></button>}
-      <div className={`${ticket ? "hidden lg:flex" : "flex"} min-w-0 items-center gap-2 text-sm`}><NewTaskAsset name="chat-smile-line" /><span className="truncate">{t(ticket ? "inbox.detailTitle" : "ticket.title")}</span></div>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--task-workspace-border)] px-4 lg:h-11 lg:px-2">
+      <div className="flex min-w-0 items-center gap-2 text-sm"><NewTaskAsset name="chat-smile-line" /><span className="truncate">{t(ticket ? "inbox.detailTitle" : "ticket.title")}</span></div>
       <div className="flex shrink-0 items-center gap-3">
         {ticket && <DropdownMenu><DropdownMenuTrigger aria-label={t("mobileTask.options")} className="grid size-8 place-items-center rounded-md hover:bg-[var(--task-workspace-soft)]"><MobileTaskAsset name="more" /></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-48 rounded-xl border border-[var(--task-workspace-border)] p-1.5 shadow-none"><DropdownMenuItem onClick={() => setTab("details")} className="min-h-9 gap-2 rounded-lg"><RemixIcon name="file-list-3-line" className="text-base text-[var(--task-workspace-muted)]" />{t("mobileTask.moreDetails")}</DropdownMenuItem><DropdownMenuItem onClick={() => void copyTicketLink()} className="min-h-9 gap-2 rounded-lg"><RemixIcon name="link" className="text-base text-[var(--task-workspace-muted)]" />{t("ticket.copyLink")}</DropdownMenuItem><DropdownMenuSeparator className="my-1" /><DropdownMenuItem onClick={remove} className="min-h-9 gap-2 rounded-lg text-destructive"><RemixIcon name="delete-bin-6-line" className="text-base" />{t("ticket.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
-        {ticket ? <DialogClose aria-label={t("taskDetail.close")} className="hidden size-7 shrink-0 place-items-center rounded-lg bg-[var(--task-workspace-soft)] lg:grid"><NewTaskAsset name="close-fill" /></DialogClose> : <DialogClose aria-label={t("taskDetail.close")} className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>}
+        {!ticket && <Button type="button" onClick={() => void submit()} disabled={saveDisabled || isSubmitting} className="h-8 min-w-20 rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:opacity-90">{t("workspace.register")}</Button>}
+        <DialogClose aria-label={t("taskDetail.close")} onClick={() => { if (ticket && hasChanges) void submit() }} className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
       </div>
     </header>
     {error && <p role="alert" className="px-4 py-2 text-xs text-error">{t("ticket.error")}</p>}
@@ -180,11 +193,11 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
                 </DialogContent>
               </Dialog>
             </div>
-            <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="chat-smile-line" className="size-4" />{t("ticket.subject")}</span><span className="text-[13px] text-[var(--task-workspace-muted)]">{t(SUBJECTS.find(option => option.value === subject)!.label)}</span></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={subject} onValueChange={value => setSubject(value as TicketSubject)}>{SUBJECTS.map(option => <DropdownMenuRadioItem key={option.value} value={option.value}>{t(option.label)}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="flag-line" className="size-4" />{t("ticket.status")}</span><span className="flex items-center gap-2 text-[13px] text-[var(--task-workspace-muted)]"><StatusIcon icon={STATUS_COLUMN_ICON[status]} className="inline-flex !size-4 items-center justify-center leading-none" />{t(STATUSES.find(option => option.value === status)!.label)}</span></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-52 rounded-xl border border-border p-1.5 shadow-none"><DropdownMenuRadioGroup value={status} onValueChange={value => setStatus(value as TicketStatus)}>{STATUSES.map(option => <DropdownMenuRadioItem key={option.value} value={option.value} className="min-h-9 gap-2 rounded-lg px-2"><StatusIcon icon={option.icon} />{t(option.label)}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="flag-line" className="size-4" />{t("newTask.priority")}</span><span className="text-[13px] text-[var(--task-workspace-muted)]">{t(PRIORITIES.find(option => option.value === priority)!.label)}</span></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={priority} onValueChange={value => setPriority(value as TicketPriority)}>{PRIORITIES.map(option => <DropdownMenuRadioItem key={option.value} value={option.value}>{t(option.label)}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="list-check-3" className="size-4" />{t("ticket.permissions")}</span><span className="flex min-w-0 flex-wrap justify-end gap-1 text-xs text-[var(--task-workspace-muted)]">{permissions.length ? permissions.map(value => <span key={value} className="rounded-lg bg-bg2 px-2 py-1">{t(PERMISSIONS.find(option => option.value === value)!.label)}</span>) : <span className="truncate text-[13px]">{t("newTask.unselected")}</span>}</span></DropdownMenuTrigger><DropdownMenuContent>{PERMISSIONS.map(option => <DropdownMenuCheckboxItem key={option.value} checked={permissions.includes(option.value)} onCheckedChange={checked => setPermissions(values => checked ? [...values, option.value] : values.filter(value => value !== option.value))}>{t(option.label)}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="folder-open-line" className="size-4" />{t("taskForm.project")}</span><span className="min-w-0 truncate text-[13px] text-[var(--task-workspace-muted)]">{availableProjects.find(project => project.id === selectedProjectId)?.name ?? t("newTask.unselected")}</span></DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto rounded-xl border border-border p-1.5 shadow-none"><DropdownMenuRadioGroup value={selectedProjectId} onValueChange={value => { setSelectedProjectId(value); if (selectedAssigneeId && !availableProjects.find(project => project.id === value)?.members.some(member => member.id === selectedAssigneeId)) setSelectedAssigneeId("") }}><DropdownMenuRadioItem value="" className="min-h-9 rounded-lg px-2">{t("newTask.unselected")}</DropdownMenuRadioItem>{availableProjects.map(project => <DropdownMenuRadioItem key={project.id} value={project.id} className="min-h-9 rounded-lg px-2">{project.name}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger className={FIELD}><span className={FIELD_LABEL}><RemixIcon name="chat-smile-line" className="size-4" />{t("ticket.subject")}</span><span className="text-[13px] text-[var(--task-workspace-muted)]">{t(SUBJECTS.find(option => option.value === subject)!.label)}</span></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={subject} onValueChange={value => setSubject(value as TicketSubject)}>{SUBJECTS.map(option => <DropdownMenuRadioItem key={option.value} value={option.value}>{t(option.label)}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
 
           </div>
         </div>
@@ -204,7 +217,6 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
       </div>
       <div className={`${tab === "activities" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:border-s lg:border-border`}><NewTaskActivity inline user={user} members={[]} following={following} onFollowingChange={setFollowing} commentStore={commentStore} activityStore={activityStore} canComment={canComment} emojiPicker /></div>
       </div>
-      <WorkspaceActionBar onSave={submit} onCancel={onDone} saveDisabled={saveDisabled} saving={isSubmitting} saveLabel={!ticket ? t("ticket.submit") : undefined} />
     </div>
   </div>
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -62,7 +62,11 @@ export function OrganizationSettingsPage({ organization, user }: { organization:
   const [invite, setInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedSignature, setSavedSignature] = useState(() => JSON.stringify(settings))
+  const [failedSignature, setFailedSignature] = useState<string | null>(null)
   const [requestError, setRequestError] = useState("")
+  const settingsSignature = JSON.stringify(settings)
 
   const roleLabel = (role: OrgRole) => ({ owner: t("orgSettings.roleOwner"), admin: t("orgSettings.roleAdmin"), custom: t("orgSettings.roleCustom") })[role]
   const owner = useMemo(() => members.find((member) => member.role === "owner"), [members])
@@ -70,7 +74,8 @@ export function OrganizationSettingsPage({ organization, user }: { organization:
   const canInviteMembers = organization.currentUserRole === "owner" || organization.currentUserPermissions?.inviteMembers === true
   const canRemoveMembers = organization.currentUserRole === "owner" || organization.currentUserPermissions?.removeMembers === true
 
-  async function persist(nextSettings = settings) {
+  async function persist(nextSettings: OrgSettings, signature: string) {
+    setSaving(true)
     setRequestError("")
     try {
       await updateOrganizationSettings(organization.id, {
@@ -87,12 +92,24 @@ export function OrganizationSettingsPage({ organization, user }: { organization:
         },
       })
       setSaved(true)
-      setSettingsDraft(null)
+      setSavedSignature(signature)
+      setFailedSignature(null)
       router.refresh()
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : t("orgSettings.saveError"))
+      setFailedSignature(signature)
+    } finally {
+      setSaving(false)
     }
   }
+
+  useEffect(() => {
+    if (!settingsDraft || settingsSignature === savedSignature || settingsSignature === failedSignature || saving || !settings.name.trim() || !settings.slug.trim()) return
+    const timeout = window.setTimeout(() => { void persist(settingsDraft, settingsSignature) }, 650)
+    return () => window.clearTimeout(timeout)
+    // persist uses the settings snapshot captured by this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsDraft, settingsSignature, savedSignature, saving, failedSignature])
 
   function updateSetting<K extends keyof OrgSettings>(key: K, value: OrgSettings[K]) {
     setSettingsDraft((current) => ({ ...(current ?? settings), [key]: value }))
@@ -171,10 +188,7 @@ export function OrganizationSettingsPage({ organization, user }: { organization:
           {active === "properties" && <PropertiesSettings properties={settings.properties} onChange={(properties) => updateSetting("properties", properties)} t={t} />}
           {(active === "email" || active === "notifications" || active === "features") && <OptionsSettings settings={settings} update={updateSetting} t={t} />}
           {active === "advanced" && <AdvancedSettings organization={organization} t={t} />}
-          <div className="mt-8 flex items-center gap-3 border-t border-border pt-4">
-            <Button onClick={() => persist()}>{t("orgSettings.save")}</Button>
-            {saved && <span role="status" className="text-xs text-text2">{t("orgSettings.saved")}</span>}
-          </div>
+          {saved && <p role="status" className="mt-8 text-xs text-text2">{t("orgSettings.saved")}</p>}
           {requestError && <p role="alert" className="mt-3 text-sm text-destructive">{requestError}</p>}
         </main>
       </div>

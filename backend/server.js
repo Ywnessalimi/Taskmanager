@@ -7,6 +7,7 @@ import { createProjectPageRepository } from "./apps/projects/project-page-reposi
 import { createNotificationRepository } from "./apps/notifications/notification-repository.js"
 import { createAuthRepository, authSessionTtlSeconds } from "./apps/auth/auth-repository.js"
 import { createOrganizationRepository, organizationPermissionKeys } from "./apps/organizations/organization-repository.js"
+import { createOrganizationActivityRepository } from "./apps/organizations/organization-activity-repository.js"
 import { assistantMessageLimits, createAIService } from "./apps/ai/ai-service.js"
 
 const host = process.env.HOST ?? "127.0.0.1"
@@ -20,6 +21,7 @@ const projectPageRepository = createProjectPageRepository(database)
 const notificationRepository = createNotificationRepository(database)
 const authRepository = createAuthRepository(database)
 const organizationRepository = createOrganizationRepository(database)
+const organizationActivityRepository = createOrganizationActivityRepository(database)
 const aiService = createAIService()
 const initialAdminCreated = process.env.INITIAL_ADMIN_EMAIL || process.env.INITIAL_ADMIN_PASSWORD
   ? authRepository.ensureInitialUser({
@@ -41,6 +43,18 @@ class HttpError extends Error {
 function sendJson(response, status, value) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8" })
   response.end(JSON.stringify(value))
+}
+
+function inTransaction(work) {
+  database.exec("BEGIN IMMEDIATE")
+  try {
+    const result = work()
+    database.exec("COMMIT")
+    return result
+  } catch (error) {
+    database.exec("ROLLBACK")
+    throw error
+  }
 }
 
 const SESSION_COOKIE = "quire_session"
@@ -367,6 +381,28 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    const organizationActivityMatch = path.match(/^\/api\/v1\/organizations\/([^/]+)\/activity$/)
+    if (organizationActivityMatch) {
+      const organizationId = decodeURIComponent(organizationActivityMatch[1])
+      if (!organizationRepository.hasAccess(currentUser.id, organizationId)) throw new HttpError(404, "not_found", "سازمان پیدا نشد.")
+      if (method === "GET") {
+        const requestedLimit = Number(url.searchParams.get("limit") ?? 15)
+        const rawBefore = url.searchParams.get("before")
+        const requestedBefore = rawBefore === null ? undefined : Number(rawBefore)
+        if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedBefore !== undefined && (!Number.isSafeInteger(requestedBefore) || requestedBefore < 1)) throw new HttpError(400, "invalid_pagination", "محدودهٔ فعالیت معتبر نیست.")
+        const limit = Math.min(requestedLimit, 50)
+        sendJson(response, 200, organizationActivityRepository.list(organizationId, { limit, before: requestedBefore }))
+        return
+      }
+      if (method === "POST") {
+        const input = validateTicketCommentInput(await readJson(request))
+        const comment = organizationActivityRepository.create(organizationId, { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl }, "comment", { text: input.text })
+        sendJson(response, 201, comment)
+        return
+      }
+      throw new HttpError(405, "method_not_allowed", "این متد پشتیبانی نمی‌شود.")
+    }
+
     const organizationMembersMatch = path.match(/^\/api\/v1\/organizations\/([^/]+)\/members(?:\/([^/]+))?$/)
     if (organizationMembersMatch) {
       const organizationId = decodeURIComponent(organizationMembersMatch[1])
@@ -480,6 +516,18 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    const projectSettingsMatch = path.match(/^\/api\/v1\/projects\/([^/]+)\/settings$/)
+    if (projectSettingsMatch && method === "PATCH") {
+      const projectId = decodeURIComponent(projectSettingsMatch[1])
+      const body = await readJson(request)
+      const name = validateNameInput(body)
+      if (typeof body.description !== "string" || body.description.length > 5000) throw new HttpError(400, "invalid_description", "توضیحات پروژه معتبر نیست.")
+      const project = organizationRepository.updateProjectSettings(currentUser.id, projectId, { name, description: body.description })
+      if (!project) throw new HttpError(403, "forbidden", "اجازهٔ ویرایش این پروژه را ندارید.")
+      sendJson(response, 200, project)
+      return
+    }
+
     const projectMatch = path.match(/^\/api\/v1\/projects\/([^/]+)(?:\/(tasks))?$/)
     if (path === "/api/v1/projects" && method === "GET") {
       sendJson(response, 200, organizationRepository.listProjects(currentUser.id))
@@ -535,10 +583,16 @@ const server = createServer(async (request, response) => {
     if (path === "/api/v1/tasks" && method === "POST") {
       const input = validateTaskInput(await readJson(request))
       if (!organizationRepository.canAccessProject(currentUser.id, input.projectId)) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
-      const actor = { id: currentUser.id, name: currentUser.name }
+      const actor = { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl }
       delete input.actorId
       delete input.actorName
-      const task = repository.createTask(validateTaskInput(input))
+      const { task } = inTransaction(() => {
+        const createdTask = repository.createTask(validateTaskInput(input))
+        const project = organizationRepository.getProject(createdTask.projectId, currentUser.id)
+        if (!project) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
+        organizationActivityRepository.create(project.organizationId, actor, "task_created", { title: createdTask.title }, createdTask.id)
+        return { task: createdTask }
+      })
       notificationRepository.createTaskAssignmentNotifications(task, actor)
       sendJson(response, 201, task)
       return
@@ -571,14 +625,23 @@ const server = createServer(async (request, response) => {
       }
       if (method === "PATCH") {
         const input = validateTaskInput(await readJson(request), { partial: true })
-        const actor = { id: currentUser.id, name: currentUser.name }
+        const actor = { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl }
         delete input.actorId
         delete input.actorName
         const previous = repository.getTask(id)
         if (!previous || !organizationRepository.canAccessProject(currentUser.id, previous.projectId)) throw new HttpError(404, "not_found", "تسک پیدا نشد.")
+        if (input.projectId && !organizationRepository.canAccessProject(currentUser.id, input.projectId)) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
         const patch = validateTaskInput(input, { partial: true })
-        const task = repository.updateTask(id, patch)
-        if (!task) throw new HttpError(404, "not_found", "تسک پیدا نشد.")
+        const task = inTransaction(() => {
+          const updatedTask = repository.updateTask(id, patch)
+          if (!updatedTask) throw new HttpError(404, "not_found", "تسک پیدا نشد.")
+          if (previous.status !== updatedTask.status) {
+            const project = organizationRepository.getProject(updatedTask.projectId, currentUser.id)
+            if (!project) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
+            organizationActivityRepository.create(project.organizationId, actor, "task_status_changed", { title: updatedTask.title, from: previous.status, to: updatedTask.status }, updatedTask.id)
+          }
+          return updatedTask
+        })
         const previousAssignees = new Set(previous?.assigneeNames ?? [])
         const newlyAssigned = (task.assigneeNames ?? []).filter((name) => !previousAssignees.has(name))
         if (newlyAssigned.length) notificationRepository.createTaskAssignmentNotifications({ ...task, assigneeNames: newlyAssigned }, actor)
@@ -634,9 +697,9 @@ const server = createServer(async (request, response) => {
           delete ticket.assigneeName
           delete ticket.assigneeAvatarUrl
         }
-        ticket.createdById = currentUser.id
-        ticket.createdByName = currentUser.name
-        ticket.createdByAvatarUrl = currentUser.avatarUrl
+        ticket.createdById = previous?.createdById ?? currentUser.id
+        ticket.createdByName = previous?.createdByName ?? currentUser.name
+        ticket.createdByAvatarUrl = previous?.createdByAvatarUrl ?? currentUser.avatarUrl
         const saved = ticketRepository.save(ticketId, ticket, actor)
         if (assignee && assignee.id !== previous?.assigneeId) notificationRepository.createTicketAssignmentNotification(saved, assignee, actor)
         sendJson(response, 200, saved)

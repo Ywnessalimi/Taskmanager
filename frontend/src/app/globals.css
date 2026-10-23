@@ -119,3 +119,33 @@
     @apply font-sans;
   }
 }
+
+/*
+ * تراز کنترل‌های متنی از زبان صفحه پیروی می‌کند. قاعده بیرون از لایه‌های
+ * Tailwind است تا ورودی‌های مشترک رفتار یکسانی داشته باشند. ورودی‌های عددی،
+ * تلفن و تاریخ از انتخابگر بیرون می‌مانند تا نمایش مقدارشان حفظ شود.
+ */
+html[dir="rtl"] :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select
+):not([inputmode="numeric"]):not([inputmode="decimal"]):not([inputmode="tel"]) {
+  text-align: right;
+}
+html[dir="ltr"] :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select
+):not([inputmode="numeric"]):not([inputmode="decimal"]):not([inputmode="tel"]) {
+  text-align: left;
+}

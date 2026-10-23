@@ -34,7 +34,7 @@ export function DesktopHeader({
   const projectId = pathname.match(/^\/home\/projects\/([^/]+)(?:\/|$)/)?.[1]
   const project = projectId ? projects.find((option) => option.id === projectId) : undefined
   const isProject = Boolean(project)
-  const sectionTitle = pathname.startsWith("/inbox") ? t("miniBar.inbox") : pathname.startsWith("/messages") ? t("nav.messages") : pathname.startsWith("/tickets") ? t("ticket.title")
+  const sectionTitle = pathname.startsWith("/inbox") ? t("miniBar.inbox") : pathname.startsWith("/tickets") ? t("ticket.title")
     : pathname.startsWith("/account") ? t("nav.account")
     : pathname.startsWith("/notifications") ? t("nav.notifications")
     : pathname === "/home/projects/MyTasks" ? t("nav.myTasks")

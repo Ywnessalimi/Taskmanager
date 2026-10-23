@@ -26,7 +26,7 @@ export function WorkspaceActionBar({
           {t("taskForm.cancel")}
         </Button>
         <Button type="button" onClick={onSave} disabled={saveDisabled || saving} className="h-12 min-w-0 flex-1 rounded-full bg-brand px-3 text-sm text-text-on-brand hover:opacity-90 lg:h-9 lg:min-w-24 lg:flex-none lg:rounded-md lg:bg-[var(--mini-bar-bg)] lg:text-white">
-          {saving ? t("workspace.saving") : saveLabel ?? t("taskDetail.save")}
+          {saving ? t("workspace.saving") : saveLabel ?? t("workspace.register")}
         </Button>
       </div>
     </footer>

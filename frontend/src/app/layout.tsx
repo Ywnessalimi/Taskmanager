@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  * نه فقط state کلاینت — تا `<html lang dir data-theme>` از همان رندر اول سرور درست باشد
  * (بدون فلش زبان/تم اشتباه). رجوع به docs/FRONTEND.md بخش «زبان و ظاهر».
  */
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [locale, cookieStore] = await Promise.all([getLocale(), cookies()]);
   const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 

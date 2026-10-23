@@ -254,6 +254,12 @@ export function createOrganizationRepository(database) {
         .run(id, name, slug, division.organization_id, division.organization_name, divisionId, division.name)
       return this.getProject(id, userId)
     },
+    updateProjectSettings(userId, projectId, { name, description }) {
+      const project = database.prepare("SELECT organization_id FROM projects WHERE id = ?").get(projectId)
+      if (!project || !can(userId, project.organization_id, "editProject")) return undefined
+      database.prepare("UPDATE projects SET name = ?, description = ? WHERE id = ?").run(name, description, projectId)
+      return this.getProject(projectId, userId)
+    },
     moveProject(userId, projectId, divisionId) {
       const project = database.prepare("SELECT p.id, p.organization_id, p.division_id FROM projects p WHERE p.id = ?").get(projectId)
       const division = database.prepare("SELECT * FROM divisions WHERE id = ?").get(divisionId)

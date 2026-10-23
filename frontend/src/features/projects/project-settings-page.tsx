@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +19,7 @@ import { useT } from "@/components/providers/locale-provider"
 import { SettingsGroup, SettingsLinkRow, SettingsToggleRow } from "@/features/account/settings-row"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
 import type { Member, Project } from "@/lib/api/types"
+import { updateProjectSettings } from "@/lib/api/organizations"
 
 const ROLE_LABEL_KEY: Record<Member["role"], TranslationKey> = {
   owner: "members.roleAdmin",
@@ -31,8 +33,7 @@ type OptionKey = "assignees" | "favorite" | "newTags" | "rtl"
 /**
  * صفحه‌ی تنظیمات پروژه — سه تب کلی/اعضا/گزینه‌ها (طبق طرح Figma settings صفحه‌ی پروژه‌ی
  * Quire، با ساختار پیاده‌سازی‌شده مطابق سبک این پروژه: `Tabs` عمودی مثل بقیه‌ی جاهای اپ،
- * ردیف‌های `SettingsGroup`/`SettingsToggleRow` مثل صفحه‌ی حساب کاربری). هیچ‌کدام از تغییرها
- * واقعاً ذخیره نمی‌شوند (فقط state محلی همین کامپوننت) — مثل بقیه‌ی فرم‌های این فاز.
+ * ردیف‌های `SettingsGroup`/`SettingsToggleRow` مثل صفحه‌ی حساب کاربری).
  */
 export function ProjectSettingsPage({ project }: { project: Project }) {
   const t = useT()
@@ -69,19 +70,39 @@ export function ProjectSettingsPage({ project }: { project: Project }) {
 
 function GeneralTab({ project }: { project: Project }) {
   const t = useT()
+  const router = useRouter()
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description ?? "")
+  const [savedSignature, setSavedSignature] = useState(() => JSON.stringify([project.name, project.description ?? ""]))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [failedSignature, setFailedSignature] = useState<string | null>(null)
+  const signature = JSON.stringify([name, description])
+
+  useEffect(() => {
+    if (signature === savedSignature || signature === failedSignature || !name.trim() || saving) return
+    const timeout = window.setTimeout(async () => {
+      setSaving(true)
+      try {
+        await updateProjectSettings(project.id, { name: name.trim(), description })
+        setSavedSignature(signature)
+        setFailedSignature(null)
+        setError("")
+        router.refresh()
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : t("projectSettings.saveError"))
+        setFailedSignature(signature)
+      } finally {
+        setSaving(false)
+      }
+    }, 650)
+    return () => window.clearTimeout(timeout)
+  }, [description, name, project.id, router, savedSignature, saving, signature, t, failedSignature])
 
   return (
     <div className="flex flex-col gap-5">
       <h3 className="text-base font-medium text-foreground">{t("projectSettings.profile")}</h3>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-text2">{t("projectSettings.picture")}</label>
-        <Avatar size="lg" className="size-20">
-          <AvatarFallback className="text-2xl">{name.slice(0, 1)}</AvatarFallback>
-        </Avatar>
-      </div>
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm text-text2">{t("projectSettings.name")}</label>

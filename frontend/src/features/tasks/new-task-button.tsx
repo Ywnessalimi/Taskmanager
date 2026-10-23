@@ -13,6 +13,10 @@ import { NewTaskDialog } from "./new-task-dialog"
 import { TicketCreateDialog } from "@/features/tickets/ticket-create-form"
 import type { CurrentUser } from "@/lib/api/types"
 
+function decodePathSegment(value: string) {
+  try { return decodeURIComponent(value) } catch { return value }
+}
+
 /**
  * منوی «جدید» سراسری؛ انتخاب تسک جدید مودال مستقل ساخت را باز می‌کند.
  *
@@ -24,7 +28,15 @@ export function NewTaskButton({ figmaStyle = false, user }: { figmaStyle?: boole
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
-  const projectId = pathname.match(/^\/home\/projects\/([^/]+)(?:\/|$)/)?.[1]
+  const homeProjectId = pathname.match(/^\/home\/projects\/([^/]+)(?:\/|$)/)?.[1]
+  const slugMatch = pathname.match(/^\/o\/([^/]+)\/([^/]+)(?:\/|$)/)
+  const slugProject = slugMatch && panel?.projects.find((project) => (
+    project.organizationSlug === decodePathSegment(slugMatch[1]) && project.slug === decodePathSegment(slugMatch[2])
+  ))
+  const requestedProjectId = homeProjectId ?? slugProject?.id
+  const projectId = requestedProjectId && panel?.projects.some((project) => project.id === requestedProjectId)
+    ? requestedProjectId
+    : undefined
 
   return (
     <>

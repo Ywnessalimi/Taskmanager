@@ -41,7 +41,7 @@ function DialogOverlay({
 }
 
 const dialogContentVariants = cva(
-  "fixed z-50 bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-closed:animate-out",
+  "fixed z-50 bg-popover text-sm text-popover-foreground shadow-[0_8px_28px_rgba(0,0,0,0.12)] ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-closed:animate-out",
   {
     variants: {
       /** `center`: مودال معمولی وسط صفحه. `side`: پنل تمام‌ارتفاع چسبیده به سمت راست صفحه
@@ -69,7 +69,7 @@ const dialogContentVariants = cva(
          * صرف‌نظر از جهت زبان همیشه راست است)، با ارتفاع کامل بین آن دو فاصله (بدون تنظیم
          * height صریح: مرورگر خودش وقتی هم `top` هم `bottom` ست شده باشد ارتفاع را پر می‌کند). */
         floatingPanel:
-          "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-2 sm:right-2 sm:bottom-2 sm:h-auto sm:w-full sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-xl",
+          "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-2 sm:right-2 sm:bottom-2 sm:h-auto sm:w-full sm:max-w-[420px] sm:rounded-2xl sm:border sm:border-border",
         /** فضای ساخت تسک: راست فیزیکی با فاصلهٔ ۱۶px؛ جزئیات و فعالیت‌ها اسکرول مستقل دارند. */
         taskWorkspace:
           "inset-0 flex h-dvh w-full flex-col overflow-hidden data-open:fade-in-0 data-closed:fade-out-0 sm:inset-auto sm:top-4 sm:right-4 sm:bottom-4 sm:h-auto sm:w-[calc(100%-2rem)] sm:max-w-[1072px] sm:rounded-2xl sm:border sm:border-[var(--task-workspace-border)]",

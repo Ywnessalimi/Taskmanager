@@ -27,7 +27,7 @@ async function allMyTasks(): Promise<MyTask[]> {
 }
 
 export async function getMyTasks(): Promise<MyTask[]> {
-  return (await allMyTasks()).filter((task) => task.status === "in-progress")
+  return allMyTasks()
 }
 
 export async function getMyTasksOverview(): Promise<MyTasksOverview> {

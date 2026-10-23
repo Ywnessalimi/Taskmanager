@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { CurrentUser, Task, TaskFormProjectOption } from "@/lib/api/types"
 
 /** پنل باز: یا فرم «تسک جدید» است یا جزئیات یک تسک موجود. */
-export type TaskPanelState = { kind: "new" } | { kind: "detail"; task: Task } | null
+export type TaskPanelState = { kind: "new"; projectId?: string } | { kind: "detail"; task: Task; parentTask?: Task } | null
 
 type TaskPanelContextValue = {
   user: CurrentUser
@@ -12,8 +12,8 @@ type TaskPanelContextValue = {
   panel: TaskPanelState
   /** گزینه‌های پروژه/اعضا برای فرم — یک‌بار در لایه‌ی `(tabs)` واکشی می‌شود. */
   projects: TaskFormProjectOption[]
-  openNewTask: () => void
-  openTaskDetail: (task: Task) => void
+  openNewTask: (projectId?: string) => void
+  openTaskDetail: (task: Task, parentTask?: Task) => void
   close: () => void
 }
 
@@ -32,8 +32,8 @@ export function TaskPanelProvider({
   const [panel, setPanel] = useState<TaskPanelState>(null)
   const [currentUser, setCurrentUser] = useState(user)
 
-  const openNewTask = useCallback(() => setPanel({ kind: "new" }), [])
-  const openTaskDetail = useCallback((task: Task) => setPanel({ kind: "detail", task }), [])
+  const openNewTask = useCallback((projectId?: string) => setPanel({ kind: "new", projectId }), [])
+  const openTaskDetail = useCallback((task: Task, parentTask?: Task) => setPanel({ kind: "detail", task, parentTask }), [])
   const close = useCallback(() => setPanel(null), [])
   const updateUser = useCallback((nextUser: CurrentUser) => setCurrentUser(nextUser), [])
 

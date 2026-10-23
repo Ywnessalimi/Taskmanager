@@ -17,7 +17,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col">
-      <HomeGreeting locale={locale} userName={currentUser.name} inProgressCount={myTasks.length} />
+      <HomeGreeting locale={locale} userName={currentUser.name} inProgressCount={myTasks.filter((task) => task.status === "in-progress").length} />
       <div className="flex flex-col gap-3 p-4">
         <p className="text-start text-sm text-foreground">{t(locale, "home.orgsAndProjects")}</p>
         <div className="rounded-md border border-border bg-background px-3">

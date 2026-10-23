@@ -59,3 +59,23 @@ export function linkTicketToTask(
   window.dispatchEvent(new Event(TICKET_TASK_LINKS_CHANGED))
   return links
 }
+
+/** Detaches a ticket from its task and compacts the remaining ticket positions. */
+export function unlinkTicketFromTask(
+  ticketId: string,
+  currentLinks: TicketTaskLinks = readTicketTaskLinks(),
+): TicketTaskLinks {
+  const sourceTaskId = currentLinks[ticketId]?.taskId
+  if (!sourceTaskId) return currentLinks
+
+  const next = { ...currentLinks }
+  delete next[ticketId]
+  Object.entries(next)
+    .filter(([, link]) => link.taskId === sourceTaskId)
+    .sort(([, left], [, right]) => left.index - right.index)
+    .forEach(([id], index) => { next[id] = { taskId: sourceTaskId, index } })
+
+  localStorage.setItem(TICKET_TASK_LINKS_KEY, JSON.stringify(next))
+  window.dispatchEvent(new Event(TICKET_TASK_LINKS_CHANGED))
+  return next
+}

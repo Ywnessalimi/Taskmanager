@@ -55,6 +55,7 @@ backend/
     008_organizations_and_divisions.sql → مالکیت سازمان/معاونت و سازگاری پروژه
     009_ticket_assignment_notifications.sql → اعلان ارجاع Ticket و مقصد Ticket
     010_organization_settings_and_members.sql → slug، تصویر و عضویت/مجوزهای سازمان
+    011_organization_activity.sql → رخدادهای سازمان و کامنت‌های فید
   test/
     task-repository.test.js    → تست migration و CRUD روی دیتابیس موقت
   data/                         → quire.sqlite (ساخته می‌شود، در Git نیست)
@@ -95,7 +96,7 @@ npm --prefix frontend run dev
 
 پاسخ سلامت: `GET http://127.0.0.1:4000/health`. مرورگر API را از مسیر هم‌مبدأ `/api/v1` فراخوانی می‌کند؛ Next آن را به API محلی می‌فرستد. Server Componentها با `QUIRE_API_ORIGIN` به سرویس بک‌اند وصل می‌شوند.
 
-دیتابیس اجرای سرور با دادهٔ نمونه seed نمی‌شود. پس از migrationها، حساب نخست را با `npm --prefix backend run setup:admin` بسازید؛ این فرمان ایمیل اولیه را از تنظیمات می‌گیرد و رمز را بدون نمایش در ترمینال دریافت می‌کند. فرمان فقط روی دیتابیسی کار می‌کند که هنوز حسابی ندارد. برای bootstrap غیرتعاملی می‌توان متغیرهای `INITIAL_ADMIN_*` را یک‌بار به محیط فرایند داد. `seed-data.js` فقط برای سناریوهای تست/دموی صریح باقی مانده است؛ فایل `quire-live.sqlite` دیتابیس فعال است.
+دیتابیس اجرای سرور خودکار دادهٔ نمونه نمی‌گیرد. پس از migrationها، حساب نخست را با `npm --prefix backend run setup:admin` بسازید؛ این فرمان رمز را بدون نمایش در ترمینال دریافت می‌کند و فقط روی دیتابیسی کار می‌کند که هنوز حسابی ندارد. برای bootstrap غیرتعاملی می‌توان متغیرهای `INITIAL_ADMIN_*` را یک‌بار به محیط فرایند داد. برای محیط محلی، `npm --prefix backend run seed:demo` به‌صورت صریح چهار حساب و داده‌های نمونهٔ سازمانی، پروژه، تسک و تیکت می‌سازد؛ رمز تصادفی هر حساب فقط در خروجی همان اجرا نمایش داده می‌شود و seed تکراری را دوباره درج نمی‌کند. `seed-data.js` برای سناریوهای قدیمی تست باقی مانده است؛ فایل `quire-live.sqlite` دیتابیس فعال است.
 
 ## ۴. مدل داده و ذخیره‌سازی
 
@@ -113,6 +114,7 @@ npm --prefix frontend run dev
 - `project_id` کلید خارجی؛ حذف پروژهٔ مرجع در این API پشتیبانی نمی‌شود.
 - `title`, `status`, `priority`, `start_date`, `due_date`, `repeat`, `recurrence`, `description`.
 - `assignee_names`, `followers`, `tags`, `subtasks`, `activity_log` به‌صورت JSON معتبر در ستون‌های `TEXT`؛ این کار فاز نمونه را کوچک نگه می‌دارد.
+- جزئیات زیرتسک (همان فیلدهای قابل‌ویرایش تسک) در آرایهٔ `subtasks` رکورد تسک مادر ذخیره می‌شود. ویرایش زیرتسک از `PATCH /api/v1/tasks/:id` مادر استفاده می‌کند؛ زیرتسک رکورد مستقل Board یا endpoint مستقل ندارد و در این فاز فقط یک سطح زیرتسک پشتیبانی می‌شود.
 - `is_favorite`, `time_spent_minutes`, `created_at`, `updated_at`.
 
 Status و Priority با `CHECK` محدود می‌شوند و foreign key فعال است. تاریخ‌های محصول رشته‌اند چون نمونه‌های فعلی تاریخ جلالی دارند؛ API آن‌ها را بدون تبدیل تقویمی نگه می‌دارد. SQL فقط در migration و repository قرار دارد؛ همهٔ ورودی‌ها به statementهای پارامتری bind می‌شوند.
@@ -134,6 +136,8 @@ Status و Priority با `CHECK` محدود می‌شوند و foreign key فعا
 
 ### `tickets` و `ticket_activity`
 
+در PUT یک تیکت موجود، مشخصات سازنده (`createdById`, `createdByName`, `createdByAvatarUrl`) از رکورد قبلی حفظ می‌شوند؛ هویت کاربر نشست جاری فقط به‌عنوان عامل تغییر در Activity ثبت می‌شود.
+
 Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فرانت (از جمله اولویت اختیاری `none`/`low`/`medium`/`high`/`urgent`)، و زمان ساخت/به‌روزرسانی در SQLite نگه‌داری می‌شود. تغییر اولویت نیز در Activity جزو تغییرات جزئیات ثبت می‌شود. Activity هر تغییر ارجاع، وضعیت، دنبال‌کردن، علاقه‌مندی، جزئیات و کامنت را با عامل و زمان UTC سرور ثبت می‌کند. ردیف‌ها بر اساس `created_at` از قدیمی به جدید خوانده می‌شوند. این جدول‌ها با migration `004_tickets_and_activity.sql` ساخته می‌شوند.
 
 ### `users` و `sessions`
@@ -142,7 +146,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 
 ### `organizations` و `organization_members`
 
-سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود.
+سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود. `organization_activity` رویدادهای ساخت تسک، تغییر وضعیت تسک و کامنت سازمان را با عامل، زمان UTC، شناسهٔ تسک اختیاری و جزئیات JSON ذخیره می‌کند؛ پاک‌شدن سازمان رخدادهایش را نیز پاک می‌کند. فید از تازه‌ترین ردیف شروع می‌شود و برای صفحه‌های قدیمی‌تر از cursor پایدار `rowid` استفاده می‌کند.
 
 ## ۵. API نسخهٔ ۱
 
@@ -167,12 +171,15 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 | `PATCH` | `/api/v1/organizations/:organizationId/members/:userId` | تغییر نقش/مجوز عضو؛ یکتایی مالک در سرور اعمال می‌شود |
 | `DELETE` | `/api/v1/organizations/:organizationId/members/:userId` | حذف عضو؛ مالک حذف‌ناپذیر است |
 | `PATCH` | `/api/v1/organizations/:organizationId/settings` | ذخیرهٔ نام، توضیحات، تصویر، slug و گزینه‌ها |
+| `GET` | `/api/v1/organizations/:organizationId/activity?limit=15&before=:cursor` | رخدادهای سازمان برای عضو مجاز، تازه‌ترین ابتدا؛ حداکثر ۵۰ ردیف در هر صفحه و cursor اختیاری برای صفحه‌های قدیمی‌تر |
+| `POST` | `/api/v1/organizations/:organizationId/activity` | ثبت کامنت در فید سازمان؛ متن حداکثر ۱۰٬۰۰۰ نویسه است و هویت نویسنده از نشست می‌آید |
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug` | خواندن سازمان برای مسیر خوانا با عضویت معتبر |
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug/projects/:projectSlug` | خواندن پروژه با slug سازمان/پروژه برای عضو مجاز |
 | `POST` | `/api/v1/organizations/:organizationId/divisions` | ساخت معاونت با مجوز `createDivision` |
 | `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId` | انتقال معاونت به سازمان مقصد؛ مالکیت سازمان مبدأ و مقصد در نشست بررسی می‌شود و تعارض نام `409` است |
 | `POST` | `/api/v1/divisions/:divisionId/projects` | ساخت پروژه با مجوز `createProject` |
 | `PATCH` | `/api/v1/projects/:projectId/location` | انتقال پروژه به معاونت مقصد؛ مالکیت پروژهٔ مبدأ و معاونت مقصد در نشست بررسی می‌شود |
+| `PATCH` | `/api/v1/projects/:projectId/settings` | ذخیرهٔ خودکار نام و توضیحات پروژه با مجوز `editProject`؛ slug پایدار می‌ماند |
 | `GET` | `/api/v1/projects` | پروژه‌های مرجع |
 | `GET` | `/api/v1/projects/:projectId` | یک پروژه یا `404` |
 | `GET` | `/api/v1/projects/:projectId/tasks` | Taskهای ریشهٔ پروژه با Subtaskهایشان |

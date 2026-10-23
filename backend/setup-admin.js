@@ -39,7 +39,7 @@ try {
   if (count > 0) throw new Error("An account already exists. This command only creates the first account.")
   const password = await readHidden("Initial account password (at least 12 characters): ")
   const created = auth.ensureInitialUser({
-    email: process.env.INITIAL_ADMIN_EMAIL ?? "ywnessalimi@gmail.com",
+    email: process.env.INITIAL_ADMIN_EMAIL ?? "ywenssalimi@gmail.com",
     name: process.env.INITIAL_ADMIN_NAME ?? "Younes Salimi",
     password,
   })

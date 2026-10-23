@@ -41,13 +41,13 @@ export function ProjectTaskList({ project, tasks = project?.tasks ?? [], today, 
       </div>}
 
       {view === "tree" && <TreeView tasks={tasks} projectId={project?.id} />}
-      {view === "board" && (grouping === "status" ? <BoardView key={project?.id ?? "my-tasks"} tasks={tasks} projectId={project?.id} figmaStyle includeTickets ticketAssignees={ticketAssignees} /> : <GroupedTasks tasks={tasks} grouping={grouping} />)}
+      {view === "board" && (grouping === "status" ? <BoardView key={project?.id ?? "my-tasks"} tasks={tasks} projectId={project?.id} projectName={project?.name} figmaStyle includeTickets ticketAssignees={ticketAssignees} /> : <GroupedTasks tasks={tasks} grouping={grouping} />)}
       <MobileCreateMenu projectId={project?.id} />
       {view === "table" && <TableView tasks={tasks} showProject={!project} />}
       {view === "timeline" && (
         <TimelineView tasks={tasks} today={today} />
       )}
-      {view === "calendar" && <CalendarView tasks={tasks} />}
+      {view === "calendar" && <CalendarView tasks={tasks} projectId={project?.id} />}
     </div>
   )
 }
