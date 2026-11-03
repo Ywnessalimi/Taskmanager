@@ -6,6 +6,7 @@ import { WorkspaceToast } from "@/components/ui/workspace-toast"
 import { getNotifications } from "@/lib/api/notifications"
 import { getTaskFormOptions } from "@/lib/api/tasks"
 import { getCurrentUser } from "@/lib/api/users"
+import { InboxDashboardProvider } from "@/features/inbox-dashboards/inbox-dashboard-provider"
 
 /**
  * مینی‌بار در موبایل پایین و از `lg` به بالا کنار محتواست؛ با RTL/LTR محل افقی آن
@@ -20,18 +21,20 @@ export default async function TabsLayout({ children, modal }: { children: React.
 
   return (
     <TaskPanelProvider projects={taskFormProjects} user={currentUser}>
-      <WorkspaceToast />
-      <div className="flex min-h-full flex-1 flex-col lg:flex-row lg:min-h-screen">
-        <SidebarNav />
-        <main className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0 has-[[data-no-mobile-nav]]:pb-0">
-          <div className="flex w-full flex-1 flex-col">
-            <DesktopHeader currentUser={currentUser} notifications={notifications} projects={taskFormProjects} />
-            {children}
-            {modal}
-          </div>
-        </main>
-        <BottomTabBar />
-      </div>
+      <InboxDashboardProvider key={currentUser.id} userId={currentUser.id}>
+        <WorkspaceToast />
+        <div className="flex min-h-full flex-1 flex-col lg:flex-row lg:min-h-screen">
+          <SidebarNav />
+          <main className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0 has-[[data-no-mobile-nav]]:pb-0">
+            <div className="flex w-full flex-1 flex-col">
+              <DesktopHeader currentUser={currentUser} notifications={notifications} projects={taskFormProjects} />
+              {children}
+              {modal}
+            </div>
+          </main>
+          <BottomTabBar />
+        </div>
+      </InboxDashboardProvider>
     </TaskPanelProvider>
   )
 }

@@ -8,6 +8,7 @@ import { getOrganizations } from "@/lib/api/organizations"
 import { getToday } from "@/lib/api/calendar"
 import { getCurrentUser } from "@/lib/api/users"
 import { getLocale } from "@/lib/i18n/server"
+import { t } from "@/lib/i18n/dictionary"
 
 /** نمای تجمعی کاربر در محیط پروژه‌ها؛ از نظر پوسته و نماها با صفحهٔ یک پروژه مشترک است. */
 export default async function MyTasksProjectPage() {
@@ -24,8 +25,8 @@ export default async function MyTasksProjectPage() {
     <div className="flex min-h-0 flex-1 flex-col bg-background lg:flex-row">
       <ProjectNavigator organizations={organizations} activeId="MyTasks" locale={locale} userId={user.id} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border px-4 lg:hidden">
-          <span className="text-base font-semibold">{user.name}</span>
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:static lg:hidden">
+          <span className="text-base font-semibold">{t(locale, "nav.myTasks")}</span>
           <RemixIcon name="search-2-line" className="text-xl" />
         </header>
         <div className="hidden lg:block">

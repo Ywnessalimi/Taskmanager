@@ -46,7 +46,7 @@ export function NotificationsFullPage({ notifications, projects = [], recipientN
     <h1 className="px-4 py-4 text-base font-semibold">{t("notifications.title")}</h1>
     <Tabs value={filter} onValueChange={(value) => setFilter(value as string)} className="min-h-0 flex-1 gap-0">
       <div className="flex h-12 shrink-0 items-center gap-4 border-y border-border px-4">
-        <TabsList variant="line" className="h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
+        <TabsList variant="line" className="group-data-horizontal/tabs:h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
           {[{ id: "all", name: t("notifications.viewAll") }, ...groups.map((project) => ({ id: project.id, name: project.name }))].map((group) => <TabsTrigger key={group.id} value={group.id} className="h-full flex-none rounded-none border-0 px-0 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]">{group.name}</TabsTrigger>)}
         </TabsList>
       </div>
@@ -77,7 +77,7 @@ export function NotificationsPreviewDialog({ notifications, projects = [], iconS
         <PopoverTitle className="px-4 text-start text-base font-semibold leading-5">{t("notifications.title")}</PopoverTitle>
         <Tabs value={filter} onValueChange={(value) => setFilter(value as string)} className="gap-0">
           <div className="flex h-12 items-center gap-4 border-y border-border px-4">
-            <TabsList variant="line" className="h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
+            <TabsList variant="line" className="group-data-horizontal/tabs:h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
               {[{ id: "all", name: t("notifications.viewAll") }, ...groups.map((project) => ({ id: project.id, name: project.name }))].map((group) => (
                 <TabsTrigger key={group.id} value={group.id} className="h-full flex-none rounded-none border-0 px-0 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]">{group.name}</TabsTrigger>
               ))}

@@ -11,6 +11,7 @@
     "start": "node --env-file-if-exists=.env.local server.js",
     "setup:admin": "node setup-admin.js",
     "seed:demo": "node seed-demo.js",
+    "seed:report-demo": "node seed-report-demo.js",
     "test": "node --test"
   }
 }

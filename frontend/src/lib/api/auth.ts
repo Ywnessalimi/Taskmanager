@@ -1,6 +1,7 @@
 export type LoginInput = {
   identifier: string
   password: string
+  remember?: boolean
 }
 
 export type SignupInput = {

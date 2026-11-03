@@ -19,7 +19,7 @@ export function ProjectWorkspace({ project, today, user, locale, organizations }
   return <div className="flex min-h-0 flex-1 flex-col bg-background lg:flex-row">
     <ProjectNavigator organizations={organizations} activeId={project.id} locale={locale} userId={user.id} />
     <div className="flex min-w-0 flex-1 flex-col">
-      <header className="flex h-14 items-center justify-between border-b border-border px-4 lg:hidden"><span className="text-base font-semibold">{user.name}</span><RemixIcon name="search-2-line" className="text-xl" /></header>
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:static lg:hidden"><span className="text-base font-semibold">{project.name}</span><RemixIcon name="search-2-line" className="text-xl" /></header>
       <div className="hidden lg:block"><ProjectPageHeader title={project.name} subtitle={project.organizationName} projectId={project.id} currentUserId={user.id} isAdmin={isAdmin} organizations={organizations} /></div>
       <ProjectSectionTabs currentUserName={user.name} project={project} today={today} />
     </div>

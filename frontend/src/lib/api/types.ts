@@ -327,7 +327,7 @@ export type NewTaskInput = {
   followers?: string[]
   isFavorite?: boolean
   timeSpentMinutes?: number
-  subtasks?: { title: string }[]
+  subtasks?: { title: string; status?: TaskStatus }[]
 }
 
 /** یک گزینه‌ی پروژه در فرم ساخت تسک، به‌همراه اعضایی که می‌توانند مسئول تسک شوند. */

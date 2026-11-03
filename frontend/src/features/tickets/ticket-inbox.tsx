@@ -22,7 +22,9 @@ import {
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MobileCreateMenu } from "@/features/tasks/mobile-create-menu"
-import { TicketCreateDialog } from "@/features/tickets/ticket-create-form"
+import { InboxDashboardCanvas } from "@/features/inbox-dashboards/inbox-dashboard-canvas"
+import { InboxDashboardCreateDialog, InboxDashboardSelector } from "@/features/inbox-dashboards/inbox-dashboard-controls"
+import { useInboxDashboard } from "@/features/inbox-dashboards/inbox-dashboard-provider"
 import { STATUS_COLUMNS, STATUS_COLUMN_ICON } from "@/features/projects/task-display"
 import type { LocalTicket } from "./local-created-tickets"
 import { getInboxTickets } from "./ticket-data"
@@ -184,8 +186,10 @@ function TicketCardList({
 export function TicketInbox({ user }: { user: CurrentUser }) {
   const t = useT()
   const { locale } = useLocale()
+  const { currentDashboard } = useInboxDashboard()
   const [tickets, setTickets] = useState<LocalTicket[]>([])
   const [error, setError] = useState(false)
+  const [loadingTickets, setLoadingTickets] = useState(true)
   const [query, setQuery] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
   const [status, setStatus] = useState("all")
@@ -196,16 +200,19 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
   const [profileCollapsed, setProfileCollapsed] = useState(false)
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false)
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
-  const [createTicketOpen, setCreateTicketOpen] = useState(false)
+  const [createDashboardOpen, setCreateDashboardOpen] = useState(false)
   const searchInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function load() {
+      setLoadingTickets(true)
       try {
         setTickets(await getInboxTickets(locale))
         setError(false)
       } catch {
         setError(true)
+      } finally {
+        setLoadingTickets(false)
       }
     }
 
@@ -408,9 +415,7 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={createTicketOpen} onOpenChange={setCreateTicketOpen}>
-        {createTicketOpen && <TicketCreateDialog user={user} onDone={() => setCreateTicketOpen(false)} />}
-      </Dialog>
+      <InboxDashboardCreateDialog open={createDashboardOpen} onOpenChange={setCreateDashboardOpen} />
 
       <section className="mx-auto flex h-[calc(100dvh-5rem)] max-h-[calc(100dvh-5rem)] w-full max-w-[800px] min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--project-surface)] lg:h-[calc(100dvh-3.5rem)] lg:max-h-[calc(100dvh-3.5rem)] lg:bg-transparent">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--task-workspace-border)] bg-background px-4 lg:hidden">
@@ -430,40 +435,44 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
             </>
           ) : (
             <>
-              <h1 className="truncate text-base font-medium text-[var(--task-workspace-text)]">{user.name}</h1>
-              <button type="button" onClick={() => setSearchOpen(true)} aria-label={t("inbox.search")} aria-expanded={searchOpen} className="grid size-9 place-items-center text-[var(--task-workspace-text)]">
-                <RemixIcon name="search-line" className="text-xl" />
-              </button>
+              <h1 className="min-w-0 flex-1 truncate text-base font-medium text-[var(--task-workspace-text)]"><InboxDashboardSelector className="max-w-full text-base" /></h1>
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" onClick={() => setSearchOpen(true)} aria-label={t("inbox.search")} aria-expanded={searchOpen} className="grid size-9 place-items-center text-[var(--task-workspace-text)]">
+                  <RemixIcon name="search-line" className="text-xl" />
+                </button>
+              </div>
             </>
           )}
         </header>
 
         <div className={`shrink-0 overflow-hidden px-4 transition-[max-height,opacity,padding] duration-300 ease-out ${profileCollapsed ? "max-h-0 pt-0 opacity-0" : "max-h-24 pt-4 opacity-100"}`}>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2 pl-10 lg:pl-0">
             <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
-              {user.avatarUrl ? <Image src={user.avatarUrl} alt={user.name} width={52} height={52} unoptimized className="size-[52px] shrink-0 rounded-2xl object-cover" /> : <span className="grid size-[52px] shrink-0 place-items-center rounded-2xl bg-bg2 text-lg text-text2">{user.name.slice(0, 1)}</span>}
+              <Image src={user.avatarUrl || "/avatars/default-profile-3d.png"} alt={user.name} width={52} height={52} unoptimized className="size-[52px] shrink-0 rounded-2xl object-cover" />
               <div dir={locale === "en" ? "ltr" : "rtl"} className="min-w-0 text-start">
-                <h2 className="truncate text-xl font-medium leading-8 text-[var(--task-workspace-text)]">{user.name}</h2>
-                <p className="truncate text-sm leading-5 text-[var(--task-workspace-muted)]">{t("inbox.welcome")}</p>
+                <h2 className="hidden truncate text-xl font-medium leading-8 text-[var(--task-workspace-text)] lg:block">{user.name}</h2>
+                <p className="truncate text-sm leading-5 text-[var(--task-workspace-muted)]">{user.name?.trim() || t("inbox.anonymousUser")}</p>
               </div>
             </div>
-            <button type="button" onClick={() => setCreateTicketOpen(true)} aria-label={t("ticket.title")} title={t("newTask.newRequest")} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--task-workspace-text)] text-white">
-              <RemixIcon name="add-line" className="text-xl" />
+            <button type="button" onClick={() => setCreateDashboardOpen(true)} aria-label={t("inboxDashboards.createAria")} title={t("inboxDashboards.createAria")} className="absolute left-0 grid size-8 shrink-0 place-items-center rounded-md text-icon2 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring lg:hidden">
+              <RemixIcon name="add-line" className="text-lg" />
             </button>
           </div>
         </div>
 
-        <div className="mt-3 flex h-11 shrink-0 items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {sortFilter(true)}
-          {filter("inbox.user", "inbox.allUsers", owner, setOwner, owners, "group-line", true)}
-          {filter("ticket.status", "inbox.allStatuses", status, setStatus, statusOptions, "filter-3-line", true)}
-          {filter("ticket.subject", "inbox.allSubjects", subject, setSubject, subjectOptions, "file-list-3-line", true)}
-          {filter("ticket.permissions", "inbox.allPermissions", "all", () => {}, permissionOptions, "checkbox-blank-circle-line", true)}
-          {hasActiveFilters && <button type="button" className="h-9 shrink-0 rounded-2xl px-2 text-xs text-text2" onClick={clearFilters}>{t("inbox.reset")}</button>}
-        </div>
+        {currentDashboard.isMain ? <>
+          <div className="mt-3 flex h-11 shrink-0 items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {sortFilter(true)}
+            {filter("inbox.user", "inbox.allUsers", owner, setOwner, owners, "group-line", true)}
+            {filter("ticket.status", "inbox.allStatuses", status, setStatus, statusOptions, "filter-3-line", true)}
+            {filter("ticket.subject", "inbox.allSubjects", subject, setSubject, subjectOptions, "file-list-3-line", true)}
+            {filter("ticket.permissions", "inbox.allPermissions", "all", () => {}, permissionOptions, "checkbox-blank-circle-line", true)}
+            {hasActiveFilters && <button type="button" className="h-9 shrink-0 rounded-2xl px-2 text-xs text-text2" onClick={clearFilters}>{t("inbox.reset")}</button>}
+          </div>
 
-        {error && <p role="alert" className="shrink-0 px-4 pt-2 text-xs text-error">{t("ticket.error")}</p>}
-        <TicketCardList key={filtered.map((ticket) => ticket.id).join(":")} tickets={filtered} user={user} t={t} hasAnyTickets={tickets.length > 0} onScroll={(scrollTop) => setProfileCollapsed(scrollTop > 12)} />
+          {error && <p role="alert" className="shrink-0 px-4 pt-2 text-xs text-error">{t("ticket.error")}</p>}
+          <TicketCardList key={filtered.map((ticket) => ticket.id).join(":")} tickets={filtered} user={user} t={t} hasAnyTickets={tickets.length > 0} onScroll={(scrollTop) => setProfileCollapsed(scrollTop > 12)} />
+        </> : <InboxDashboardCanvas key={currentDashboard.id} dashboard={currentDashboard} tickets={tickets} user={user} ticketLoadError={error} ticketLoading={loadingTickets} />}
 
         <div className="lg:hidden"><MobileCreateMenu /></div>
       </section>

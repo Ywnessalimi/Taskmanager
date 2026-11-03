@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useLocale } from "@/components/providers/locale-provider"
 import { AssigneePickerDialog } from "./assignee-picker-dialog"
 import { NewTaskAsset } from "./new-task-assets"
-import type { CurrentUser, TaskFormMemberOption, TicketActivity, TicketComment } from "@/lib/api/types"
+import type { CurrentUser, TaskActivityEntry, TaskFormMemberOption, TicketActivity, TicketComment } from "@/lib/api/types"
 
 type ActivityComment = { id: string | number; text: string; date: Date; files: string[]; reacted: boolean; reaction?: string; authorName: string; authorAvatarUrl?: string }
 type CommentStore = {
@@ -19,11 +19,12 @@ type CommentStore = {
 type ActivityStore = { list: () => Promise<TicketActivity[]> }
 
 /** بخش فعالیت ساخت تسک؛ در حالت inline تمام فضای باقی‌مانده را می‌گیرد و نوار ذخیره بیرون آن می‌ماند. */
-export function NewTaskActivity({ user, members, following, onFollowingChange, inline = false, footerAction, commentStore, activityStore, canComment = true, emojiPicker = false }: {
+export function NewTaskActivity({ user, members, following, onFollowingChange, inline = false, footerAction, commentStore, activityStore, canComment = true, emojiPicker = false, taskActivities = [] }: {
   inline?: boolean
   footerAction?: ReactNode
   commentStore?: CommentStore
   activityStore?: ActivityStore
+  taskActivities?: TaskActivityEntry[]
   canComment?: boolean
   emojiPicker?: boolean
   user: CurrentUser
@@ -48,6 +49,7 @@ export function NewTaskActivity({ user, members, following, onFollowingChange, i
   const filtered = comments.filter((comment) => comment.text.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
   const timeline = [
     ...events.filter(event => event.kind !== "comment").map(event => ({ type: "event" as const, id: event.id, date: new Date(event.createdAt), event })),
+    ...taskActivities.map(activity => ({ type: "task-event" as const, id: activity.id, date: new Date(activity.date), activity })),
     ...filtered.map(comment => ({ type: "comment" as const, id: String(comment.id), date: comment.date, comment })),
   ].sort((left, right) => left.date.getTime() - right.date.getTime())
 
@@ -133,7 +135,7 @@ export function NewTaskActivity({ user, members, following, onFollowingChange, i
       {searchOpen && <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t("nav.search")} placeholder={t("newTask.searchActivity")} className="m-3 rounded-lg border border-border bg-background p-2 outline-none" />}
       <div className="flex min-h-32 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {timeline.length === 0 && <p className="m-auto py-5 text-center text-xs text-[var(--task-workspace-muted)]">{isLoadingComments ? t("ticket.commentsLoading") : t("taskDetail.noActivity")}</p>}
-        {timeline.map((entry) => entry.type === "event" ? <article key={entry.id} className="flex items-start gap-2 text-xs text-[var(--task-workspace-muted)]"><Avatar className="size-5"><AvatarImage src={entry.event.actorAvatarUrl} alt={entry.event.actorName} /><AvatarFallback>{entry.event.actorName.slice(0, 1)}</AvatarFallback></Avatar><div><span className="text-text2">{entry.event.actorName}</span>{" "}{entry.event.kind === "created" ? t("ticket.activity.created") : entry.event.kind === "assigned" ? `${t("ticket.activity.assigned")}: ${String(entry.event.details.to ?? t("ticket.unassigned"))}` : entry.event.kind === "status_changed" ? `${t("ticket.activity.statusChanged")}: ${String(entry.event.details.to)}` : entry.event.kind === "following" ? t(entry.event.details.following ? "ticket.activity.followingOn" : "ticket.activity.followingOff") : entry.event.kind === "favorite" ? t(entry.event.details.favorite ? "ticket.activity.favoriteOn" : "ticket.activity.favoriteOff") : t("ticket.activity.updated")}<time className="ms-2">{new Intl.DateTimeFormat(locale === "fa" ? "fa-IR" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tehran" }).format(entry.date)}</time></div></article> : (
+        {timeline.map((entry) => entry.type === "task-event" ? <article key={`task-${entry.id}`} className="flex items-start gap-2 text-xs text-[var(--task-workspace-muted)]"><Avatar className="size-5"><AvatarFallback>{entry.activity.actorName.slice(0, 1)}</AvatarFallback></Avatar><div><span className="text-text2">{entry.activity.actorName}</span>{" "}{entry.activity.message}<time className="ms-2">{Number.isNaN(entry.date.getTime()) ? entry.activity.date : new Intl.DateTimeFormat(locale === "fa" ? "fa-IR" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tehran" }).format(entry.date)}</time></div></article> : entry.type === "event" ? <article key={entry.id} className="flex items-start gap-2 text-xs text-[var(--task-workspace-muted)]"><Avatar className="size-5"><AvatarImage src={entry.event.actorAvatarUrl} alt={entry.event.actorName} /><AvatarFallback>{entry.event.actorName.slice(0, 1)}</AvatarFallback></Avatar><div><span className="text-text2">{entry.event.actorName}</span>{" "}{entry.event.kind === "created" ? t("ticket.activity.created") : entry.event.kind === "assigned" ? `${t("ticket.activity.assigned")}: ${String(entry.event.details.to ?? t("ticket.unassigned"))}` : entry.event.kind === "status_changed" ? `${t("ticket.activity.statusChanged")}: ${String(entry.event.details.to)}` : entry.event.kind === "following" ? t(entry.event.details.following ? "ticket.activity.followingOn" : "ticket.activity.followingOff") : entry.event.kind === "favorite" ? t(entry.event.details.favorite ? "ticket.activity.favoriteOn" : "ticket.activity.favoriteOff") : t("ticket.activity.updated")}<time className="ms-2">{new Intl.DateTimeFormat(locale === "fa" ? "fa-IR" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tehran" }).format(entry.date)}</time></div></article> : (
           <article key={entry.id} className="rounded-lg border border-[var(--task-workspace-border)] bg-background px-4 pt-4 pb-2">
             <div className="mb-3 flex items-center gap-1">
               <Avatar className="size-5">{entry.comment.authorAvatarUrl && <AvatarImage src={entry.comment.authorAvatarUrl} alt={entry.comment.authorName} />}<AvatarFallback>{entry.comment.authorName.slice(0, 1)}</AvatarFallback></Avatar>

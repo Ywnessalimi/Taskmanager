@@ -9,13 +9,9 @@
  *   ۲. نام‌مستعارهای اضافه‌ی این پروژه (--bg2, --text2, --icon, --brand, ...) که روی همان
  *      توکن‌های استاندارد سوارند و در سراسر کامپوننت‌ها استفاده شده‌اند — رجوع به
  *      docs/FRONTEND.md بخش ۵.
- * رنگ برند/Primary این پروژه آبی (#165DFB) است و در هر دو تم روشن/تیره ثابت می‌ماند.
- *
- * سه حالت ظاهر: پیش‌فرض `:root` روشن است؛ وقتی کاربر «ظاهر» را روی «سیستم» گذاشته
- * (یعنی هیچ `data-theme` روی `<html>` نیست)، `@media (prefers-color-scheme: dark)` تصمیم
- * می‌گیرد؛ و وقتی کاربر صریحاً «روشن»/«تیره» را انتخاب کرده، `<html data-theme="light|dark">`
- * (در `src/app/layout.tsx` از روی کوکی `theme` تنظیم می‌شود) این تصمیم را override می‌کند —
- * رجوع به docs/FRONTEND.md بخش «زبان و ظاهر».
+ * رنگ برند/Primary این پروژه آبی (#165DFB) است. ظاهر برنامه در حال حاضر فقط روشن است؛
+ * layout همیشه data-theme="light" می‌گذارد تا media query سیستم فعال نشود. تعریف‌های
+ * CSS تیره از نسخهٔ قبلی باقی مانده‌اند اما در رابط برنامه قابل فعال‌سازی نیستند.
  */
 
 :root {
@@ -39,6 +35,7 @@
   --task-workspace-muted: #79817f;
   --task-workspace-secondary: #626262;
   --task-workspace-soft: #eeeeee;
+  --task-activity-badge: #d66a00;
   --task-workspace-icon-filter: none;
   /* --- توکن‌های استاندارد shadcn (تم روشن) --- */
   --background: #ffffff;

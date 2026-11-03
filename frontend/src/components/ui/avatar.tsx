@@ -39,17 +39,24 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
 
 function AvatarFallback({
   className,
+  children,
+  profile = true,
+  style,
   ...props
-}: AvatarPrimitive.Fallback.Props) {
+}: AvatarPrimitive.Fallback.Props & { profile?: boolean }) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        profile && "bg-cover bg-center",
         className
       )}
+      style={profile ? { ...style, backgroundImage: "url('/avatars/default-profile-3d.png')" } : style}
       {...props}
-    />
+    >
+      {profile ? <span className="sr-only">{children}</span> : children}
+    </AvatarPrimitive.Fallback>
   )
 }
 
