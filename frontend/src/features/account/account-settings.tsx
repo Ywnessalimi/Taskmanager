@@ -23,10 +23,7 @@ import { RemixIcon } from "@/components/ui/remix-icon"
 import { Switch } from "@/components/ui/switch"
 import { SectionTitle } from "@/components/layout/section"
 import { useLocale } from "@/components/providers/locale-provider"
-import { useTheme } from "@/components/providers/theme-provider"
 import type { Locale, TranslationKey } from "@/lib/i18n/dictionary"
-import type { Theme } from "@/lib/theme"
-import { THEMES } from "@/lib/theme"
 import type { CurrentUser, NotificationPreferences } from "@/lib/api/types"
 import { logout } from "@/lib/api/auth"
 import { ProfileDialog } from "./profile-dialog"
@@ -60,17 +57,10 @@ const NOTIFICATION_ROWS: {
   },
 ]
 
-const THEME_LABEL_KEY: Record<Theme, TranslationKey> = {
-  light: "account.appearanceLight",
-  dark: "account.appearanceDark",
-  system: "account.appearanceSystem",
-}
-
 /**
- * محتوای تب «حساب کاربری»: پروفایل، تنظیمات حساب (شامل انتخابگرهای زبان و ظاهر که واقعاً
- * کار می‌کنند)، تنظیمات اعلان و خروج. تغییرهای پروفایل/اعلان فقط در state همین کامپوننت‌اند
- * (بدون API واقعی)؛ زبان و ظاهر اما سراسری‌اند (`LocaleProvider`/`ThemeProvider`) — رجوع به
- * README.md همین پوشه.
+ * محتوای تب «حساب کاربری»: پروفایل، تنظیمات حساب، تنظیمات اعلان و خروج. تغییرهای
+ * پروفایل/اعلان فقط در state همین کامپوننت‌اند (بدون API واقعی)؛ زبان سراسری است و ظاهر
+ * فعلاً روی روشن قفل شده است — رجوع به README.md همین پوشه.
  */
 export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
   const [user, setUser] = useState(initialUser)
@@ -182,29 +172,16 @@ function LanguagePickerRow({ locale, onChange }: { locale: Locale; onChange: (lo
   )
 }
 
-/** ردیف «ظاهر»: منوی کشویی با سه گزینه‌ی روشن/تیره/هماهنگ با سیستم. */
+/** ظاهر فعلاً فقط روشن است؛ ردیف غیرتعاملی مقدار قفل‌شده را نشان می‌دهد. */
 function AppearancePickerRow() {
   const { t } = useLocale()
-  const { theme, setTheme } = useTheme()
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className={`${ROW_BASE} enabled:hover:bg-bg2`}>
-        <RemixIcon name="moon-line" className="text-base text-icon2" />
+    <div className={ROW_BASE} aria-disabled="true">
+        <RemixIcon name="sun-line" className="text-base text-icon2" />
         <span className="flex-1 text-sm text-foreground">{t("account.appearance")}</span>
-        <span className="text-xs text-text2">{t(THEME_LABEL_KEY[theme])}</span>
-        <RemixIcon name="arrow-left-s-line" className="text-base text-icon2" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
-          {THEMES.map((value) => (
-            <DropdownMenuRadioItem key={value} value={value} closeOnClick>
-              {t(THEME_LABEL_KEY[value])}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <span className="text-xs text-text2">{t("account.appearanceLight")}</span>
+    </div>
   )
 }
 

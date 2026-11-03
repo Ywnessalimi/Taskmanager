@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useT } from "@/components/providers/locale-provider"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -97,6 +98,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
   const [error, setError] = useState(false)
   const [failedSignature, setFailedSignature] = useState<string | null>(null)
   const [showActivities, setShowActivities] = useState(false)
+  const [unreadActivityCount, setUnreadActivityCount] = useState(0)
   const timer = useTaskTimer(minutes, setMinutes)
   const fileInput = useRef<HTMLInputElement>(null)
   const [savedTaskSignature, setSavedTaskSignature] = useState(() => task ? JSON.stringify([
@@ -107,6 +109,31 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
   const project = projects.find((option) => option.id === projectId)
   const selectedPriority = PRIORITIES.find((option) => option.value === priority)!
   const unset = t("newTask.unselected")
+
+  useEffect(() => {
+    if (!task?.id) return
+    const activities = task.activityLog ?? []
+    const key = `quire:task-activity-seen:${user.id}:${task.id}`
+    const updateReadState = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(key) ?? "[]")
+        const seen = new Set<string>(Array.isArray(stored) ? stored : [])
+        const visible = showActivities || window.matchMedia("(min-width: 1024px)").matches
+        if (visible) {
+          localStorage.setItem(key, JSON.stringify([...new Set([...seen, ...activities.map((entry) => entry.id)])]))
+          setUnreadActivityCount(0)
+        } else {
+          setUnreadActivityCount(activities.filter((entry) => !seen.has(entry.id)).length)
+        }
+      } catch {
+        setUnreadActivityCount(0)
+      }
+    }
+    const timeout = window.setTimeout(updateReadState, 0)
+    window.addEventListener("resize", updateReadState)
+    window.addEventListener("storage", updateReadState)
+    return () => { window.clearTimeout(timeout); window.removeEventListener("resize", updateReadState); window.removeEventListener("storage", updateReadState) }
+  }, [task?.id, task?.activityLog, user.id, showActivities])
 
   const initialColumnId = useSyncExternalStore(
     (notify) => {
@@ -192,7 +219,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
     setSubmitting(true)
     setError(false)
     try {
-      const created = await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map(({ title }) => ({ title })) }, { id: user.id, name: user.name })
+      const created = await createTask({ recurrence, title: title.trim(), projectId, priority, tags, startDate: startDate || undefined, dueDate: dueDate || undefined, assigneeNames, description: description.trim() || undefined, status, followers: following ? [user.name] : [], isFavorite: favorite, timeSpentMinutes: minutes + Math.ceil(timer.elapsedSeconds / 60), subtasks: subtasks.map(({ title, status }) => ({ title, status })) }, { id: user.id, name: user.name })
       if (selectedColumnId !== "todo" && selectedColumnId !== "in-progress" && selectedColumnId !== "completed") {
         writeTaskBoardColumnAssignment(created.id, { projectId, columnId: selectedColumnId })
       }
@@ -247,7 +274,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
       </div>
       <div className="flex shrink-0 border-b border-border lg:hidden">
         <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`flex-1 py-2 ${!showActivities ? "border-b-2 border-brand" : ""}`}>{t("taskDetail.title")}</button>
-        <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`flex-1 py-2 ${showActivities ? "border-b-2 border-brand" : ""}`}>{t("newTask.activities")}</button>
+        <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`flex flex-1 items-center justify-center gap-1.5 py-2 ${showActivities ? "border-b-2 border-brand" : ""}`}>{t("newTask.activities")}{unreadActivityCount > 0 && <span aria-label={`${unreadActivityCount} ${t("newTask.unreadActivities")}`} className="inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--task-activity-badge)] px-1 text-[10px] font-semibold leading-none text-white">{unreadActivityCount}</span>}</button>
       </div>
       {error && <p role="alert" className="p-2 text-error">{t("newTask.submitError")}</p>}
       <div className="flex min-h-0 flex-1">
@@ -258,7 +285,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled className="flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs text-[var(--task-workspace-secondary)]"><NewTaskAsset name="git-merge-line" />{t("newTask.noMilestone")}</button>
                 <button type="button" aria-pressed={following} onClick={() => setFollowing(!following)} className={`flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs ${following ? "bg-[#141a1a] text-white" : ""}`}><RemixIcon name={following ? "eye-fill" : "eye-line"} />{t(following ? "newTask.following" : "newTask.follow")}</button>
-                <button type="button" aria-label={t("taskDetail.favorite")} aria-pressed={favorite} onClick={() => setFavorite(!favorite)} className={`flex size-8 items-center justify-center rounded-lg border border-border ${favorite ? "text-error" : ""}`}><RemixIcon name={favorite ? "heart-fill" : "heart-line"} className="text-base" /></button>
+                <button type="button" aria-label={t("taskDetail.favorite")} aria-pressed={favorite} onClick={() => setFavorite(!favorite)} className={`flex size-8 items-center justify-center rounded-lg border border-border ${favorite ? "text-destructive" : ""}`}><RemixIcon name={favorite ? "heart-fill" : "heart-line"} className="text-base" /></button>
               </div>
             </div>
             <div className="flex items-center gap-3 pt-2.5 pb-4">
@@ -279,7 +306,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
                   <DropdownMenuContent align="start"><DropdownMenuRadioGroup value={priority} onValueChange={(value) => setPriority(value as TaskPriority)}>{PRIORITIES.map((option) => <DropdownMenuRadioItem key={option.value} value={option.value}><PriorityDot priority={option.value} />{t(option.label)}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
                 </DropdownMenu>
                 <TagPickerDialog tags={tags} onChange={setTags} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="price-tag3-line" label={t("newTask.tags")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{tags.join("، ") || unset}</span></DialogTrigger>} />
-                <div className={FIELD_CLASS}><FieldLabel icon="timer-line" label={t("newTask.timeSpent")} /><button type="button" aria-label={t(timer.running ? "taskDetail.stopTimer" : "taskDetail.startTimer")} aria-pressed={timer.running} onClick={timer.toggle} className={timer.running ? "rounded-full bg-bg2" : ""}><NewTaskAsset name="play-circle-fill" /></button>{(timer.running || minutes > 0) && <span className="text-xs tabular-nums" dir="ltr">{minutes + Math.floor(timer.elapsedSeconds / 60)}:{String(timer.elapsedSeconds % 60).padStart(2, "0")}</span>}</div>
+                <div className={`${FIELD_CLASS} flex-wrap`}><FieldLabel icon="timer-line" label={t("newTask.timeSpent")} /><div className="flex flex-wrap items-center gap-2"><button type="button" aria-label={t(timer.running ? "taskDetail.stopTimer" : "taskDetail.startTimer")} aria-pressed={timer.running} onClick={timer.toggle} className={timer.running ? "rounded-full bg-bg2" : ""}><NewTaskAsset name="play-circle-fill" /></button><span className="text-xs tabular-nums" dir="ltr">{minutes + Math.floor(timer.elapsedSeconds / 60)}:{String(timer.elapsedSeconds % 60).padStart(2, "0")}</span><button type="button" onClick={() => setMinutes(value => value + 10)} className="h-8 rounded-md border border-border px-2 text-xs">{t("newTask.add10Minutes")}</button><button type="button" onClick={() => setMinutes(value => value + 30)} className="h-8 rounded-md border border-border px-2 text-xs">{t("newTask.add30Minutes")}</button></div></div>
               </div>
             </div>
             <div className="overflow-hidden"><NewTaskAsset name="line11" /></div>
@@ -293,9 +320,9 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
               <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-[var(--task-workspace-muted)]"><NewTaskAsset name="git-branch-line" />{t("taskDetail.subtasks")}<NewTaskAsset name="arrow-down-sline" className="ms-auto" /></summary>
               <div className="pb-3">
                 {subtasks.map((item) => <div key={item.id} className="flex items-center gap-2 border-b border-border/50 py-1 last:border-b-0">
-                  <span className="size-3 shrink-0 rounded-full border border-border" />
-                  <button type="button" onClick={() => { void saveChanges().then((saved) => { if (saved) onOpenSubtask(item.id) }) }} className="min-w-0 flex-1 truncate rounded-md px-1 py-1.5 text-start text-sm hover:bg-bg2">{item.title}</button>
-                  <button type="button" className="shrink-0 rounded-md px-2 text-text3 hover:bg-bg2" aria-label={`${t("newTask.removeSubtask")} ${item.title}`} onClick={() => setSubtasks((previous) => previous.filter((candidate) => candidate.id !== item.id))}>×</button>
+                  <Checkbox checked={item.status === "completed"} onCheckedChange={(checked) => setSubtasks((previous) => previous.map((candidate) => candidate.id === item.id ? { ...candidate, status: checked ? "completed" : "todo" } : candidate))} aria-label={`${t("newTask.completeSubtask")} ${item.title}`} />
+                  <button type="button" onClick={() => { void saveChanges().then((saved) => { if (saved) onOpenSubtask(item.id) }) }} className={`min-w-0 flex-1 truncate rounded-md px-1 py-1.5 text-start text-sm hover:bg-bg2 ${item.status === "completed" ? "text-text3 line-through" : ""}`}>{item.title}</button>
+                  <button type="button" className="grid size-8 shrink-0 place-items-center rounded-md border border-border text-text3 hover:bg-bg2 lg:size-auto lg:border-0 lg:px-2" aria-label={`${t("newTask.removeSubtask")} ${item.title}`} onClick={() => setSubtasks((previous) => previous.filter((candidate) => candidate.id !== item.id))}><RemixIcon name="close-line" className="text-base" /></button>
                 </div>)}
                 <div className="flex gap-2"><input value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addSubtask() } }} placeholder={t("newTask.subtaskPlaceholder")} aria-label={t("newTask.subtaskPlaceholder")} className="min-w-0 flex-1 rounded border border-border px-2 py-1 outline-none" /><Button type="button" variant="ghost" onClick={addSubtask} disabled={!subtaskTitle.trim()}>{t("projectTabs.add")}</Button></div>
               </div>
@@ -303,7 +330,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
           </div>
         </form>
         <div className={`${showActivities ? "flex" : "hidden lg:flex"} min-h-0 flex-1 flex-col lg:flex-none`}>
-          <NewTaskActivity user={user} members={project?.members ?? []} following={following} onFollowingChange={setFollowing} />
+          <NewTaskActivity user={user} members={project?.members ?? []} following={following} onFollowingChange={setFollowing} taskActivities={task?.activityLog} />
         </div>
       </div>
     </DialogContent>

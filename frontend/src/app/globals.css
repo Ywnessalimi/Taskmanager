@@ -5,14 +5,10 @@
 @import "../styles/fonts.css";
 @import "../styles/remixicon.css";
 
-@custom-variant dark (&:is(.dark *));
-
 /*
  * توکن‌های رنگی از src/styles/colors.css می‌آیند (منبع اصلی حقیقت رنگ‌ها) — همان
  * نام‌گذاری استاندارد shadcn/ui (--background, --primary, --card, --sidebar-*, --chart-*, ...)
- * مستقیماً اینجا به کلاس‌های Tailwind نگاشت می‌شود. حالت تیره از طریق prefers-color-scheme
- * در همان فایل مدیریت می‌شود، نه کلاس .dark — پس فعلاً سوییچر تم دستی نداریم
- * (رجوع به docs/FRONTEND.md بخش «لایه‌ی رنگی»).
+ * مستقیماً اینجا به کلاس‌های Tailwind نگاشت می‌شود. ظاهر برنامه فعلاً روی حالت روشن قفل است.
  */
 @theme inline {
   --color-background: var(--background);

@@ -100,6 +100,25 @@ const TICKET_USER_AVATARS: Record<string, string> = {
   u6: "/avatars/u6.jpg",
 }
 
+// PointerSensor keeps its existing mouse/pen behaviour; touch has its own delayed sensor.
+class BoardPointerSensor extends PointerSensor {
+  static activators: typeof PointerSensor.activators = [{
+    eventName: "onPointerDown",
+    handler: (...args) => args[0].nativeEvent.pointerType !== "touch" && PointerSensor.activators[0].handler(...args),
+  }]
+}
+
+class BoardTouchSensor extends TouchSensor {
+  static activators: typeof TouchSensor.activators = [{
+    eventName: "onTouchStart",
+    handler: (...args) => {
+      const target = args[0].nativeEvent.target
+      if (target instanceof Element && target.closest("button, a, input, textarea, select, [contenteditable='true']")) return false
+      return TouchSensor.activators[0].handler(...args)
+    },
+  }]
+}
+
 const boardCollisionDetection: CollisionDetection = (args) => {
   if (args.active.data.current?.kind === "ticket") {
     const ticketDropTargets = args.droppableContainers.filter((container) => {
@@ -230,6 +249,7 @@ function BoardTicketCard({
       {...attributes}
       {...listeners}
       onPointerDown={handlePointerDown}
+      onTouchStart={(event) => { event.stopPropagation(); listeners?.onTouchStart?.(event) }}
       onClick={(event) => {
         event.stopPropagation()
         const start = pointerStart.current
@@ -241,7 +261,7 @@ function BoardTicketCard({
       data-ticket-drop-task={parentTaskId}
       aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
       data-board-card
-      className={`flex min-w-0 touch-pan-x items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+      className={`flex min-w-0 [touch-action:auto] items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
     >
       <AvatarGroup className="shrink-0 rtl:space-x-reverse">
         <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
@@ -545,7 +565,7 @@ function SortableTaskCard({
       {...listeners}
       onClick={() => panel?.openTaskDetail(task)}
       data-board-card
-      className={`flex touch-pan-x flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
+      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
@@ -567,7 +587,7 @@ function SortableTaskCard({
 /** کلون شناور روی نشانگر موس هنگام درگ (`DragOverlay`) — تا کارت هیچ‌وقت زیر ستون‌های دیگر گم نشود. */
 function TaskCardOverlay({ task, projectId }: { task: Task; projectId?: string }) {
   return (
-    <div className="flex w-64 cursor-grabbing flex-col gap-2 rounded-4xl border border-border bg-background px-3 py-2 shadow-lg">
+    <div className="flex w-64 scale-[1.02] cursor-grabbing flex-col gap-2 rounded-4xl border border-border bg-background px-3 py-2 shadow-lg transition-transform duration-150">
       <TaskCardBody task={task} projectId={projectId} onUpdate={() => {}} />
     </div>
   )
@@ -1042,8 +1062,8 @@ export function BoardView({
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(BoardPointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(BoardTouchSensor, { activationConstraint: { delay: 2000, tolerance: 12 } })
   )
 
   function updateTask(taskId: string, patch: Partial<Task>) {
@@ -1271,6 +1291,7 @@ export function BoardView({
     <DndContext
       id={`board-${projectId ?? "my-tasks"}`}
       sensors={sensors}
+      autoScroll={{ threshold: { x: 0.15, y: 0.15 }, acceleration: 8 }}
       collisionDetection={boardCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
@@ -1282,7 +1303,7 @@ export function BoardView({
         setTicketTargetIndex(null)
       }}
     >
-      <div data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto touch-pan-x px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto touch-pan-x pb-2"}>
+      <div data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto [touch-action:auto] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto [touch-action:auto] pb-2"}>
       <div className={figmaStyle ? "flex w-max min-w-full gap-6 overflow-visible py-2" : "flex w-max min-w-full gap-4"}>
         {columns.map((column) => (
           <Column

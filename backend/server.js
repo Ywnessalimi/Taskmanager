@@ -68,7 +68,7 @@ function getCookie(request, name) {
 }
 
 function setSessionCookie(response, token, maxAge = authSessionTtlSeconds) {
-  response.setHeader("set-cookie", `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${isSecureCookie ? "; Secure" : ""}`)
+  response.setHeader("set-cookie", `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/${maxAge === null ? "" : `; Max-Age=${maxAge}`}${isSecureCookie ? "; Secure" : ""}`)
 }
 
 const loginAttempts = new Map()
@@ -290,7 +290,7 @@ const server = createServer(async (request, response) => {
         throw new HttpError(401, "invalid_credentials", "ایمیل یا رمز عبور درست نیست.")
       }
       loginAttempts.delete(remoteAddress)
-      setSessionCookie(response, session.token)
+      setSessionCookie(response, session.token, input.remember === false ? null : authSessionTtlSeconds)
       sendJson(response, 200, session.user)
       return
     }

@@ -28,7 +28,7 @@ export function BottomTabBar() {
       <Dialog><DialogTrigger className={cn(itemClass, "text-[var(--mini-bar-muted)] hover:text-white")} aria-label={t("aiAssistant.aria")}><RemixIcon name="brain-line" className="text-2xl" />{t("aiAssistant.title")}</DialogTrigger><AIAssistantDialog /></Dialog>
       <Link href="/notifications" aria-current={notificationsActive ? "page" : undefined} className={cn(itemClass, notificationsActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}><RemixIcon name={notificationsActive ? "notification-3-fill" : "notification-3-line"} className="text-2xl" />{t("nav.notifications")}</Link>
       <Link href="/account" aria-current={accountActive ? "page" : undefined} className={cn(itemClass, accountActive ? "font-semibold text-white" : "text-[var(--mini-bar-muted)]")}>
-        {taskPanel?.user.avatarUrl ? <Image src={taskPanel.user.avatarUrl} alt="" width={24} height={24} unoptimized className={cn("size-6 rounded-full object-cover", accountActive && "ring-1 ring-white")} /> : <span className={cn("grid size-6 place-items-center rounded-full border border-current text-[10px]", accountActive && "ring-1 ring-white")}>{taskPanel?.user.name.slice(0, 1) ?? "?"}</span>}
+        <Image src={taskPanel?.user.avatarUrl || "/avatars/default-profile-3d.png"} alt="" width={24} height={24} unoptimized className={cn("size-6 rounded-full object-cover", accountActive && "ring-1 ring-white")} />
         {t("miniBar.profile")}
       </Link>
     </nav>

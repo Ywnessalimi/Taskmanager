@@ -226,7 +226,7 @@ function GeneralSettings({ settings, update, t, onImageError }: { settings: OrgS
     <Field label={t("orgSettings.picture" as never)}>
       <input ref={imageInput} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(event) => { void selectImage(event.target.files?.[0]); event.target.value = "" }} />
       <button type="button" onClick={() => imageInput.current?.click()} aria-label={t("orgSettings.uploadPicture" as never)} className="group relative w-fit rounded-md focus-visible:outline-2 focus-visible:outline-ring">
-        <Avatar className="size-24 rounded-md"><AvatarImage src={settings.imageUrl ?? undefined} alt={settings.name} /><AvatarFallback className="rounded-md bg-[#aaa] text-3xl text-white">{settings.name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+        <Avatar className="size-24 rounded-md"><AvatarImage src={settings.imageUrl ?? undefined} alt={settings.name} /><AvatarFallback profile={false} className="rounded-md bg-[#aaa] text-3xl text-white">{settings.name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
         <span className="absolute inset-0 grid place-items-center rounded-md bg-black/40 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">{t("orgSettings.changePicture" as never)}</span>
       </button>
     </Field>

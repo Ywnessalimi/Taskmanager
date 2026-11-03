@@ -1,5 +1,7 @@
 # lib/api
 
+ورود `auth.ts` گزینهٔ `remember` را برای تعیین ماندگاری cookie نشست به API می‌فرستد.
+
 این لایه قراردادهای داده و درخواست‌های فرانت‌اند به بک‌اند را نگه می‌دارد. `backend-client.ts` درخواست‌های هم‌مبدأ و کوکی نشست را به `/api/v1` می‌فرستد؛ مسیرهای API به `backend/server.js` و SQLite متصل‌اند.
 
 وابستگی‌ها: `types.ts` برای قراردادها و `backend-client.ts` برای ارتباط HTTP. درخواست‌های مرورگر User-Agent را با header داخلی `x-quire-user-agent` می‌فرستند تا API بتواند دستگاه و مرورگر نشست را ثبت کند. توابع `auth.ts`، `organizations.ts`، `projects.ts`، `tasks.ts`، `tickets.ts`، `notifications.ts`، `project-pages.ts` و `assistant.ts` دامنه‌های ورود/نشست، ساختار پروژه، تسک، تیکت، اعلان، سند/گفت‌وگو و دستیار را می‌خوانند یا تغییر می‌دهند. نشست‌ها با `GET/DELETE /api/v1/auth/sessions` در همان قرارداد احراز هویت مدیریت می‌شوند.

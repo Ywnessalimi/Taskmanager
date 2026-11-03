@@ -12,6 +12,9 @@ import { NotificationsPreviewDialog } from "@/features/notifications/notificatio
 import type { CurrentUser, Notification, TaskFormProjectOption } from "@/lib/api/types"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { projectPath } from "@/lib/organization-paths"
+import { InboxDashboardCreateDialog, InboxDashboardSelector } from "@/features/inbox-dashboards/inbox-dashboard-controls"
+import { RemixIcon } from "@/components/ui/remix-icon"
+import { useState } from "react"
 
 /**
  * هدر دسکتاپ همهٔ مسیرها مطابق KalaMarket node 1710:27098 است. عنوان بر اساس
@@ -31,6 +34,8 @@ export function DesktopHeader({
   const activeUser = taskPanel?.user ?? currentUser
   const pathname = usePathname()
   const router = useRouter()
+  const [createInboxDashboardOpen, setCreateInboxDashboardOpen] = useState(false)
+  const isInbox = pathname.startsWith("/inbox")
   const projectId = pathname.match(/^\/home\/projects\/([^/]+)(?:\/|$)/)?.[1]
   const project = projectId ? projects.find((option) => option.id === projectId) : undefined
   const isProject = Boolean(project)
@@ -53,6 +58,14 @@ export function DesktopHeader({
             {projects.map((option) => <DropdownMenuItem key={option.id} onClick={() => router.push(projectPath(option))}>{option.name}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
+      ) : isInbox ? (
+        <div className="flex min-w-0 items-center gap-2">
+          <InboxDashboardSelector />
+          <button type="button" onClick={() => setCreateInboxDashboardOpen(true)} aria-label={t("inboxDashboards.createAria")} title={t("inboxDashboards.createAria")} className="grid size-8 shrink-0 place-items-center rounded-md text-icon2 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            <RemixIcon name="add-line" className="text-lg" />
+          </button>
+          <InboxDashboardCreateDialog open={createInboxDashboardOpen} onOpenChange={setCreateInboxDashboardOpen} />
+        </div>
       ) : (
         <span className="truncate text-base text-foreground">{sectionTitle}</span>
       )}

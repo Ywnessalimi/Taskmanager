@@ -136,7 +136,7 @@ export function ProjectSectionTabs({
     <div className="flex min-h-0 flex-1 items-stretch">
       <TaskPanel />
       <Tabs value={value} onValueChange={(next) => setValue(next as string)} className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <TabsList variant="line" className="group-data-horizontal/tabs:h-12 w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-[var(--project-surface)] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList variant="line" className="sticky top-14 z-20 group-data-horizontal/tabs:h-12 w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-[var(--project-surface)] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:static">
           <TabsTrigger value="overview" className={TAB_CLASS}>
             <DesignAsset name="dashboard.svg" size={20} />
             {t("projectTabs.dashboard")}

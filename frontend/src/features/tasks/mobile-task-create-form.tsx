@@ -17,7 +17,6 @@ import { MobileTaskAsset } from "./mobile-task-assets"
 import { NewTaskActivity } from "./new-task-activity"
 import { WorkspaceActionBar } from "@/components/ui/workspace-action-bar"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { useTaskTimer } from "./time-tracking"
 import { createTask } from "@/lib/api/tasks"
 import type { TaskRecurrence, CurrentUser, TaskFormProjectOption, TaskPriority, TaskStatus } from "@/lib/api/types"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
@@ -38,7 +37,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
   const [minutes,setMinutes]=useState(0), [description,setDescription]=useState(""), [files,setFiles]=useState<string[]>([])
   const [recurrence,setRecurrence]=useState<TaskRecurrence>({dates:[],count:1})
   const [error,setError]=useState(false), [tab,setTab]=useState("activities"), [saving,setSaving]=useState(false)
-  const inputFile=useRef<HTMLInputElement>(null), timer=useTaskTimer(minutes,setMinutes)
+  const inputFile=useRef<HTMLInputElement>(null)
   const project=projects.find(p=>p.id===projectId), unset=t("newTask.unselected")
   const finish=()=>router.back()
   async function saveTask() {
@@ -53,7 +52,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
   return <div className="flex h-dvh flex-col">
     <h1 className="sr-only">{t("taskForm.title")}</h1>
     <div className="mx-auto flex min-h-0 w-full flex-1 flex-col bg-background text-[var(--task-workspace-text)] lg:my-4 lg:h-[calc(100dvh-2rem)] lg:flex-none lg:w-[calc(100%-2rem)] lg:max-w-[1072px] lg:overflow-hidden lg:rounded-2xl lg:border lg:border-border">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
         <button type="button" aria-label={t("taskForm.cancel")} onClick={finish}><MobileTaskAsset name="back" className="ltr:rotate-180" /></button>
         <div className="flex items-center gap-4">
           <button type="button" disabled aria-label={t("mobileTask.previous")}><MobileTaskAsset name="up" /></button><button type="button" disabled aria-label={t("mobileTask.next")}><MobileTaskAsset name="down" /></button><MobileTaskAsset name="divider" className="rotate-90" />
@@ -62,13 +61,12 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
         </div>
       </header>
       {error && <p role="alert" className="shrink-0 px-4 py-2 text-xs text-error">{t("mobileTask.saveError")}</p>}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         <div className="shrink-0">
         <div className="px-4 pt-3 lg:px-6">
           <div className="flex items-center justify-between gap-2">
             <DropdownMenu><DropdownMenuTrigger aria-label={t("taskForm.project")} className="flex min-w-0 items-center gap-1 truncate text-sm text-[var(--task-workspace-muted)]"><span className="truncate">{project?.name??t("taskForm.project")}</span><RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /></DropdownMenuTrigger><DropdownMenuContent className="max-h-72 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"><DropdownMenuRadioGroup value={projectId} onValueChange={value=>{setProjectId(value);setAssignees([])}}>{projects.map(p=><DropdownMenuRadioItem key={p.id} value={p.id} className="min-h-9 whitespace-normal">{p.name}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
             <div className="flex shrink-0 items-center gap-2">
-              <button type="button" disabled className="flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs text-text2"><NewTaskAsset name="git-merge-line" />{t("newTask.noMilestone")}</button>
               <button type="button" onClick={()=>setFollowing(!following)} aria-pressed={following} className="flex h-8 items-center gap-1 rounded-lg border border-border px-1.5 text-xs text-text2"><NewTaskAsset name="eye-line" />{t(following?"newTask.following":"newTask.follow")}</button>
               <button type="button" aria-label={t("taskDetail.favorite")} aria-pressed={favorite} onClick={()=>setFavorite(!favorite)} className={`flex size-8 items-center justify-center rounded-lg border border-border ${favorite?"bg-bg2":""}`}><NewTaskAsset name="heart3-line" /></button>
             </div>
@@ -83,11 +81,10 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
             <div className={`${FIELD} flex-wrap gap-x-3 gap-y-2`}>
               <Label icon="timer-line">{t("newTask.timeSpent")}</Label>
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <input aria-label={t("newTask.timeSpent")} type="number" min={0} step={1} value={minutes + Math.floor(timer.elapsedSeconds / 60)} onChange={event => setMinutes(Math.max(0, Math.floor(Number(event.target.value) || 0) - Math.floor(timer.elapsedSeconds / 60)))} className="h-8 w-16 rounded-md border border-border bg-transparent px-2 text-center text-xs" />
+                <input aria-label={t("newTask.timeSpent")} type="number" min={0} step={1} value={minutes} onChange={event => setMinutes(Math.max(0, Math.floor(Number(event.target.value) || 0)))} className="h-8 w-16 rounded-none border-0 border-b border-border bg-transparent px-2 text-center text-sm outline-none focus:border-foreground" />
                 <span className="text-xs text-text3">{t("newTask.minutesUnit")}</span>
                 <button type="button" onClick={() => setMinutes(value => value + 10)} className="h-8 rounded-md border border-border px-2 text-xs">{t("newTask.add10Minutes")}</button>
                 <button type="button" onClick={() => setMinutes(value => value + 30)} className="h-8 rounded-md border border-border px-2 text-xs">{t("newTask.add30Minutes")}</button>
-                <button type="button" aria-label={t(timer.running?"taskDetail.stopTimer":"taskDetail.startTimer")} aria-pressed={timer.running} onClick={timer.toggle} className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border"><MobileTaskAsset name="play" /></button>
               </div>
             </div>
             <DatePickerDialog value={startDate} onChange={setStartDate} trigger={<DialogTrigger className={FIELD}><Label icon="calendar-todo-line">{t("newTask.startDate")}</Label><span className="flex items-center gap-1 text-[13px]">{startDate&&<MobileTaskAsset name="start-calendar" />}{startDate||unset}</span></DialogTrigger>} />
@@ -97,7 +94,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
           </div>
         </div>
         <Tabs value={tab} onValueChange={value=>setTab(value as string)} className="gap-0 lg:hidden">
-          <TabsList variant="line" className="group-data-horizontal/tabs:h-12 w-full justify-start gap-4 rounded-none border-b border-border bg-[var(--task-workspace-bg)] px-4">
+          <TabsList variant="line" className="sticky top-0 z-20 group-data-horizontal/tabs:h-12 w-full justify-start gap-4 rounded-none border-b border-border bg-[var(--task-workspace-bg)] px-4 py-0">
             <TabsTrigger value="details" className="h-full flex-none gap-2 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]"><MobileTaskAsset name="details" />{t("mobileTask.moreDetails")}</TabsTrigger>
             <TabsTrigger value="activities" className="h-full flex-none gap-2 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]"><MobileTaskAsset name="activities" />{t("newTask.activities")}</TabsTrigger>
           </TabsList>
