@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { t } from "@/lib/i18n/dictionary"
 import type { Locale } from "@/lib/i18n/dictionary"
@@ -25,7 +24,7 @@ export function HomeGreeting({
         </p>
       </div>
 
-      <Link
+      <a
         href="/home/projects/MyTasks"
         className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-sm hover:bg-bg2"
       >
@@ -36,7 +35,7 @@ export function HomeGreeting({
           {t(locale, "home.tasksTodoRest")}
         </span>
         <RemixIcon name="arrow-left-line" className="shrink-0 text-base text-icon2" />
-      </Link>
+      </a>
     </div>
   )
 }

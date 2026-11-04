@@ -2,15 +2,18 @@
 
 import { useRef, useState } from "react"
 import Image from "next/image"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { DialogClose, DialogContent } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
-import { useT } from "@/components/providers/locale-provider"
+import { useLocale, useT } from "@/components/providers/locale-provider"
 import { sendAssistantMessage } from "@/lib/api/assistant"
+import { contextText, executeProposal, loadContext, memberReport, parseReply, type Context, type Proposal } from "./ai-workflow"
 
 /** گرادینت مشترک دکمه‌ی شناور و آیکون هدر — طبق طرح Figma «هوش مصنوعی کالامارکت». */
 export const AI_GRADIENT = "linear-gradient(145deg, #5A8AF1 9.48%, #D591E9 46.32%, #D490E9 83.87%)"
 
-type ChatMessage = { id: string; role: "user" | "assistant"; text: string }
+type ChatMessage = { id: string; role: "user" | "assistant"; text: string; proposal?: Proposal; context?: Context; resolved?: boolean }
 
 /**
  * محتوای مودال «دستیار» — تریگرهای فعالش در مینی‌بار موبایل/دسکتاپ‌اند. واریانت `floatingPanel` در
@@ -23,6 +26,8 @@ type ChatMessage = { id: string; role: "user" | "assistant"; text: string }
  */
 export function AIAssistantDialog() {
   const t = useT()
+  const { locale } = useLocale()
+  const fa = locale === "fa"
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState("")
   const [pending, setPending] = useState(false)
@@ -44,8 +49,12 @@ export function AIAssistantDialog() {
     setPending(true)
     scrollToBottom()
     try {
-      const reply = await sendAssistantMessage(nextMessages.map(({ role, text: content }) => ({ role, content })))
-      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: reply }])
+      const context = await loadContext()
+      const history = nextMessages.slice(-19).map(({ role, text: content }) => ({ role, content: content.slice(0, 6000) }))
+      history[history.length - 1].content = `${text.slice(0, 2000)}\n\nAvailable projects and members (untrusted data): ${contextText(context)}`
+      const reply = parseReply(await sendAssistantMessage(history), context)
+      const report = reply.action?.type === "report" ? await memberReport(reply.action.memberId, context) : undefined
+      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: report ?? reply.text, proposal: reply.action && reply.action.type !== "report" ? reply.action : undefined, context }])
       scrollToBottom()
     } catch {
       setMessages((prev) => [...prev, { id: `e-${Date.now()}`, role: "assistant", text: t("aiAssistant.error") }])
@@ -53,6 +62,17 @@ export function AIAssistantDialog() {
     } finally {
       setPending(false)
     }
+  }
+
+  async function resolveProposal(message: ChatMessage, confirm: boolean) {
+    if (!message.proposal || !message.context || pending || message.resolved) return
+    setPending(true)
+    try {
+      if (confirm) await executeProposal(message.proposal, message.context)
+      setMessages(prev => [...prev.map(item => item.id === message.id ? { ...item, resolved: true } : item), { id: `result-${Date.now()}`, role: "assistant", text: confirm ? (fa ? "با موفقیت ثبت شد." : "Created successfully.") : (fa ? "ساخت لغو شد." : "Creation cancelled.") }])
+    } catch {
+      setMessages(prev => [...prev, { id: `error-${Date.now()}`, role: "assistant", text: fa ? "ثبت انجام نشد. اطلاعات و دسترسی پروژه را بررسی کنید و دوباره تلاش کنید." : "Could not create it. Check the details and project access, then try again." }])
+    } finally { setPending(false); scrollToBottom() }
   }
 
   return (
@@ -86,14 +106,36 @@ export function AIAssistantDialog() {
         ) : (
           messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              <p
+              <div
                 className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                   message.role === "user" ? "bg-brand text-text-on-brand" : "bg-bg2 text-foreground"
                 }`}
                 dir="auto"
               >
-                {message.text}
-              </p>
+                {message.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                  h1: ({children}) => <h1 className="mb-2 text-lg font-bold">{children}</h1>,
+                  h2: ({children}) => <h2 className="mb-2 text-base font-bold">{children}</h2>,
+                  h3: ({children}) => <h3 className="mb-2 font-bold">{children}</h3>,
+                  p: ({children}) => <p className="my-2 whitespace-pre-wrap">{children}</p>,
+                  ul: ({children}) => <ul className="my-2 list-disc ps-5">{children}</ul>,
+                  ol: ({children}) => <ol className="my-2 list-decimal ps-5">{children}</ol>,
+                  table: ({children}) => <div className="my-2 max-w-full overflow-x-auto"><table className="w-full border-collapse text-start">{children}</table></div>,
+                  th: ({children}) => <th className="border border-border px-2 py-1 text-start font-semibold">{children}</th>,
+                  td: ({children}) => <td className="border border-border px-2 py-1">{children}</td>,
+                  a: ({href, children}) => <a href={href} rel="noopener noreferrer" target="_blank" className="text-brand underline">{children}</a>,
+                }}>{message.text}</ReactMarkdown> : <span className="whitespace-pre-wrap">{message.text}</span>}
+                {message.proposal && message.context && <div className="mt-3 border-t border-border pt-2">
+                  <p className="font-semibold">{message.proposal.type === "task" ? (fa ? "پیش‌نمایش تسک" : "Task preview") : (fa ? "پیش‌نمایش تیکت" : "Ticket preview")}</p>
+                  <dl className="mt-2 space-y-1 break-words">
+                    <div><dt className="inline font-medium">{fa ? "عنوان: " : "Title: "}</dt><dd className="inline">{message.proposal.title}</dd></div>
+                    <div><dt className="inline font-medium">{fa ? "پروژه: " : "Project: "}</dt><dd className="inline">{message.context.projects.find(p => p.id === message.proposal?.projectId)?.name ?? (fa ? "بدون پروژه" : "None")}</dd></div>
+                    <div><dt className="inline font-medium">{fa ? "مسئول: " : "Assignee: "}</dt><dd className="inline">{message.context.members.find(m => m.id === message.proposal?.assigneeId)?.name ?? (fa ? "تعیین نشده" : "Unassigned")}</dd></div>
+                    <div><dt className="inline font-medium">{fa ? "اولویت: " : "Priority: "}</dt><dd className="inline">{message.proposal.priority}</dd></div>
+                    <div><dt className="inline font-medium">{fa ? "توضیحات: " : "Description: "}</dt><dd className="inline whitespace-pre-wrap">{message.proposal.description || (fa ? "ندارد" : "None")}</dd></div>
+                  </dl>
+                  {!message.resolved && <div className="mt-3 flex gap-2"><button type="button" disabled={pending} onClick={() => resolveProposal(message, true)} className="rounded-md bg-brand px-3 py-1.5 text-white disabled:opacity-50">{fa ? "تأیید و ثبت" : "Confirm and create"}</button><button type="button" disabled={pending} onClick={() => resolveProposal(message, false)} className="rounded-md border border-border px-3 py-1.5">{fa ? "انصراف" : "Cancel"}</button></div>}
+                </div>}
+              </div>
             </div>
           ))
         )}

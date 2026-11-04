@@ -43,9 +43,21 @@ try {
     for (const project of projects) projectStmt.run(project.id, project.name, orgId, orgName, divisions[project.division].id, divisions[project.division].name, '1405/07/01', '1405/10/30', 'Ongoing work with completed milestones and active follow-ups.', project.slug)
     const taskStmt = db.prepare("INSERT INTO tasks (id,display_id,project_id,title,assignee_names,priority,status,start_date,due_date,tags,description,subtasks,followers,is_favorite,time_spent_minutes,activity_log,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,'[]','[]',0,?,'[]',?,?)")
     const sequence = db.prepare('UPDATE task_display_sequence SET last_value = last_value + 1 WHERE id = 1 RETURNING last_value')
+    const taskRecords = []
     for (const [pi, project] of projects.entries()) for (const [i, title] of tasks.entries()) {
       const user = accounts[(pi * 3 + i) % accounts.length]
-      taskStmt.run(randomUUID(), `#${sequence.get().last_value}`, project.id, title, JSON.stringify([user.name]), priorities[(pi + i) % priorities.length], statuses[(pi + i) % statuses.length], '1405/07/10', `1405/08/${String(5 + i * 2).padStart(2, '0')}`, JSON.stringify([divisions[project.division].name]), `Work is underway. ${user.name} is coordinating the next step.`, 15 * (i % 5), now, now)
+      const task = { id: randomUUID(), title, projectId: project.id, user, priority: priorities[(pi + i) % priorities.length] }
+      taskStmt.run(task.id, `#${sequence.get().last_value}`, project.id, title, JSON.stringify([user.name]), task.priority, statuses[(pi + i) % statuses.length], '1405/07/10', `1405/08/${String(5 + i * 2).padStart(2, '0')}`, JSON.stringify([divisions[project.division].name]), `Work is underway. ${user.name} is coordinating the next step.`, 15 * (i % 5), now, now)
+      taskRecords.push(task)
+    }
+    const notificationStmt = db.prepare('INSERT INTO notifications (id,recipient_name,actor_id,actor_name,verb,target_type,target_id,target_label,project_id,status,created_at) VALUES (?,?,?,?,\'taskAssigned\',\'task\',?,?,?, ?,?)')
+    for (const [userIndex, user] of accounts.entries()) {
+      const assignedTasks = taskRecords.filter((task) => task.user.id === user.id).slice(0, 3)
+      for (const [index, task] of assignedTasks.entries()) {
+        const actor = accounts[(userIndex + index + 1) % accounts.length]
+        const createdAt = new Date(Date.now() - (index + 1) * 3_600_000).toISOString()
+        notificationStmt.run(randomUUID(), user.name, actor.id, actor.name, task.id, task.title, task.projectId, index < 2 ? 'unread' : 'read', createdAt)
+      }
     }
     const ticketStmt = db.prepare('INSERT INTO tickets (id,title,data,created_at,updated_at) VALUES (?,?,?,?,?)')
     const activityStmt = db.prepare("INSERT INTO ticket_activity (id,ticket_id,actor_id,actor_name,actor_avatar_url,kind,details,created_at) VALUES (?,?,?,?,?,'created',?,?)")
@@ -58,6 +70,6 @@ try {
       activityStmt.run(randomUUID(), id, creator.id, creator.name, creator.avatar, JSON.stringify({ title }), now)
     }
     db.exec('COMMIT')
-    console.log('Created 10 users, 1 organization, 2 divisions, 4 projects, 40 tasks and 100 tickets.')
+    console.log('Created 10 users, 1 organization, 2 divisions, 4 projects, 40 tasks, 100 tickets and sample task notifications.')
   } catch (error) { db.exec('ROLLBACK'); throw error }
 } finally { db.close() }

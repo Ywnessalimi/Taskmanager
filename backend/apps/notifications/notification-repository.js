@@ -6,7 +6,10 @@ function toNotification(row) {
     verb: row.verb,
     actorId: row.actor_id,
     actorName: row.actor_name,
-    target: { type: row.target_type, id: row.target_id, label: row.target_label, projectId: row.project_id },
+    target: {
+      type: row.target_type, id: row.target_id, label: row.target_label, projectId: row.project_id,
+      ...(row.target_priority ? { priority: row.target_priority } : {}),
+    },
     status: row.status,
     requiresApproval: false,
     createdAt: row.created_at,
@@ -58,7 +61,13 @@ export function createNotificationRepository(database) {
   }
 
   function listForRecipient(recipientName) {
-    return database.prepare("SELECT * FROM notifications WHERE recipient_name = ? ORDER BY created_at DESC, rowid DESC")
+    return database.prepare(`
+      SELECT notifications.*, tasks.priority AS target_priority
+      FROM notifications
+      LEFT JOIN tasks ON notifications.target_type = 'task' AND notifications.target_id = tasks.id
+      WHERE notifications.recipient_name = ?
+      ORDER BY notifications.created_at DESC, notifications.rowid DESC
+    `)
       .all(recipientName).map(toNotification)
   }
 

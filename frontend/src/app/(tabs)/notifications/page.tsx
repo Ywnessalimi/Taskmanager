@@ -6,5 +6,5 @@ import { NotificationsFullPage } from "@/features/notifications/notifications-pr
 export default async function NotificationsPage() {
   const [projects, user] = await Promise.all([getTaskFormOptions(), getCurrentUser()])
   const notifications = await getNotifications(user.name)
-  return <NotificationsFullPage notifications={notifications} projects={projects} recipientName={user.name} />
+  return <NotificationsFullPage notifications={notifications} projects={projects} recipientName={user.name} recipientId={user.id} />
 }

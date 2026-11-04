@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
+import Image from "next/image"
 import { useLocale, useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -74,17 +75,21 @@ export function InboxDashboardCreateDialog({ open, onOpenChange }: { open: boole
   }
 
   return <Dialog open={open} onOpenChange={(next) => { if (!next) setName(""); onOpenChange(next) }}>
-    <DialogContent showCloseButton={false} className="gap-4 sm:max-w-sm">
-      <DialogHeader className="text-start">
-        <DialogTitle className="text-base">{t("inboxDashboards.createTitle")}</DialogTitle>
-      </DialogHeader>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <input autoFocus maxLength={40} dir={locale === "en" ? "ltr" : "rtl"} value={name} onChange={(event) => setName(event.target.value)} placeholder={t("inboxDashboards.namePlaceholder")} aria-label={t("inboxDashboards.namePlaceholder")} className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none placeholder:text-text3 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t("inboxDashboards.cancel")}</Button>
-          <Button type="submit" disabled={!name.trim()}><RemixIcon name="add-line" />{t("inboxDashboards.createAction")}</Button>
-        </div>
-      </form>
+    <DialogContent showCloseButton={false} className="max-h-[90dvh] gap-0 overflow-y-auto rounded-2xl p-0 shadow-none sm:max-w-md">
+      <Image src="/images/inbox-dashboards/create-dashboard.webp" alt="" width={768} height={512} unoptimized className="h-36 w-full object-cover sm:h-44" />
+      <div className="flex flex-col gap-4 p-5 sm:p-6">
+        <DialogHeader className="gap-1 text-start">
+          <DialogTitle className="text-base">{t("inboxDashboards.createTitle")}</DialogTitle>
+          <p className="text-sm leading-6 text-text2">{t("inboxDashboards.createDescription")}</p>
+        </DialogHeader>
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <input autoFocus maxLength={40} dir={locale === "en" ? "ltr" : "rtl"} value={name} onChange={(event) => setName(event.target.value)} placeholder={t("inboxDashboards.namePlaceholder")} aria-label={t("inboxDashboards.namePlaceholder")} className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none placeholder:text-text3 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t("inboxDashboards.cancel")}</Button>
+            <Button type="submit" disabled={!name.trim()} className="rounded-full px-4"><RemixIcon name="add-line" />{t("inboxDashboards.createAction")}</Button>
+          </div>
+        </form>
+      </div>
     </DialogContent>
   </Dialog>
 }

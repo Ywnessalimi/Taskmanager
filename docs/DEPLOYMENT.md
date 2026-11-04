@@ -21,6 +21,16 @@
 - `quire-https.service`: TLS proxy روی `0.0.0.0:443`؛ گواهی از نسخهٔ اختصاصی برنامه در `/var/lib/quire/tls/` خوانده می‌شود. سرویس با `CAP_NET_BIND_SERVICE` اجرا می‌شود تا کاربر غیرریشه‌ای `quire` بتواند پورت privileged 443 را bind کند.
 - `quire-cert-sync.timer`: هر پنج دقیقه گواهی تمدیدشدهٔ میزبان را به مسیر برنامه کپی می‌کند؛ proxy تغییر گواهی را خودکار بارگذاری می‌کند.
 
+تنظیمات دستیار هوش مصنوعی باید روی سرور در `/etc/quire/quire-ai.env` قرار بگیرند؛ فایل محلی `backend/.env.local` به سرویس systemd منتقل نمی‌شود. فایل فقط باید شامل `AI_API_BASE_URL`، `AI_API_KEY` و `AI_MODEL` باشد، با مالک `root:quire` و مجوز `0640`. فایل unit در `backend/deploy/quire-api.service` آن را به‌عنوان `EnvironmentFile` بارگذاری می‌کند. پس از ساخت یا تغییر فایل:
+
+```bash
+systemctl daemon-reload
+systemctl restart quire-api
+systemctl status quire-api
+```
+
+مقدار کلید را در shell history، لاگ یا فرمان‌های قابل مشاهده ننویسید.
+
 وضعیت و لاگ:
 
 ```bash

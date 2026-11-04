@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,8 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
   const router = useRouter()
   const [openOrganizations, setOpenOrganizations] = useState(() => new Set<string>())
   const [openDivisions, setOpenDivisions] = useState(() => new Set<string>())
+  const [treeStateLoaded, setTreeStateLoaded] = useState(false)
+  const treeStateKey = `quire:projects-tree:${user.id}`
   const [createTarget, setCreateTarget] = useState<{ kind: "organization" | "division" | "project"; organizationId?: string; divisionId?: string } | null>(null)
   const [newName, setNewName] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
@@ -33,6 +35,39 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const draggedItem = useRef<{ kind: "project"; id: string; organizationId: string } | { kind: "division"; id: string; organizationId: string } | null>(null)
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(treeStateKey)
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved)
+        if (parsed && typeof parsed === "object") {
+          const state = parsed as { organizations?: unknown; divisions?: unknown }
+          if (Array.isArray(state.organizations) && state.organizations.every((id) => typeof id === "string")) {
+            setOpenOrganizations(new Set(state.organizations))
+          }
+          if (Array.isArray(state.divisions) && state.divisions.every((id) => typeof id === "string")) {
+            setOpenDivisions(new Set(state.divisions))
+          }
+        }
+      }
+    } catch {
+      // Keep the in-memory defaults if local storage is unavailable or malformed.
+    }
+    setTreeStateLoaded(true)
+  }, [treeStateKey])
+
+  useEffect(() => {
+    if (!treeStateLoaded) return
+    try {
+      window.localStorage.setItem(treeStateKey, JSON.stringify({
+        organizations: [...openOrganizations],
+        divisions: [...openDivisions],
+      }))
+    } catch {
+      // The tree remains usable when local storage is unavailable.
+    }
+  }, [openDivisions, openOrganizations, treeStateKey, treeStateLoaded])
 
   function hasPermission(organizationId: string, permission: string) {
     const organization = organizations.find((entry) => entry.id === organizationId)
@@ -156,10 +191,10 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
         </header>
 
         <div className="flex flex-1 flex-col gap-4 px-6 py-3 lg:flex-none">
-          <Link href="/home/projects/MyTasks" className="flex items-center gap-2 px-1 text-xs leading-normal font-medium text-[#595959] hover:text-foreground">
+          <a href="/home/projects/MyTasks" className="flex items-center gap-2 px-1 text-xs leading-normal font-medium text-[#595959] hover:text-foreground">
             <Image src="/images/figma/project-navigation/tasks.svg" width={16} height={16} alt="" />
             {t("nav.myTasks")}
-          </Link>
+          </a>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-text2">{t("projects.myOrganizations")}</p>
             <Button variant="ghost" onClick={() => setCreateTarget({ kind: "organization" })}>
@@ -274,7 +309,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
       <Dialog open={Boolean(createTarget)} onOpenChange={(open) => { if (!open) { setCreateTarget(null); setNewName("") } }}>
         <DialogContent variant="center" showCloseButton={false} className="max-w-sm">
           <div className="flex items-center justify-end gap-2">
-            <Button type="submit" form="organization-project-create-form" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button>
+            {(createTarget?.kind === "division" || createTarget?.kind === "project") && <Button type="submit" form="organization-project-create-form" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button>}
             <DialogClose aria-label={t("taskDetail.close")} className="grid size-7 place-items-center rounded-lg bg-bg2"><RemixIcon name="close-line" className="text-base" /></DialogClose>
           </div>
           <DialogHeader>
@@ -284,6 +319,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
           <form id="organization-project-create-form" onSubmit={createItem} className="flex flex-col gap-4">
             <input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} aria-label={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} placeholder={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring" />
             {createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}
+            {createTarget?.kind === "organization" && <div className="flex justify-end pt-1"><Button type="submit" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button></div>}
           </form>
         </DialogContent>
       </Dialog>

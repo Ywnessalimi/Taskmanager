@@ -12,6 +12,7 @@ Environment=HOST=127.0.0.1
 Environment=PORT=4000
 Environment=DATABASE_PATH=/var/lib/quire/quire.sqlite
 Environment=SESSION_COOKIE_SECURE=true
+EnvironmentFile=/etc/quire/quire-ai.env
 ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=5

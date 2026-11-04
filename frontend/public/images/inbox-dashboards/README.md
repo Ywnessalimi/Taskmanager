@@ -1,1 +1,1 @@
-تصویر ارسالی کاربر برای حالت خالی کارتابل سفارشی؛ مصرف‌کننده: `features/inbox-dashboards/InboxDashboardCanvas`. دکمهٔ افزودن ویجت زیر تصویر، حالت ویرایش و انتخابگر ویجت را باز می‌کند.
+`empty-widgets-ui.webp` تصویر بهینه‌شدهٔ حالت خالی کارتابل سفارشی است؛ از تصویر مرجع `empty-widgets.png` ساخته شده و مصرف‌کنندهٔ آن `features/inbox-dashboards/InboxDashboardCanvas` است. `create-dashboard.webp` تصویر سربرگ مودال ساخت کارتابل است و کنار آن عنوان، توضیح و ورودی نام دیده می‌شوند.

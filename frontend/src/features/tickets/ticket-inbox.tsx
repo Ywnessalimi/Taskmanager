@@ -450,11 +450,11 @@ export function TicketInbox({ user }: { user: CurrentUser }) {
             <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
               <Image src={user.avatarUrl || "/avatars/default-profile-3d.png"} alt={user.name} width={52} height={52} unoptimized className="size-[52px] shrink-0 rounded-2xl object-cover" />
               <div dir={locale === "en" ? "ltr" : "rtl"} className="min-w-0 text-start">
-                <h2 className="hidden truncate text-xl font-medium leading-8 text-[var(--task-workspace-text)] lg:block">{user.name}</h2>
-                <p className="truncate text-sm leading-5 text-[var(--task-workspace-muted)]">{user.name?.trim() || t("inbox.anonymousUser")}</p>
+                <h2 className="truncate text-base font-semibold leading-6 text-[var(--task-workspace-text)]">{user.name?.trim() || t("inbox.anonymousUser")}</h2>
+                <p className="truncate text-[13px] font-normal leading-5 text-[var(--task-workspace-muted)]">{user.bio?.trim() || t("inbox.memberRole")}</p>
               </div>
             </div>
-            <button type="button" onClick={() => setCreateDashboardOpen(true)} aria-label={t("inboxDashboards.createAria")} title={t("inboxDashboards.createAria")} className="absolute left-0 grid size-8 shrink-0 place-items-center rounded-md text-icon2 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring lg:hidden">
+            <button type="button" onClick={() => setCreateDashboardOpen(true)} aria-label={t("inboxDashboards.createAria")} title={t("inboxDashboards.createAria")} className="absolute left-0 right-auto grid size-8 shrink-0 place-items-center rounded-md text-icon2 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring lg:hidden">
               <RemixIcon name="add-line" className="text-lg" />
             </button>
           </div>

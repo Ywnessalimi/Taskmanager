@@ -98,9 +98,9 @@ function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing
       {editing && <button type="button" onClick={() => onRemove(slot.id)} aria-label={t("inboxDashboards.removeWidget")} title={t("inboxDashboards.removeWidget")} className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-text3 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><RemixIcon name="delete-bin-line" className="text-base" /></button>}
     </div>
     <WidgetRows slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={loading} error={error} />
-    <Link href={slot.widget === "tickets" ? "/inbox" : slot.widget === "tasks" ? "/home/projects/MyTasks" : "/notifications"} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
+    <a href={slot.widget === "tickets" ? "/inbox" : slot.widget === "tasks" ? "/home/projects/MyTasks" : "/notifications"} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
       {t("inboxDashboards.viewAll")}<RemixIcon name="arrow-left-line" className="text-sm rtl:rotate-180" />
-    </Link>
+    </a>
   </article>
 }
 
@@ -168,9 +168,9 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
       <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => { if (editing) { saveSlots(dashboard.id, draft); setEditing(false) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
     </div>
     {slots.length === 0 && !editing ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 py-8 text-center">
-      <Image src="/images/inbox-dashboards/empty-widgets.webp" alt="" width={510} height={510} unoptimized className="size-44 object-contain" />
+      <Image src="/images/inbox-dashboards/empty-widgets-ui.webp" alt="" width={512} height={512} unoptimized className="size-44 object-contain" />
       <p className="text-sm text-text3">{t("inboxDashboards.noWidgets")}</p>
-      <Button type="button" size="sm" onClick={() => { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true); setPickerSlot("new") }}>
+      <Button type="button" size="sm" className="rounded-full border-white px-4" onClick={() => { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true); setPickerSlot("new") }}>
         <RemixIcon name="add-line" />{t("inboxDashboards.emptySlot")}
       </Button>
     </div> : <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:grid-cols-3 xl:grid-cols-4">

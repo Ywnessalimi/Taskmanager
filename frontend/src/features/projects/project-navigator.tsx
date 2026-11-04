@@ -99,10 +99,10 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
     <>
     <aside className="hidden w-52 shrink-0 flex-col border-e border-border bg-[var(--project-surface)] lg:flex">
       <nav className="flex flex-col gap-3 border-b border-border px-4 py-4">
-        <Link href={myTasksHref} aria-current={isMyTasks ? "page" : undefined} className={`flex items-center gap-2 px-1 text-xs leading-normal font-medium ${isMyTasks ? "text-foreground" : "text-[#595959] hover:text-foreground"}`}>
+        <a href={myTasksHref} aria-current={isMyTasks ? "page" : undefined} className={`flex items-center gap-2 px-1 text-xs leading-normal font-medium ${isMyTasks ? "text-foreground" : "text-[#595959] hover:text-foreground"}`}>
           <Image src="/images/figma/project-navigation/tasks.svg" width={16} height={16} alt="" />
           {t(locale, "nav.myTasks")}
-        </Link>
+        </a>
       </nav>
       <nav aria-label={t(locale, "projects.all")} className="flex flex-col gap-4 overflow-y-auto p-3">
         {moveError && <p role="alert" className="text-xs text-destructive">{moveError}</p>}

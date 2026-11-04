@@ -88,7 +88,7 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
           {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
           <AvatarFallback>{user.name.slice(0, 1)}</AvatarFallback>
         </Avatar>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 self-center">
           <p className="truncate text-base font-medium text-foreground">{user.name}</p>
           {user.bio && <p className="truncate text-xs text-text2">{user.bio}</p>}
         </div>
@@ -156,7 +156,7 @@ function LanguagePickerRow({ locale, onChange }: { locale: Locale; onChange: (lo
         <RemixIcon name="global-line" className="text-base text-icon2" />
         <span className="flex-1 text-sm text-foreground">{t("account.language")}</span>
         <span className="text-xs text-text2">{currentLabel}</span>
-        <RemixIcon name="arrow-left-s-line" className="text-base text-icon2" />
+        <RemixIcon name={locale === "en" ? "arrow-right-s-line" : "arrow-left-s-line"} className="text-base text-icon2" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup value={locale} onValueChange={(value) => onChange(value as Locale)}>

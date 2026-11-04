@@ -172,7 +172,7 @@ export type OrganizationActivity = {
 export type NotificationStatus = "unread" | "read"
 
 export type NotificationTarget =
-  | { type: "task"; id: string; label: string; projectId: string }
+  | { type: "task"; id: string; label: string; projectId: string; priority?: TaskPriority }
   | { type: "ticket"; id: string; label: string; projectId?: string }
   | { type: "project"; id: string; label: string }
   | { type: "organization"; id: string; label: string }
