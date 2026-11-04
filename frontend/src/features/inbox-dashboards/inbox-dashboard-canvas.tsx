@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useLocale, useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -166,7 +167,13 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
       </div>
       <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => { if (editing) { saveSlots(dashboard.id, draft); setEditing(false) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
     </div>
-    {slots.length === 0 && !editing ? <div className="flex min-h-48 items-center justify-center text-sm text-text3">{t("inboxDashboards.noWidgets")}</div> : <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:grid-cols-3 xl:grid-cols-4">
+    {slots.length === 0 && !editing ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 py-8 text-center">
+      <Image src="/images/inbox-dashboards/empty-widgets.webp" alt="" width={510} height={510} unoptimized className="size-44 object-contain" />
+      <p className="text-sm text-text3">{t("inboxDashboards.noWidgets")}</p>
+      <Button type="button" size="sm" onClick={() => { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true); setPickerSlot("new") }}>
+        <RemixIcon name="add-line" />{t("inboxDashboards.emptySlot")}
+      </Button>
+    </div> : <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:grid-cols-3 xl:grid-cols-4">
       {slots.map((slot) => <SlotCard key={slot.id} slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={slot.widget === "tickets" ? ticketLoading : loading} error={slot.widget ? widgetError(slot.widget) : false} editing={editing} onRemove={setRemoveId} />)}
       {editing && <button type="button" onClick={() => setPickerSlot("new")} aria-label={t("inboxDashboards.emptySlot")} className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background/70 text-text3 hover:text-brand focus-visible:outline-2 focus-visible:outline-ring"><span className="grid size-9 place-items-center rounded-full border border-border bg-background"><RemixIcon name="add-line" className="text-lg" /></span><span className="text-xs">{t("inboxDashboards.emptySlot")}</span></button>}
     </div>}

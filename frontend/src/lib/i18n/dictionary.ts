@@ -82,7 +82,7 @@ const fa = {
   "inboxDashboards.removeWidget": "حذف ویجت",
   "inboxDashboards.editWidgets": "ویرایش",
   "inboxDashboards.saveWidgets": "ذخیره",
-  "inboxDashboards.noWidgets": "هیچ ویجتی اضافه نکرده‌اید",
+  "inboxDashboards.noWidgets": "هنوز ویجتی اضافه نکرده‌اید",
   "inboxDashboards.confirmRemove": "این ویجت حذف شود؟",
   "inboxDashboards.confirmRemoveDescription": "حذف پس از ذخیرهٔ تغییرات اعمال می‌شود.",
   "repeat.dates": "روزهای تکرار",

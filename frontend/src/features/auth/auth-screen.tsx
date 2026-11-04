@@ -1,4 +1,5 @@
 import { t, type Locale } from "@/lib/i18n/dictionary"
+import Image from "next/image"
 import { AuthHero } from "./auth-hero"
 
 /**
@@ -27,6 +28,7 @@ export function AuthScreen({
       <div className="flex w-full flex-1 items-center justify-center lg:min-h-dvh lg:w-[400px] lg:flex-none">
         <div className="flex w-full max-w-[360px] flex-col gap-4 rounded-[20px] bg-[var(--auth-bg)] px-5 pt-[70px] pb-5 lg:min-h-dvh lg:max-w-none lg:justify-center lg:rounded-none lg:py-0">
           <div dir={locale === "fa" ? "rtl" : "ltr"} className="flex w-full flex-col gap-2 text-start">
+            <Image src="/images/auth/mobile-welcome.png" alt="" width={64} height={64} unoptimized className="mb-2 ml-auto size-16 object-contain lg:hidden" />
             <p className="text-lg text-[color:var(--auth-text-primary)]">{t(locale, "auth.welcomeTitle")}</p>
             <p className="text-sm text-[color:var(--auth-text-tertiary)]">
               {t(locale, "auth.welcomeSubtitle")}
