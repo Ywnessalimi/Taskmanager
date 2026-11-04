@@ -9,6 +9,7 @@ import type { Organization } from "@/lib/api/types"
 import { projectPath } from "@/lib/organization-paths"
 import { t, type Locale } from "@/lib/i18n/dictionary"
 import { moveDivision, moveProject } from "@/lib/api/organizations"
+import { divisionImageForName } from "./division-image"
 
 /** فهرست همهٔ پروژه‌ها در محیط مستقل پروژه‌ها، کنار پروژهٔ انتخاب‌شده. */
 export function ProjectNavigator({ organizations, activeId, locale, userId }: { organizations: Organization[]; activeId?: string; locale: Locale; userId: string }) {
@@ -124,7 +125,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
                     onDragEnd={endDrag}
                     className={`flex min-h-7 cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs text-text2 transition-opacity duration-150 ${draggedItemId === division.id ? "opacity-45" : ""}`}
                   >
-                    <RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /><span className="min-w-0 flex-1 truncate">{division.name}</span>
+                    <RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /><Image src={divisionImageForName(division.name)} alt="" width={22} height={22} sizes="22px" className="size-[22px] shrink-0 rounded-md object-cover" /><span className="min-w-0 flex-1 truncate">{division.name}</span>
                   </summary>
                   <div className="flex flex-col ps-2">{division.projects.map((project) => (
                     <div key={project.id} className="flex min-h-8 items-center gap-1">

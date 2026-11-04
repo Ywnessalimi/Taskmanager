@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { t, type Locale } from "@/lib/i18n/dictionary"
@@ -20,6 +20,94 @@ function ProjectCover({ name }: { name: string }) {
   )
 }
 
+function fileKind(file: File): "PDF" | "XLS" | "DOC" | "PPT" | "FILE" {
+  const extension = file.name.split(".").pop()?.toLowerCase()
+  if (extension === "pdf" || file.type === "application/pdf") return "PDF"
+  if (["xls", "xlsx", "xlsm"].includes(extension ?? "") || /spreadsheet|ms-excel/.test(file.type)) return "XLS"
+  if (["doc", "docx"].includes(extension ?? "") || /wordprocessing|msword/.test(file.type)) return "DOC"
+  if (["ppt", "pptx"].includes(extension ?? "") || /presentation|ms-powerpoint/.test(file.type)) return "PPT"
+  return "FILE"
+}
+
+function fileSize(bytes: number, locale: Locale): string {
+  const units = ["B", "KB", "MB", "GB"]
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value)} ${units[unit]}`
+}
+
+/** کارت انتخاب محلی؛ تصویر با URL موقت مرورگر نمایش داده و هنگام خروج آزاد می‌شود. */
+function AttachmentCard({ file, locale }: { file: File; locale: Locale }) {
+  const imageRef = useRef<HTMLImageElement>(null)
+  const [imageFailed, setImageFailed] = useState(false)
+  const isImage = file.type.startsWith("image/") || (!file.type && /\.(?:png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(file.name))
+  const showImage = isImage && !imageFailed
+
+  useEffect(() => {
+    if (!showImage || !imageRef.current) return
+    const url = URL.createObjectURL(file)
+    imageRef.current.src = url
+    return () => URL.revokeObjectURL(url)
+  }, [file, showImage])
+
+  return (
+    <div title={file.name} className="flex h-[72px] w-[240px] max-w-full items-center gap-3 overflow-hidden rounded-lg border border-border bg-background p-2">
+      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg2">
+        {showImage ? (
+          // A local object URL is created in the effect and released when this card unmounts.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img ref={imageRef} alt="" onError={() => setImageFailed(true)} className="size-full object-cover" />
+        ) : (
+          <div aria-hidden="true" className="relative flex h-10 w-8 items-end justify-center rounded-[3px] border border-icon2 bg-background pb-1.5 text-[9px] font-bold leading-none text-text2">
+            <span className="absolute end-0 top-0 size-2 border-b border-s border-icon2 bg-bg2" />
+            {fileKind(file)}
+          </div>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span dir="auto" className="block truncate text-sm font-medium text-foreground">{file.name}</span>
+        <span className="flex items-center gap-1 text-xs text-text2">
+          <span dir="auto">{locale === "fa" ? "موقت" : "Temporary"}</span>
+          <span aria-hidden="true">·</span>
+          <span dir="ltr">{fileSize(file.size, locale)}</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function ProjectAttachments({ locale }: { locale: Locale }) {
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [attachments, setAttachments] = useState<File[]>([])
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => fileInput.current?.click()}
+        className="flex w-fit items-center gap-1.5 rounded-md py-1.5 text-sm text-text2 hover:text-foreground"
+      >
+        <RemixIcon name="attachment-line" className="text-base" />
+        {t(locale, "project.addAttachment")}
+      </button>
+      <input ref={fileInput} type="file" multiple className="hidden" onChange={(event) => {
+        const selected = Array.from(event.currentTarget.files ?? [])
+        setAttachments((previous) => {
+          const byName = new Map(previous.map((file) => [file.name, file]))
+          selected.forEach((file) => { if (!byName.has(file.name)) byName.set(file.name, file) })
+          return [...byName.values()]
+        })
+        event.currentTarget.value = ""
+      }} />
+      {attachments.length > 0 && <div className="flex max-w-full flex-wrap gap-2">{attachments.map((file) => <AttachmentCard key={file.name} file={file} locale={locale} />)}</div>}
+    </>
+  )
+}
+
 /**
  * هدر بالای تب «نمای‌کلی» پروژه — از طرح Figma «AlignUI — Project Header» (node
  * 13731:5329) گرفته شده: کاور + نام پروژه، ردیف سازمان/اعضا/بازه‌ی زمانی، توضیحات، و
@@ -28,8 +116,6 @@ function ProjectCover({ name }: { name: string }) {
  * عمدی با فایل طرح.
  */
 export function ProjectOverviewHeader({ project, locale }: { project: Project; locale: Locale }) {
-  const fileInput = useRef<HTMLInputElement>(null)
-  const [attachments, setAttachments] = useState<string[]>([])
   const members = project.members ?? []
   const overflowCount = Math.max(0, members.length - 5)
   return (
@@ -82,16 +168,7 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          className="flex w-fit items-center gap-1.5 rounded-md py-1.5 text-sm text-text2 hover:text-foreground"
-        >
-          <RemixIcon name="attachment-line" className="text-base" />
-          {t(locale, "project.addAttachment")}
-        </button>
-        <input ref={fileInput} type="file" multiple className="hidden" onChange={(event) => { setAttachments((previous) => [...new Set([...previous, ...Array.from(event.target.files ?? []).map((file) => file.name)])]); event.currentTarget.value = "" }} />
-        {attachments.map((name) => <span key={name} className="max-w-full truncate text-xs text-text2">{name}</span>)}
+        <ProjectAttachments key={project.id} locale={locale} />
       </div>
     </div>
   )

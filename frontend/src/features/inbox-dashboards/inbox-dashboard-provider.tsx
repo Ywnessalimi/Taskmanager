@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react"
 
-export type InboxWidgetType = "tickets" | "tasks" | "notifications"
+export type InboxWidgetType = "tickets" | "tasks" | "notifications" | "task-status-chart" | "task-status-donut"
 export type InboxDashboardSlot = { id: string; widget: InboxWidgetType | null }
 export type CustomInboxDashboard = { id: string; name: string; slots: InboxDashboardSlot[] }
 type StoredDashboards = { selectedId: string; dashboards: CustomInboxDashboard[] }
@@ -25,7 +25,7 @@ function newId() {
 }
 
 function isWidgetType(value: unknown): value is InboxWidgetType {
-  return value === "tickets" || value === "tasks" || value === "notifications"
+  return value === "tickets" || value === "tasks" || value === "notifications" || value === "task-status-chart" || value === "task-status-donut"
 }
 
 function normalize(value: unknown): StoredDashboards {

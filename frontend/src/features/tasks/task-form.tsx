@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useT } from "@/components/providers/locale-provider"
+import { useTaskPanel } from "@/components/providers/task-panel-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import { TaskDetailHeader } from "@/features/tasks/task-detail-header"
 import { AssigneePickerDialog } from "@/features/tasks/assignee-picker-dialog"
@@ -97,6 +98,7 @@ export function TaskForm({
   currentUserName?: string
 }) {
   const t = useT()
+  const taskPanel = useTaskPanel()
   const isEdit = Boolean(task)
 
   const [title, setTitle] = useState(task?.title ?? "")
@@ -311,6 +313,7 @@ export function TaskForm({
           <AssigneePickerDialog
             members={selectedProject?.members ?? []}
             assigneeNames={assigneeNames}
+            currentUserId={taskPanel?.user.id}
             onChange={setAssigneeNames}
             trigger={
               <DialogTrigger className={assigneeNames.length > 1 ? "flex items-center rounded-md p-2 hover:bg-bg2" : PILL_CLASS}>

@@ -21,11 +21,13 @@ import type { TaskFormMemberOption } from "@/lib/api/types"
 export function AssigneePickerDialog({
   members,
   assigneeNames,
+  currentUserId,
   onChange,
   trigger,
 }: {
   members: TaskFormMemberOption[]
   assigneeNames: string[]
+  currentUserId?: string
   onChange: (value: string[]) => void
   trigger: React.ReactNode
 }) {
@@ -51,7 +53,7 @@ export function AssigneePickerDialog({
           <DialogTitle>{t("taskForm.assign")}</DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:max-h-[calc(85vh-3.5rem)] sm:flex-none">
           {members.length === 0 ? (
             <p className="py-8 text-center text-sm text-text2">{t("taskDetail.noFollowerCandidates")}</p>
           ) : (
@@ -69,7 +71,9 @@ export function AssigneePickerDialog({
                     {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
                     <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <span className="min-w-0 flex-1 line-clamp-3 break-words">{member.name}</span>
+                  <span className="min-w-0 flex-1 line-clamp-3 break-words">
+                    {member.id === currentUserId ? t("taskForm.assignToMe") : member.name}
+                  </span>
                 </button>
               )
             })

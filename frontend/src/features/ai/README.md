@@ -16,10 +16,9 @@ AI assistant — opened from the mobile and desktop mini bar.
 - Translations: the `aiAssistant.*` keys in `src/lib/i18n/dictionary.ts`.
 - `lib/api/assistant.ts` and the authenticated backend chat route. The provider key is configured on the backend only.
 
-## Tool foundation (initial phase)
+## Conversation and actions
 
 - User and assistant message bubbles use physical right/left alignment in both locales; `dir="auto"` keeps each message's text direction natural.
-- `ai-tools.ts` defines a provider-neutral catalog and typed calls for `create_task`, `create_ticket`, and `get_my_tasks_report`; `executeAITool` routes calls through existing feature/data APIs.
-- Task and Ticket creation use their SQLite APIs. The report reuses `getMyTasksOverview()` and returns status/workload counts plus a compact list needing attention.
-- `create_*` are state-changing operations. A future model adapter/UI must show the proposed action and obtain user confirmation before calling the executor. The current chat does not call these tools automatically; the backend prompt limits it to advice and text.
-- Consumers: `AIAssistantDialog`; dependencies include `lib/api/{tasks,my-tasks,users}.ts` and `features/tickets/local-created-tickets.ts` for the separate tool foundation.
+- `ai-workflow.ts` loads projects, members and tasks available to the signed-in user, validates the model's structured proposals, and creates Task or Ticket or edits selected Task fields through the user's existing authenticated APIs only after the dialog's confirmation button. Before editing, it re-reads the task and refuses stale proposals if a changed field or its project no longer matches. The API rechecks project access; the existing permission model has no separate task create/edit permissions. Member reports count authorized `/tasks` data. Tasks identify assignees by name; duplicate names prevent a reliable report. Task time is shared and is not attributed to an individual.
+- Assistant Markdown uses `react-markdown` and `remark-gfm`; raw HTML is not enabled. The model receives conversation text and accessible project/member names and IDs and a bounded list of task titles and IDs. The proposal preview includes the fields that will be saved and the previous values for edits.
+- `ai-tools.ts` remains a separate legacy tool foundation; the dialog uses `ai-workflow.ts`. Consumers: `AIAssistantDialog`; dependencies include `lib/api/{tasks,users}.ts` and `features/tickets/local-created-tickets.ts`.

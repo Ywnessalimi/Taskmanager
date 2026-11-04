@@ -297,7 +297,7 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
               <div className="flex flex-col gap-3">
                 <DatePickerDialog value={startDate} onChange={setStartDate} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="calendar-todo-line" label={t("newTask.startDate")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{startDate || unset}</span></DialogTrigger>} />
                 <DatePickerDialog value={dueDate} onChange={setDueDate} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="calendar-check-line" label={t("newTask.dueDate")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{dueDate || unset}</span></DialogTrigger>} />
-                <AssigneePickerDialog members={project?.members ?? []} assigneeNames={assigneeNames} onChange={setAssigneeNames} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="team-line" label={t("newTask.members")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{assigneeNames.join("، ") || unset}</span></DialogTrigger>} />
+                <AssigneePickerDialog members={project?.members ?? []} assigneeNames={assigneeNames} currentUserId={user.id} onChange={setAssigneeNames} trigger={<DialogTrigger className={FIELD_CLASS}><FieldLabel icon="team-line" label={t("newTask.members")} /><span className="truncate text-[13px] text-[var(--task-workspace-muted)]">{assigneeNames.join("، ") || unset}</span></DialogTrigger>} />
                 <RepeatPicker layout="taskWorkspace" value={recurrence} onChange={setRecurrence} />
               </div>
               <div className="flex flex-col gap-3">

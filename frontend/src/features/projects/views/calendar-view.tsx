@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { useLocale } from "@/components/providers/locale-provider"
 import { PriorityDot } from "@/features/projects/task-display"
 import { PROJECT_BOARD_BASE_COLUMNS, readProjectBoardColumns, readTaskBoardColumnAssignments } from "@/features/projects/board-column-storage"
 import type { Task } from "@/lib/api/types"
@@ -100,6 +101,8 @@ const FRIDAY_HATCH: React.CSSProperties = {
 
 export function CalendarView({ tasks, projectId }: { tasks: Task[]; projectId?: string }) {
   const panel = useTaskPanel()
+  const { locale } = useLocale()
+  const isFa = locale === "fa"
   const [mode, setMode] = useState<CalendarMode>("month")
   const [anchor, setAnchor] = useState<JalaliDate>(todayPersian)
   const [, setColumnsVersion] = useState(0)
@@ -171,11 +174,11 @@ export function CalendarView({ tasks, projectId }: { tasks: Task[]; projectId?: 
       <header className="sticky top-0 z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 bg-background pb-2">
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => navigate(-1)} aria-label="بازهٔ قبل" className="flex size-8 items-center justify-center rounded-md text-icon2 hover:bg-bg2">
-            <RemixIcon name="arrow-right-s-line" className="text-lg" />
+            <RemixIcon name={isFa ? "arrow-right-s-line" : "arrow-left-s-line"} className="text-lg" />
           </button>
           <h2 aria-live="polite" className="min-w-32 text-center text-sm font-medium text-foreground">{periodLabel(start, end, mode)}</h2>
           <button type="button" onClick={() => navigate(1)} aria-label="بازهٔ بعد" className="flex size-8 items-center justify-center rounded-md text-icon2 hover:bg-bg2">
-            <RemixIcon name="arrow-left-s-line" className="text-lg" />
+            <RemixIcon name={isFa ? "arrow-left-s-line" : "arrow-right-s-line"} className="text-lg" />
           </button>
           <button type="button" onClick={() => setAnchor(todayPersian())} className="ms-1 rounded-md px-2 py-1 text-xs text-text2 hover:bg-bg2">امروز</button>
         </div>

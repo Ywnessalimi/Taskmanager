@@ -390,6 +390,7 @@ export function AssigneeField({ task, projectId, onChange, avatarOnly = false }:
     <AssigneePickerDialog
       members={members}
       assigneeNames={assigneeNames}
+      currentUserId={panel?.user.id}
       onChange={onChange}
       trigger={
         avatarOnly && assigneeNames.length > 0 ? (

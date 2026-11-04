@@ -11,6 +11,7 @@ import { useLocale, useT } from "@/components/providers/locale-provider"
 import { organizationPath, projectPath } from "@/lib/organization-paths"
 import { createDivision, createOrganization, createProject, moveDivision, moveProject } from "@/lib/api/organizations"
 import type { CurrentUser, Organization } from "@/lib/api/types"
+import { divisionImageForName } from "./division-image"
 
 function toggle(set: Set<string>, id: string) {
   const next = new Set(set)
@@ -255,6 +256,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                             className="flex min-w-0 flex-1 items-center gap-2 rounded-md ps-2 text-start"
                           >
                             <RemixIcon name="arrow-down-s-line" className={`shrink-0 text-base text-icon2 transition-transform ${divisionOpen ? "" : collapsedChevronDirection}`} />
+                            <Image src={divisionImageForName(division.name)} alt="" width={28} height={28} sizes="28px" className="size-7 shrink-0 rounded-lg object-cover" />
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground">{division.name}</span>
                           </button>
                           <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/division-header:opacity-100 lg:group-focus-within/division-header:opacity-100">

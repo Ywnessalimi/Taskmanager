@@ -56,7 +56,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
         <button type="button" aria-label={t("taskForm.cancel")} onClick={finish}><MobileTaskAsset name="back" className="ltr:rotate-180" /></button>
         <div className="flex items-center gap-4">
           <button type="button" disabled aria-label={t("mobileTask.previous")}><MobileTaskAsset name="up" /></button><button type="button" disabled aria-label={t("mobileTask.next")}><MobileTaskAsset name="down" /></button><MobileTaskAsset name="divider" className="rotate-90" />
-          <AssigneePickerDialog members={project?.members??[]} assigneeNames={assignees} onChange={setAssignees} trigger={<DialogTrigger aria-label={t("mobileTask.search")}><MobileTaskAsset name="search" /></DialogTrigger>} />
+          <AssigneePickerDialog members={project?.members??[]} assigneeNames={assignees} currentUserId={user.id} onChange={setAssignees} trigger={<DialogTrigger aria-label={t("mobileTask.search")}><MobileTaskAsset name="search" /></DialogTrigger>} />
           <DropdownMenu><DropdownMenuTrigger aria-label={t("mobileTask.options")}><MobileTaskAsset name="more" /></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem onClick={()=>setTab("details")}>{t("mobileTask.moreDetails")}</DropdownMenuItem><DropdownMenuItem onClick={finish} className="text-destructive">{t("mobileTask.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
         </div>
       </header>
@@ -89,7 +89,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
             </div>
             <DatePickerDialog value={startDate} onChange={setStartDate} trigger={<DialogTrigger className={FIELD}><Label icon="calendar-todo-line">{t("newTask.startDate")}</Label><span className="flex items-center gap-1 text-[13px]">{startDate&&<MobileTaskAsset name="start-calendar" />}{startDate||unset}</span></DialogTrigger>} />
             <DatePickerDialog value={dueDate} onChange={setDueDate} trigger={<DialogTrigger className={FIELD}><Label icon="calendar-check-line">{t("newTask.dueDate")}</Label><span className="flex items-center gap-1 text-[13px]">{dueDate&&<MobileTaskAsset name="due-calendar" />}{dueDate||unset}</span></DialogTrigger>} />
-            <AssigneePickerDialog members={project?.members??[]} assigneeNames={assignees} onChange={setAssignees} trigger={<DialogTrigger className={FIELD}><Label icon="team-line">{t("newTask.members")}</Label><span className="flex -space-x-2 rtl:space-x-reverse">{assignees.length?assignees.map(name=><Avatar key={name} className="size-6 border-2 border-background"><AvatarImage src={project?.members.find(p=>p.name===name)?.avatarUrl} alt={name} /><AvatarFallback>{name.slice(0,1)}</AvatarFallback></Avatar>):<span className="text-[13px]">{unset}</span>}</span></DialogTrigger>} />
+            <AssigneePickerDialog members={project?.members??[]} assigneeNames={assignees} currentUserId={user.id} onChange={setAssignees} trigger={<DialogTrigger className={FIELD}><Label icon="team-line">{t("newTask.members")}</Label><span className="flex -space-x-2 rtl:space-x-reverse">{assignees.length?assignees.map(name=><Avatar key={name} className="size-6 border-2 border-background"><AvatarImage src={project?.members.find(p=>p.name===name)?.avatarUrl} alt={name} /><AvatarFallback>{name.slice(0,1)}</AvatarFallback></Avatar>):<span className="text-[13px]">{unset}</span>}</span></DialogTrigger>} />
             <RepeatPicker value={recurrence} onChange={setRecurrence} />
           </div>
         </div>

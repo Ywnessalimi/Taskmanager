@@ -338,7 +338,12 @@ export function NotificationsPreviewDialog({ notifications, projects = [], iconS
         {notifications.some(isUnread) && <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-brand" />}
       </PopoverTrigger>
       <PopoverContent className="flex w-[393px] max-w-[calc(100vw-2rem)] flex-col gap-[11px] overflow-hidden rounded-2xl bg-background pt-4 shadow-none ring-1 ring-border">
-        <PopoverTitle className="px-4 text-start text-base font-semibold leading-5">{t("notifications.title")}</PopoverTitle>
+        <div className="flex items-center justify-between px-4">
+          <PopoverTitle className="text-start text-base font-semibold leading-5">{t("notifications.title")}</PopoverTitle>
+          <PopoverClose nativeButton={false} render={<Link href="/notifications" aria-label={t("notifications.openFullPage")} title={t("notifications.openFullPage")} className="flex size-8 shrink-0 items-center justify-center rounded-md text-icon2 hover:bg-bg2 hover:text-foreground" />}>
+            <RemixIcon name="expand-diagonal-line" className="text-lg" />
+          </PopoverClose>
+        </div>
         <Tabs value={filter} onValueChange={(value) => setFilter(value as string)} className="gap-0">
           <div className="flex h-12 items-center gap-4 border-y border-border px-4">
             <TabsList variant="line" className="group-data-horizontal/tabs:h-full min-w-0 flex-1 justify-start gap-4 overflow-x-auto p-0 [scrollbar-width:none]">
@@ -346,9 +351,6 @@ export function NotificationsPreviewDialog({ notifications, projects = [], iconS
                 <TabsTrigger key={group.id} value={group.id} className="h-full flex-none rounded-none border-0 px-0 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]">{group.name}</TabsTrigger>
               ))}
             </TabsList>
-            <PopoverClose nativeButton={false} render={<Link href="/account" aria-label={t("account.sectionNotifications")} className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-bg2" />}>
-              <Image src="/images/figma/notifications/settings.svg" alt="" width={20} height={20} />
-            </PopoverClose>
           </div>
           <TabsContent value={filter} className="max-h-[min(480px,60vh)] overflow-y-auto px-4 pb-4">
             <NotificationRows notifications={visible} projects={projects} recipientName={recipientName} readIds={readIds} setReadIds={setReadIds} closePopover />

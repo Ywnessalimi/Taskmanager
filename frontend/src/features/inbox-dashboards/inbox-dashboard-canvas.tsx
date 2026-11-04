@@ -10,6 +10,7 @@ import { RemixIcon } from "@/components/ui/remix-icon"
 import { getMyTasks } from "@/lib/api/my-tasks"
 import { getNotifications } from "@/lib/api/notifications"
 import type { CurrentUser, MyTask, Notification } from "@/lib/api/types"
+import { StatusDonutChart } from "@/components/charts/status-donut-chart"
 import { formatRelativeTime, TARGET_ICON, targetHref, VERB_KEY } from "@/features/notifications/notification-format"
 import type { LocalTicket } from "@/features/tickets/local-created-tickets"
 import type { TranslationKey } from "@/lib/i18n/dictionary"
@@ -20,14 +21,22 @@ const widgetIcon: Record<InboxWidgetType, string> = {
   tickets: "chat-smile-line",
   tasks: "task-line",
   notifications: "notification-3-line",
+  "task-status-chart": "bar-chart-box-line",
+  "task-status-donut": "donut-chart-line",
 }
 
 function WidgetTitle({ type, count }: { type: InboxWidgetType; count?: number }) {
   const t = useT()
-  const key = type === "tickets" ? "inboxDashboards.myTickets" : type === "tasks" ? "inboxDashboards.myTasks" : "inboxDashboards.myNotifications"
+  const titleKeys: Record<InboxWidgetType, TranslationKey> = {
+    tickets: "inboxDashboards.myTickets",
+    tasks: "inboxDashboards.myTasks",
+    notifications: "inboxDashboards.myNotifications",
+    "task-status-chart": "inboxDashboards.taskStatusChart",
+    "task-status-donut": "inboxDashboards.taskStatusDonut",
+  }
   return <div className="flex min-w-0 items-center gap-2">
     <RemixIcon name={widgetIcon[type]} className="shrink-0 text-base text-icon2" />
-    <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{t(key)}</h3>
+    <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{t(titleKeys[type])}</h3>
     {typeof count === "number" && <span className="shrink-0 text-xs tabular-nums text-text3">{count}</span>}
   </div>
 }
@@ -41,11 +50,38 @@ function WidgetRows({ slot, tickets, tasks, notifications, loading, error }: {
   error: boolean
 }) {
   const t = useT()
-  const items = slot.widget === "tickets" ? tickets : slot.widget === "tasks" ? tasks : notifications
+  const items = slot.widget === "tickets" ? tickets : slot.widget === "notifications" ? notifications : tasks
   if (!slot.widget) return null
   if (loading) return <p className="mt-3 text-xs text-text3">{t("inboxDashboards.loading")}</p>
   if (error) return <p role="alert" className="mt-3 text-xs text-error">{t("inboxDashboards.loadError")}</p>
   if (!items.length) return <p className="mt-3 text-xs text-text3">{t("inboxDashboards.noItems")}</p>
+
+  if (slot.widget === "task-status-chart" || slot.widget === "task-status-donut") {
+    const statusCounts = [
+      { status: "todo" as const, label: t("status.todo"), value: tasks.filter((task) => task.status === "todo").length, colorVar: "var(--text3)" },
+      { status: "in-progress" as const, label: t("status.inProgress"), value: tasks.filter((task) => task.status === "in-progress").length, colorVar: "var(--brand)" },
+      { status: "completed" as const, label: t("status.completed"), value: tasks.filter((task) => task.status === "completed").length, colorVar: "var(--success)" },
+    ]
+    if (slot.widget === "task-status-donut") {
+      return <div className="mt-3 flex min-h-0 flex-1 items-center justify-center overflow-y-auto py-1">
+        <StatusDonutChart
+          size={112}
+          legendPosition="bottom"
+          segments={statusCounts.map(({ label, value, colorVar }) => ({ label, value, colorVar }))}
+        />
+      </div>
+    }
+    const maxValue = Math.max(1, ...statusCounts.map((entry) => entry.value))
+    return <div className="mt-4 flex min-h-0 flex-1 flex-col justify-center gap-4">
+      {statusCounts.map((entry) => <div key={entry.status} className="grid grid-cols-[minmax(0,1fr)_2rem] items-center gap-x-3 gap-y-1.5">
+        <span className="truncate text-xs text-text2">{entry.label}</span>
+        <span className="text-end text-xs tabular-nums text-text3">{entry.value}</span>
+        <div className="col-span-2 h-2 overflow-hidden rounded-full bg-bg2">
+          <div className="h-full rounded-full" style={{ width: `${(entry.value / maxValue) * 100}%`, backgroundColor: entry.colorVar }} />
+        </div>
+      </div>)}
+    </div>
+  }
 
   if (slot.widget === "tickets") {
     const ticketRows = (items as LocalTicket[]).slice(0, 2)
@@ -88,7 +124,8 @@ function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing
 }) {
   const t = useT()
   const { selectDashboard } = useInboxDashboard()
-  const count = slot.widget === "tickets" ? tickets.length : slot.widget === "tasks" ? tasks.length : slot.widget === "notifications" ? notifications.length : undefined
+  const count = slot.widget === "tickets" ? tickets.length : slot.widget === "notifications" ? notifications.length : tasks.length
+  const viewAllHref = slot.widget === "tickets" ? "/inbox" : slot.widget === "notifications" ? "/notifications" : "/home/projects/MyTasks"
 
   if (!slot.widget) return null
 
@@ -98,7 +135,7 @@ function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing
       {editing && <button type="button" onClick={() => onRemove(slot.id)} aria-label={t("inboxDashboards.removeWidget")} title={t("inboxDashboards.removeWidget")} className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-text3 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><RemixIcon name="delete-bin-line" className="text-base" /></button>}
     </div>
     <WidgetRows slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={loading} error={error} />
-    <a href={slot.widget === "tickets" ? "/inbox" : slot.widget === "tasks" ? "/home/projects/MyTasks" : "/notifications"} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
+    <a href={viewAllHref} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
       {t("inboxDashboards.viewAll")}<RemixIcon name="arrow-left-line" className="text-sm rtl:rotate-180" />
     </a>
   </article>
@@ -108,6 +145,8 @@ const widgetChoices: { type: InboxWidgetType; icon: string; title: TranslationKe
   { type: "tickets", icon: widgetIcon.tickets, title: "inboxDashboards.myTickets", description: "inboxDashboards.ticketsDescription" },
   { type: "tasks", icon: widgetIcon.tasks, title: "inboxDashboards.myTasks", description: "inboxDashboards.tasksDescription" },
   { type: "notifications", icon: widgetIcon.notifications, title: "inboxDashboards.myNotifications", description: "inboxDashboards.notificationsDescription" },
+  { type: "task-status-chart", icon: widgetIcon["task-status-chart"], title: "inboxDashboards.taskStatusChart", description: "inboxDashboards.taskStatusChartDescription" },
+  { type: "task-status-donut", icon: widgetIcon["task-status-donut"], title: "inboxDashboards.taskStatusDonut", description: "inboxDashboards.taskStatusDonutDescription" },
 ]
 
 type DashboardWidgetData = {
@@ -134,7 +173,7 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
   useEffect(() => {
     if (!widgetSignature) return
     let active = true
-    const taskRequest = widgetSignature.includes("tasks")
+    const taskRequest = widgetSignature.includes("tasks") || widgetSignature.includes("task-status-")
       ? getMyTasks().then((value) => ({ value, error: false as const })).catch(() => ({ value: [] as MyTask[], error: true as const }))
       : Promise.resolve({ value: [] as MyTask[], error: false as const })
     const notificationRequest = widgetSignature.includes("notifications")
@@ -157,7 +196,7 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
   const tasks = currentData?.tasks ?? []
   const notifications = currentData?.notifications ?? []
   const loading = Boolean(widgetSignature) && !currentData
-  const widgetError = (widget: InboxWidgetType) => widget === "tasks" ? currentData?.taskError ?? false : widget === "notifications" ? currentData?.notificationError ?? false : ticketLoadError
+  const widgetError = (widget: InboxWidgetType) => widget === "tasks" || widget.startsWith("task-status-") ? currentData?.taskError ?? false : widget === "notifications" ? currentData?.notificationError ?? false : ticketLoadError
 
   return <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-3 [scrollbar-width:thin]">
     <div className="mb-3 flex min-h-9 items-center justify-between gap-3">
@@ -165,15 +204,15 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
         <h2 className="truncate text-base font-medium text-foreground">{dashboard.name}</h2>
         {editing && <p className="mt-0.5 text-xs text-text3">{t("inboxDashboards.canvasHint")}</p>}
       </div>
-      <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => { if (editing) { saveSlots(dashboard.id, draft); setEditing(false) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
+      <Button type="button" variant={editing ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => { if (editing) { saveSlots(dashboard.id, draft); setEditing(false) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
     </div>
     {slots.length === 0 && !editing ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 py-8 text-center">
       <Image src="/images/inbox-dashboards/empty-widgets-ui.webp" alt="" width={512} height={512} unoptimized className="size-44 object-contain" />
       <p className="text-sm text-text3">{t("inboxDashboards.noWidgets")}</p>
-      <Button type="button" size="sm" className="rounded-full border-white px-4" onClick={() => { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true); setPickerSlot("new") }}>
+      <Button type="button" variant="outline" size="sm" className="rounded-full border-border px-4" onClick={() => { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true); setPickerSlot("new") }}>
         <RemixIcon name="add-line" />{t("inboxDashboards.emptySlot")}
       </Button>
-    </div> : <div className="grid grid-cols-2 gap-3 max-[360px]:grid-cols-1 sm:grid-cols-3 xl:grid-cols-4">
+    </div> : <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
       {slots.map((slot) => <SlotCard key={slot.id} slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={slot.widget === "tickets" ? ticketLoading : loading} error={slot.widget ? widgetError(slot.widget) : false} editing={editing} onRemove={setRemoveId} />)}
       {editing && <button type="button" onClick={() => setPickerSlot("new")} aria-label={t("inboxDashboards.emptySlot")} className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background/70 text-text3 hover:text-brand focus-visible:outline-2 focus-visible:outline-ring"><span className="grid size-9 place-items-center rounded-full border border-border bg-background"><RemixIcon name="add-line" className="text-lg" /></span><span className="text-xs">{t("inboxDashboards.emptySlot")}</span></button>}
     </div>}

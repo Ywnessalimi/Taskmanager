@@ -76,7 +76,7 @@ export function InboxDashboardCreateDialog({ open, onOpenChange }: { open: boole
 
   return <Dialog open={open} onOpenChange={(next) => { if (!next) setName(""); onOpenChange(next) }}>
     <DialogContent showCloseButton={false} className="max-h-[90dvh] gap-0 overflow-y-auto rounded-2xl p-0 shadow-none sm:max-w-md">
-      <Image src="/images/inbox-dashboards/create-dashboard.webp" alt="" width={768} height={512} unoptimized className="h-36 w-full object-cover sm:h-44" />
+      <Image src="/images/inbox-dashboards/create-dashboard.webp" alt="" width={768} height={512} unoptimized className="h-auto w-full object-contain" />
       <div className="flex flex-col gap-4 p-5 sm:p-6">
         <DialogHeader className="gap-1 text-start">
           <DialogTitle className="text-base">{t("inboxDashboards.createTitle")}</DialogTitle>

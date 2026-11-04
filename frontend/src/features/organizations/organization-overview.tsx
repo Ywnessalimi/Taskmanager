@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import type { ReactNode } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DialogClose } from "@/components/ui/dialog"
@@ -13,6 +14,7 @@ import { OrganizationActivityFeed } from "@/features/organizations/organization-
 import { createProject } from "@/lib/api/organizations"
 import { projectPath } from "@/lib/organization-paths"
 import type { Organization, ProjectRef } from "@/lib/api/types"
+import { divisionImageForName } from "@/features/projects/division-image"
 
 function ProjectRow({ project, organizationSlug }: { project: ProjectRef; organizationSlug?: string }) {
   return (
@@ -143,6 +145,7 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
                 {divisions.map((division) => <details key={division.id} open={division.id === initialDivisionId} className="group border-b border-[var(--task-workspace-border)] last:border-b-0">
                   <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 py-2 text-sm text-[var(--task-workspace-secondary)]">
                     <RemixIcon name="arrow-down-s-line" className="shrink-0 text-base text-[var(--task-workspace-muted)] transition-transform group-open:rotate-180" />
+                    <Image src={divisionImageForName(division.name)} alt="" width={28} height={28} sizes="28px" className="size-7 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1 truncate">{division.name}</span>
                     <span className="text-xs text-[var(--task-workspace-muted)]">{division.projects.length}</span>
                   </summary>

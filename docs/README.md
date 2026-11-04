@@ -9,6 +9,7 @@ This folder is the source of truth for the project's product, design, frontend, 
 3. **[FRONTEND.md](./FRONTEND.md)** — the frontend architecture with Next.js: routes, components, the data layer.
 4. **[BACKEND.md](./BACKEND.md)** — the minimal Node.js + SQLite API, data model, endpoints, and migration path.
 5. **[DEPLOYMENT.md](./DEPLOYMENT.md)** — running the demo build on a server: standalone output, systemd service, port, and firewall.
+6. **[AI_ASSISTANT.md](./AI_ASSISTANT.md)** — draft discussion document for the assistant's proposed skill architecture, permissions, reporting, and open decisions; it does not replace the product or architecture sources of truth.
 
 ## Current project status
 
