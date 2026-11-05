@@ -14,7 +14,6 @@ import { OrganizationActivityFeed } from "@/features/organizations/organization-
 import { createProject } from "@/lib/api/organizations"
 import { projectPath } from "@/lib/organization-paths"
 import type { Organization, ProjectRef } from "@/lib/api/types"
-import { divisionImageForName } from "@/features/projects/division-image"
 
 function ProjectRow({ project, organizationSlug }: { project: ProjectRef; organizationSlug?: string }) {
   return (
@@ -114,7 +113,7 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
             </div>
 
             <div className="flex items-center gap-3 pt-2.5 pb-4">
-              <RemixIcon name="building-4-line" className="text-xl text-[var(--task-workspace-muted)]" />
+              {selectedDivision ? <Image src="/images/divisions/general.jpg" alt="" width={40} height={40} className="size-10 rounded-lg object-cover" /> : <Image src={organization.imageUrl || "/images/divisions/general.jpg"} alt="" width={40} height={40} unoptimized className="size-10 rounded-lg object-cover" />}
               <h1 className="min-w-0 truncate text-lg font-semibold text-[var(--task-workspace-text)]">{selectedDivision?.name ?? displayName}</h1>
             </div>
 
@@ -145,7 +144,7 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
                 {divisions.map((division) => <details key={division.id} open={division.id === initialDivisionId} className="group border-b border-[var(--task-workspace-border)] last:border-b-0">
                   <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 py-2 text-sm text-[var(--task-workspace-secondary)]">
                     <RemixIcon name="arrow-down-s-line" className="shrink-0 text-base text-[var(--task-workspace-muted)] transition-transform group-open:rotate-180" />
-                    <Image src={divisionImageForName(division.name)} alt="" width={28} height={28} sizes="28px" className="size-7 shrink-0 rounded-lg object-cover" />
+                    <RemixIcon name="folder-line" className="shrink-0 text-base" />
                     <span className="min-w-0 flex-1 truncate">{division.name}</span>
                     <span className="text-xs text-[var(--task-workspace-muted)]">{division.projects.length}</span>
                   </summary>

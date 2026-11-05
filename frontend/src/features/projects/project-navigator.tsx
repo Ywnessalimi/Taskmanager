@@ -9,7 +9,6 @@ import type { Organization } from "@/lib/api/types"
 import { projectPath } from "@/lib/organization-paths"
 import { t, type Locale } from "@/lib/i18n/dictionary"
 import { moveDivision, moveProject } from "@/lib/api/organizations"
-import { divisionImageForName } from "./division-image"
 
 /** فهرست همهٔ پروژه‌ها در محیط مستقل پروژه‌ها، کنار پروژهٔ انتخاب‌شده. */
 export function ProjectNavigator({ organizations, activeId, locale, userId }: { organizations: Organization[]; activeId?: string; locale: Locale; userId: string }) {
@@ -113,7 +112,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
               onDragOver={(event) => onOrganizationDragOver(event, organization.id)}
               onDrop={(event) => onOrganizationDrop(event, organization.id)}
               className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-1 text-base font-medium text-foreground transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `organization:${organization.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
-            ><RemixIcon name="arrow-down-s-fill" className="shrink-0 text-base" /><span className="truncate">{organization.name}</span></summary>
+            ><RemixIcon name="arrow-down-s-fill" className="shrink-0 text-base" /><Image src={organization.imageUrl || "/images/divisions/general.jpg"} alt="" width={22} height={22} unoptimized className="size-[22px] shrink-0 rounded-md object-cover" /><span className="truncate">{organization.name}</span></summary>
             <div className="flex flex-col gap-1">
               {organization.divisions.map((division) => (
                 <details key={division.id} open className={`group/navdivision rounded-md ps-2 transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `division:${division.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}>
@@ -125,7 +124,7 @@ export function ProjectNavigator({ organizations, activeId, locale, userId }: { 
                     onDragEnd={endDrag}
                     className={`flex min-h-7 cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs text-text2 transition-opacity duration-150 ${draggedItemId === division.id ? "opacity-45" : ""}`}
                   >
-                    <RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /><Image src={divisionImageForName(division.name)} alt="" width={22} height={22} sizes="22px" className="size-[22px] shrink-0 rounded-md object-cover" /><span className="min-w-0 flex-1 truncate">{division.name}</span>
+                    <RemixIcon name="arrow-down-s-line" className="shrink-0 text-sm" /><RemixIcon name="folder-line" className="shrink-0 text-base" /><span className="min-w-0 flex-1 truncate">{division.name}</span>
                   </summary>
                   <div className="flex flex-col ps-2">{division.projects.map((project) => (
                     <div key={project.id} className="flex min-h-8 items-center gap-1">

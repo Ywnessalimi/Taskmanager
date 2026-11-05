@@ -14,7 +14,6 @@ import { RepeatPicker } from "./repeat-picker"
 import { TagPickerDialog } from "./tag-picker-dialog"
 import { NewTaskAsset, type NewTaskAssetName } from "./new-task-assets"
 import { MobileTaskAsset } from "./mobile-task-assets"
-import { NewTaskActivity } from "./new-task-activity"
 import { WorkspaceActionBar } from "@/components/ui/workspace-action-bar"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { createTask } from "@/lib/api/tasks"
@@ -36,7 +35,7 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
   const [assignees,setAssignees]=useState<string[]>([]), [following,setFollowing]=useState(false), [favorite,setFavorite]=useState(false)
   const [minutes,setMinutes]=useState(0), [description,setDescription]=useState(""), [files,setFiles]=useState<string[]>([])
   const [recurrence,setRecurrence]=useState<TaskRecurrence>({dates:[],count:1})
-  const [error,setError]=useState(false), [tab,setTab]=useState("activities"), [saving,setSaving]=useState(false)
+  const [error,setError]=useState(false), [tab,setTab]=useState("details"), [saving,setSaving]=useState(false)
   const inputFile=useRef<HTMLInputElement>(null)
   const project=projects.find(p=>p.id===projectId), unset=t("newTask.unselected")
   const finish=()=>router.back()
@@ -95,15 +94,12 @@ export function MobileTaskCreateForm({projects, user, defaultProjectId}:{project
         </div>
         <Tabs value={tab} onValueChange={value=>setTab(value as string)} className="gap-0 lg:hidden">
           <TabsList variant="line" className="sticky top-0 z-20 group-data-horizontal/tabs:h-12 w-full justify-start gap-4 rounded-none border-b border-border bg-[var(--task-workspace-bg)] px-4 py-0">
-            <TabsTrigger value="details" className="h-full flex-none gap-2 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]"><MobileTaskAsset name="details" />{t("mobileTask.moreDetails")}</TabsTrigger>
-            <TabsTrigger value="activities" className="h-full flex-none gap-2 text-xs after:rounded-t-[4px] after:bg-[#141a1a] group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-[5px]"><MobileTaskAsset name="activities" />{t("newTask.activities")}</TabsTrigger>
+            <TabsTrigger value="details" className="h-full flex-none gap-2 text-xs after:hidden"><MobileTaskAsset name="details" />{t("mobileTask.moreDetails")}</TabsTrigger>
           </TabsList>
         </Tabs>
 <div className={`${tab === "details" ? "flex" : "hidden"} flex-col gap-4 p-4 lg:flex lg:px-6`}><textarea value={description} onChange={e=>setDescription(e.target.value)} aria-label={t("taskForm.descriptionPlaceholder")} placeholder={t("taskForm.descriptionPlaceholder")} className="min-h-36 w-full rounded-lg border border-border bg-background p-3 outline-none" /><button type="button" onClick={()=>inputFile.current?.click()} className="flex items-center gap-2 text-sm text-text2"><NewTaskAsset name="attachment2" />{t("taskForm.attachFile")}</button><input ref={inputFile} type="file" multiple className="hidden" onChange={e=>setFiles(Array.from(e.target.files??[]).map(file=>file.name))} />{files.map(file=><button key={file} type="button" onClick={()=>setFiles(list=>list.filter(name=>name!==file))} className="w-fit rounded bg-bg2 px-2 py-1 text-xs">{file} ×</button>)}</div>
         </div>
-        <div className={`${tab === "activities" ? "flex" : "hidden"} min-h-0 w-full flex-1 flex-col`}>
-<div className="flex min-h-0 w-full flex-1 flex-col"><NewTaskActivity inline user={user} members={project?.members??[]} following={following} onFollowingChange={setFollowing} /></div>
-        </div>
+
       </div>
     </div>
     <WorkspaceActionBar onSave={saveTask} onCancel={finish} saveDisabled={!title.trim() || !projectId} saving={saving} />

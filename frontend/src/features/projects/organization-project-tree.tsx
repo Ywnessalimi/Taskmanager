@@ -11,7 +11,6 @@ import { useLocale, useT } from "@/components/providers/locale-provider"
 import { organizationPath, projectPath } from "@/lib/organization-paths"
 import { createDivision, createOrganization, createProject, moveDivision, moveProject } from "@/lib/api/organizations"
 import type { CurrentUser, Organization } from "@/lib/api/types"
-import { divisionImageForName } from "./division-image"
 
 function toggle(set: Set<string>, id: string) {
   const next = new Set(set)
@@ -221,13 +220,13 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                     className="flex min-w-0 flex-1 items-center justify-start gap-2 text-start text-base font-medium text-foreground"
                   >
                     <RemixIcon name="arrow-down-s-fill" className={`shrink-0 text-base transition-transform ${organizationOpen ? "" : collapsedChevronDirection}`} />
-                    <span className="relative grid size-6 shrink-0 place-items-center overflow-hidden rounded-lg bg-bg2 text-text2" aria-hidden="true">{organization.imageUrl && organization.preferences?.showSidebarIcon === true ? <Image src={organization.imageUrl} alt="" fill sizes="24px" unoptimized className="object-cover" /> : <RemixIcon name="building-4-line" className="text-base" />}</span>
+                    <span className="relative grid size-6 shrink-0 place-items-center overflow-hidden rounded-lg bg-bg2 text-text2" aria-hidden="true"><Image src={organization.imageUrl && organization.preferences?.showSidebarIcon === true ? organization.imageUrl : "/images/divisions/general.jpg"} alt="" fill sizes="24px" unoptimized className="object-cover" /></span>
                     <span className="min-w-0 truncate">{organizationName}</span>
                   </button>
                   <div className="ms-auto flex shrink-0 items-center gap-1">
                     <Link draggable={false} href={organizationPath(organization)} aria-label={`${organizationName} — ${t("projects.openOrganization")}`} title={t("projects.openOrganization")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-xl" /></Link>
                     <Link draggable={false} href={`/home/organizations/${organization.id}/settings`} aria-label={`${t("projects.settings")} — ${organizationName}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
-                    {hasPermission(organization.id, "createDivision") && <button type="button" draggable={false} aria-label={`${t("projects.addDivision")} — ${organizationName}`} title={t("projects.addDivision")} onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })} className="grid size-6 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="add-line" className="text-sm" /></button>}
+                    {hasPermission(organization.id, "createDivision") && <button type="button" draggable={false} aria-label={`${t("projects.addDivision")} — ${organizationName}`} title={t("projects.addDivision")} onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })} className="grid size-6 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="add-line" className="text-xl" /></button>}
                   </div>
                 </div>
                 <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${organizationOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
@@ -256,12 +255,12 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                             className="flex min-w-0 flex-1 items-center gap-2 rounded-md ps-2 text-start"
                           >
                             <RemixIcon name="arrow-down-s-line" className={`shrink-0 text-base text-icon2 transition-transform ${divisionOpen ? "" : collapsedChevronDirection}`} />
-                            <Image src={divisionImageForName(division.name)} alt="" width={28} height={28} sizes="28px" className="size-7 shrink-0 rounded-lg object-cover" />
+                            <RemixIcon name="folder-line" className="shrink-0 text-base text-text2" />
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground">{division.name}</span>
                           </button>
                           <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/division-header:opacity-100 lg:group-focus-within/division-header:opacity-100">
                             <Link draggable={false} href={`/home/organizations/${organization.id}?divisionId=${encodeURIComponent(division.id)}`} aria-label={`${t("projects.settings")} — ${division.name}`} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
-                            {hasPermission(organization.id, "createProject") && <button type="button" draggable={false} aria-label={`${t("projects.addProject")} — ${division.name}`} onClick={() => setCreateTarget({ kind: "project", organizationId: organization.id, divisionId: division.id })} className="grid size-6 place-items-center rounded text-icon2 hover:text-foreground"><Image src="/images/figma/projects/add-team-plus.svg" alt="" width={10} height={10} /></button>}
+                            {hasPermission(organization.id, "createProject") && <button type="button" draggable={false} aria-label={`${t("projects.addProject")} — ${division.name}`} onClick={() => setCreateTarget({ kind: "project", organizationId: organization.id, divisionId: division.id })} className="grid size-6 place-items-center rounded text-icon2 hover:text-foreground"><RemixIcon name="add-line" className="text-xl" /></button>}
                           </div>
                         </div>
                         <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${divisionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>

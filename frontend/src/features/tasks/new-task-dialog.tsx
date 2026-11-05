@@ -15,6 +15,7 @@ import { AssigneePickerDialog } from "./assignee-picker-dialog"
 import { TagPickerDialog } from "./tag-picker-dialog"
 import { useTaskTimer } from "./time-tracking"
 import { NewTaskActivity } from "./new-task-activity"
+import { MobileTaskAsset } from "./mobile-task-assets"
 import { NewTaskAsset, type NewTaskAssetName } from "./new-task-assets"
 import { RepeatPicker } from "./repeat-picker"
 import { TaskStatusPicker } from "./task-status-picker"
@@ -272,9 +273,9 @@ function TaskWorkspaceEditor({ projects, defaultProjectId, user, onDone, task, p
           <DialogClose aria-label={t("taskDetail.close")} onClick={() => { if (task && hasTaskChanges) void saveChanges() }} className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
         </div>
       </div>
-      <div className="flex shrink-0 border-b border-border lg:hidden">
-        <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`flex-1 py-2 ${!showActivities ? "border-b-2 border-brand" : ""}`}>{t("taskDetail.title")}</button>
-        <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`flex flex-1 items-center justify-center gap-1.5 py-2 ${showActivities ? "border-b-2 border-brand" : ""}`}>{t("newTask.activities")}{unreadActivityCount > 0 && <span aria-label={`${unreadActivityCount} ${t("newTask.unreadActivities")}`} className="inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--task-activity-badge)] px-1 text-[10px] font-semibold leading-none text-white">{unreadActivityCount}</span>}</button>
+      <div className="flex h-12 shrink-0 items-stretch gap-4 border-b border-border bg-[var(--task-workspace-bg)] px-4 lg:hidden">
+        <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`relative flex items-center gap-2 text-xs ${!showActivities ? "text-foreground" : "text-text2"} ${task && !showActivities ? "after:absolute after:inset-x-0 after:bottom-0 after:h-[5px] after:rounded-t-[4px] after:bg-[#141a1a]" : ""}`}><MobileTaskAsset name="details" />{t("mobileTask.moreDetails")}</button>
+        {task && <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`relative flex items-center gap-2 text-xs ${showActivities ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[5px] after:rounded-t-[4px] after:bg-[#141a1a]" : "text-text2"}`}><MobileTaskAsset name="activities" />{t("newTask.activities")}{unreadActivityCount > 0 && <span aria-label={`${unreadActivityCount} ${t("newTask.unreadActivities")}`} className="inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--task-activity-badge)] px-1 text-[10px] font-semibold leading-none text-white">{unreadActivityCount}</span>}</button>}
       </div>
       {error && <p role="alert" className="p-2 text-error">{t("newTask.submitError")}</p>}
       <div className="flex min-h-0 flex-1">

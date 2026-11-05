@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NewTaskAsset } from "@/features/tasks/new-task-assets"
 import { MobileTaskAsset } from "@/features/tasks/mobile-task-assets"
 import { Button } from "@/components/ui/button"
+import { WorkspaceActionBar } from "@/components/ui/workspace-action-bar"
 import { displayId, showWorkspaceToast } from "@/lib/workspace-toast"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { NewTaskActivity } from "@/features/tasks/new-task-activity"
@@ -156,7 +157,7 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
       <div className="flex min-w-0 items-center gap-2 text-sm"><NewTaskAsset name="chat-smile-line" /><span className="truncate">{t(ticket ? "inbox.detailTitle" : "ticket.title")}</span></div>
       <div className="flex shrink-0 items-center gap-3">
         {ticket && <DropdownMenu><DropdownMenuTrigger aria-label={t("mobileTask.options")} className="grid size-8 place-items-center rounded-md hover:bg-[var(--task-workspace-soft)]"><MobileTaskAsset name="more" /></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-48 rounded-xl border border-[var(--task-workspace-border)] p-1.5 shadow-none"><DropdownMenuItem onClick={() => setTab("details")} className="min-h-9 gap-2 rounded-lg"><RemixIcon name="file-list-3-line" className="text-base text-[var(--task-workspace-muted)]" />{t("mobileTask.moreDetails")}</DropdownMenuItem><DropdownMenuItem onClick={() => void copyTicketLink()} className="min-h-9 gap-2 rounded-lg"><RemixIcon name="link" className="text-base text-[var(--task-workspace-muted)]" />{t("ticket.copyLink")}</DropdownMenuItem><DropdownMenuSeparator className="my-1" /><DropdownMenuItem onClick={remove} className="min-h-9 gap-2 rounded-lg text-destructive"><RemixIcon name="delete-bin-6-line" className="text-base" />{t("ticket.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
-        {!ticket && <Button type="button" onClick={() => void submit()} disabled={saveDisabled || isSubmitting} className="h-8 min-w-20 rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:opacity-90">{t("workspace.register")}</Button>}
+        {!ticket && <Button type="button" onClick={() => void submit()} disabled={saveDisabled || isSubmitting} className="hidden h-8 min-w-20 rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:opacity-90 lg:inline-flex">{t("workspace.register")}</Button>}
         <DialogClose aria-label={t("taskDetail.close")} onClick={() => { if (ticket && hasChanges) void submit() }} className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--task-workspace-soft)]"><NewTaskAsset name="close-fill" /></DialogClose>
       </div>
     </header>
@@ -218,6 +219,7 @@ export function TicketWorkspace({ user, onDone, ticket, projectId, projects = []
       <div className={`${tab === "activities" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:border-s lg:border-border`}><NewTaskActivity inline user={user} members={[]} following={following} onFollowingChange={setFollowing} commentStore={commentStore} activityStore={activityStore} canComment={canComment} emojiPicker /></div>
       </div>
     </div>
+    {!ticket && <div className="lg:hidden"><WorkspaceActionBar onSave={() => void submit()} onCancel={onDone} saveDisabled={saveDisabled} saving={isSubmitting} /></div>}
   </div>
 }
 
