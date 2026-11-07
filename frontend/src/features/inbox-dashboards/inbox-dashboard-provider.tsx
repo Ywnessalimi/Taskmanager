@@ -1,10 +1,11 @@
 "use client"
 
-import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react"
+import { backendRequest } from "@/lib/api/backend-client"
 
 export type InboxWidgetType = "tickets" | "tasks" | "notifications" | "task-status-chart" | "task-status-donut"
 export type InboxDashboardSlot = { id: string; widget: InboxWidgetType | null }
-export type CustomInboxDashboard = { id: string; name: string; slots: InboxDashboardSlot[] }
+export type CustomInboxDashboard = { id: string; name: string; slots: InboxDashboardSlot[]; remote?: boolean; version?: number }
 type StoredDashboards = { selectedId: string; dashboards: CustomInboxDashboard[] }
 
 const MAIN_ID = "main"
@@ -105,19 +106,33 @@ function updateStored(userId: string, update: (current: StoredDashboards) => Sto
 type InboxDashboardContextValue = {
   selectedId: string
   dashboards: CustomInboxDashboard[]
-  currentDashboard: { id: string; name: string; isMain: boolean; slots: InboxDashboardSlot[] }
+  currentDashboard: CustomInboxDashboard & { isMain: boolean }
+  error: string
   selectDashboard: (id: string) => void
   createDashboard: (name: string) => void
   deleteDashboard: (id: string) => void
   addSlot: () => void
   setSlotWidget: (slotId: string, widget: InboxWidgetType) => void
   clearSlot: (slotId: string) => void
-  saveSlots: (dashboardId: string, slots: InboxDashboardSlot[]) => void
+  saveSlots: (dashboardId: string, slots: InboxDashboardSlot[]) => Promise<void>
 }
 
 const InboxDashboardContext = createContext<InboxDashboardContextValue | null>(null)
 
 export function InboxDashboardProvider({ userId, children }: { userId: string; children: ReactNode }) {
+  const [remote, setRemote] = useState<CustomInboxDashboard[]>([])
+  const [remoteSelectedId, setRemoteSelectedId] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  useEffect(() => {
+    let active = true
+    const refresh = () => {
+      void backendRequest<CustomInboxDashboard[]>("/dashboards").then(value => { if (active) setRemote(value) }).catch(cause => { if (active) setError(cause.message) })
+    }
+    refresh()
+    window.addEventListener("quire-dashboards-saved", refresh)
+    window.addEventListener("focus", refresh)
+    return () => { active = false; window.removeEventListener("quire-dashboards-saved", refresh); window.removeEventListener("focus", refresh) }
+  }, [userId])
   const stored = useSyncExternalStore(
     (notify) => subscribe(userId, notify),
     () => getSnapshot(userId),
@@ -125,18 +140,34 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
   )
 
   const value = useMemo<InboxDashboardContextValue>(() => {
-    const current = stored.dashboards.find((dashboard) => dashboard.id === stored.selectedId)
+    const dashboards = [...stored.dashboards, ...remote]
+    const selectedId = remote.some(dashboard => dashboard.id === remoteSelectedId) ? remoteSelectedId! : stored.selectedId
+    const current = dashboards.find((dashboard) => dashboard.id === selectedId)
+    async function saveRemote(dashboard: CustomInboxDashboard, slots: InboxDashboardSlot[]) {
+      try {
+        const saved = await backendRequest<CustomInboxDashboard>(`/dashboards/${dashboard.id}`, { method: "PATCH", body: JSON.stringify({ version: dashboard.version, slots }) })
+        setRemote(previous => previous.map(item => item.id === saved.id ? saved : item))
+        setError("")
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not save dashboard")
+        throw cause
+      }
+    }
     return {
-      selectedId: stored.selectedId,
-      dashboards: stored.dashboards,
+      selectedId,
+      dashboards,
+      error,
       currentDashboard: current
         ? { ...current, isMain: false }
         : { id: MAIN_ID, name: "کارتابل", isMain: true, slots: [] },
       selectDashboard(id) {
+        if (remote.some(dashboard => dashboard.id === id)) { setRemoteSelectedId(id); return }
+        setRemoteSelectedId(null)
         if (id !== MAIN_ID && !stored.dashboards.some((dashboard) => dashboard.id === id)) return
         updateStored(userId, (currentState) => ({ ...currentState, selectedId: id }))
       },
       createDashboard(name) {
+        setRemoteSelectedId(null)
         const cleanName = name.trim()
         if (!cleanName) return
         const id = newId()
@@ -144,6 +175,10 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
         updateStored(userId, (currentState) => ({ dashboards: [...currentState.dashboards, dashboard], selectedId: id }))
       },
       deleteDashboard(id) {
+        if (remote.some(dashboard => dashboard.id === id)) {
+          void backendRequest(`/dashboards/${id}`, { method: "DELETE" }).then(() => { setRemote(previous => previous.filter(item => item.id !== id)); setRemoteSelectedId(null) }).catch(cause => setError(cause.message))
+          return
+        }
         if (id === MAIN_ID) return
         updateStored(userId, (currentState) => ({
           dashboards: currentState.dashboards.filter((dashboard) => dashboard.id !== id),
@@ -151,6 +186,7 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
         }))
       },
       addSlot() {
+        if (current?.remote) { void saveRemote(current, [...current.slots, { id: newId(), widget: null }]).catch(() => {}); return }
         updateStored(userId, (currentState) => ({
           ...currentState,
           dashboards: currentState.dashboards.map((dashboard) => dashboard.id === currentState.selectedId
@@ -159,6 +195,7 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
         }))
       },
       setSlotWidget(slotId, widget) {
+        if (current?.remote) { void saveRemote(current, current.slots.map(slot => slot.id === slotId ? { ...slot, widget } : slot)).catch(() => {}); return }
         updateStored(userId, (currentState) => ({
           ...currentState,
           dashboards: currentState.dashboards.map((dashboard) => dashboard.id === currentState.selectedId
@@ -167,6 +204,7 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
         }))
       },
       clearSlot(slotId) {
+        if (current?.remote) { void saveRemote(current, current.slots.map(slot => slot.id === slotId ? { ...slot, widget: null } : slot)).catch(() => {}); return }
         updateStored(userId, (currentState) => ({
           ...currentState,
           dashboards: currentState.dashboards.map((dashboard) => dashboard.id === currentState.selectedId
@@ -174,14 +212,16 @@ export function InboxDashboardProvider({ userId, children }: { userId: string; c
             : dashboard),
         }))
       },
-      saveSlots(dashboardId, slots) {
+      async saveSlots(dashboardId, slots) {
+        const dashboard = remote.find(item => item.id === dashboardId)
+        if (dashboard) { await saveRemote(dashboard, slots); return }
         updateStored(userId, (currentState) => ({
           ...currentState,
           dashboards: currentState.dashboards.map((dashboard) => dashboard.id === dashboardId ? { ...dashboard, slots } : dashboard),
         }))
       },
     }
-  }, [stored, userId])
+  }, [stored, userId, remote, remoteSelectedId, error])
 
   return <InboxDashboardContext.Provider value={value}>{children}</InboxDashboardContext.Provider>
 }

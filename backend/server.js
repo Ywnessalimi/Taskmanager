@@ -9,6 +9,12 @@ import { createAuthRepository, authSessionTtlSeconds } from "./apps/auth/auth-re
 import { createOrganizationRepository, organizationPermissionKeys } from "./apps/organizations/organization-repository.js"
 import { createOrganizationActivityRepository } from "./apps/organizations/organization-activity-repository.js"
 import { assistantMessageLimits, createAIService } from "./apps/ai/ai-service.js"
+import { createTaskService, DomainError, validateTaskInput } from "./apps/tasks/task-service.js"
+import { createAssistantStore } from "./apps/ai/assistant-store.js"
+import { createAgentService } from "./apps/ai/agent-service.js"
+import { exportReport } from "./apps/ai/report-export.js"
+import { createIntegrationService } from "./apps/integrations/integration-service.js"
+import { createDashboardService } from "./apps/dashboards/dashboard-service.js"
 
 const host = process.env.HOST ?? "127.0.0.1"
 const port = Number(process.env.PORT ?? 4000)
@@ -23,6 +29,12 @@ const authRepository = createAuthRepository(database)
 const organizationRepository = createOrganizationRepository(database)
 const organizationActivityRepository = createOrganizationActivityRepository(database)
 const aiService = createAIService()
+const taskService = createTaskService({ database, repository, organizationRepository, notificationRepository, organizationActivityRepository, validateTaskInput })
+const assistantStore = createAssistantStore(database)
+const dashboardService = createDashboardService({ database, repository, taskService })
+const agentService = createAgentService({ database, repository, organizationRepository, notificationRepository, ticketRepository, ticketCommentRepository, taskService, dashboardService, store: assistantStore })
+const integrationService = createIntegrationService({ database, authRepository, organizationRepository, repository, taskService, store: assistantStore })
+const activeChats = new Set()
 const initialAdminCreated = process.env.INITIAL_ADMIN_EMAIL || process.env.INITIAL_ADMIN_PASSWORD
   ? authRepository.ensureInitialUser({
       email: process.env.INITIAL_ADMIN_EMAIL,
@@ -90,32 +102,6 @@ async function readJson(request) {
   }
 }
 
-function validateTaskInput(value, { partial = false } = {}) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new HttpError(400, "invalid_body", "بدنهٔ درخواست باید یک شیء باشد.")
-  }
-  const input = { ...value }
-  if (!partial || "title" in input) {
-    if (typeof input.title !== "string" || !input.title.trim()) throw new HttpError(400, "invalid_title", "عنوان تسک الزامی است.")
-    input.title = input.title.trim()
-  }
-  if (!partial || "projectId" in input) {
-    if (typeof input.projectId !== "string" || !input.projectId.trim()) throw new HttpError(400, "invalid_project", "پروژهٔ تسک الزامی است.")
-  }
-  const arrays = ["assigneeNames", "tags", "subtasks", "followers", "activityLog"]
-  for (const field of arrays) {
-    if (field in input && !Array.isArray(input[field])) throw new HttpError(400, "invalid_field", `${field} باید آرایه باشد.`)
-  }
-  if ("priority" in input && !["none", "low", "medium", "high", "urgent"].includes(input.priority)) throw new HttpError(400, "invalid_priority", "اولویت معتبر نیست.")
-  if ("status" in input && !["todo", "in-progress", "completed"].includes(input.status)) throw new HttpError(400, "invalid_status", "وضعیت معتبر نیست.")
-  if ("repeat" in input && input.repeat != null && !["none", "daily", "weekly", "monthly"].includes(input.repeat)) throw new HttpError(400, "invalid_repeat", "الگوی تکرار معتبر نیست.")
-  if ("isFavorite" in input && typeof input.isFavorite !== "boolean") throw new HttpError(400, "invalid_field", "isFavorite باید boolean باشد.")
-  if ("timeSpentMinutes" in input && (!Number.isInteger(input.timeSpentMinutes) || input.timeSpentMinutes < 0)) throw new HttpError(400, "invalid_field", "زمان صرف‌شده باید عدد صحیح نامنفی باشد.")
-  for (const field of ["startDate", "dueDate", "description"]) {
-    if (field in input && input[field] != null && typeof input[field] !== "string") throw new HttpError(400, "invalid_field", `${field} باید رشته باشد.`)
-  }
-  return input
-}
 
 function validateTaskActor(value) {
   if (!value || typeof value !== "object") return undefined
@@ -244,7 +230,11 @@ function validateProfileInput(value) {
   if (typeof avatarUrl !== "string" || avatarUrl.length > 900_000 || (avatarUrl && !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(avatarUrl))) {
     throw new HttpError(400, "invalid_avatar", "تصویر پروفایل معتبر نیست یا حجم آن زیاد است.")
   }
-  return { name, email, bio, avatarUrl }
+  const jobTitle = value.jobTitle
+  const skills = value.skills
+  if (jobTitle !== undefined && (typeof jobTitle !== "string" || jobTitle.length > 120)) throw new HttpError(400, "invalid_job_title", "عنوان شغلی معتبر نیست.")
+  if (skills !== undefined && (!Array.isArray(skills) || skills.length > 30 || skills.some(skill => typeof skill !== "string" || !skill.trim() || skill.length > 80))) throw new HttpError(400, "invalid_skills", "مهارت‌ها معتبر نیستند.")
+  return { name, email, bio, avatarUrl, jobTitle, skills }
 }
 
 const server = createServer(async (request, response) => {
@@ -295,6 +285,16 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    response.setHeader("cache-control", "no-store")
+    if ((path.startsWith("/api/v1/assistant") || path.startsWith("/api/v1/dashboards") || path.startsWith("/api/v1/integrations") || path === "/api/v1/mcp") &&
+        (request.headers["sec-fetch-site"] === "cross-site" || (origin && !origins.has(origin)))) {
+      throw new HttpError(403, "invalid_origin", "مبدأ درخواست مجاز نیست.")
+    }
+    if (path === "/api/v1/mcp") {
+      if (method !== "POST") { response.writeHead(405, { allow: "POST" }); response.end(); return }
+      await integrationService.handle(request, response, await readJson(request))
+      return
+    }
     const sessionToken = getCookie(request, SESSION_COOKIE)
     const session = authRepository.getSession(sessionToken, request.headers["x-quire-user-agent"] ?? "")
     if (path === "/api/v1/auth/me" && method === "GET") {
@@ -336,6 +336,64 @@ const server = createServer(async (request, response) => {
     if (path.startsWith("/api/v1/") && !session) throw new HttpError(401, "unauthenticated", "برای ادامه وارد حساب کاربری شوید.")
     const currentUser = session?.user
 
+    if (path === '/api/v1/dashboards' && method === 'GET') {
+      sendJson(response, 200, dashboardService.list(currentUser))
+      return
+    }
+    const dashboardMatch = path.match(/^\/api\/v1\/dashboards\/([^/]+)(\/tasks)?$/)
+    if (dashboardMatch) {
+      if (dashboardMatch[2] && method === 'GET') sendJson(response, 200, dashboardService.tasks(currentUser, dashboardMatch[1]))
+      else if (!dashboardMatch[2] && method === 'PATCH') sendJson(response, 200, dashboardService.update(currentUser, dashboardMatch[1], await readJson(request)))
+      else if (!dashboardMatch[2] && method === 'DELETE') { dashboardService.remove(currentUser, dashboardMatch[1]); response.writeHead(204); response.end() }
+      else throw new HttpError(405, 'method_not_allowed', 'متد مجاز نیست.')
+      return
+    }
+
+
+    if (path === "/api/v1/assistant/skills" && method === "GET") {
+      sendJson(response, 200, aiService.capabilities())
+      return
+    }
+    const skillMatch = path.match(/^\/api\/v1\/assistant\/tools\/([a-z_]+)$/)
+    if (skillMatch && method === "POST") {
+      sendJson(response, 200, agentService.run(currentUser, skillMatch[1], await readJson(request)))
+      return
+    }
+    const previewMatch = path.match(/^\/api\/v1\/assistant\/previews\/([^/]+)\/(confirm|cancel)$/)
+    if (previewMatch && method === "POST") {
+      const input = await readJson(request)
+      if (previewMatch[2] === "cancel") {
+        assistantStore.cancel(currentUser.id, previewMatch[1])
+        sendJson(response, 200, { cancelled: true })
+      } else sendJson(response, 200, agentService.confirm(currentUser, previewMatch[1], input.selectedKeys))
+      return
+    }
+    const reportExportMatch = path.match(/^\/api\/v1\/assistant\/reports\/([^/]+)\/export$/)
+    if (reportExportMatch && method === "POST") {
+      const options = await readJson(request)
+      const report = agentService.reportFor(currentUser, reportExportMatch[1])
+      const file = await exportReport(report, options)
+      // Recheck current access after asynchronous rendering.
+      agentService.reportFor(currentUser, report.id)
+      if (!authRepository.getSession(sessionToken)) throw new HttpError(401, "unauthenticated", "نشست منقضی شده است.")
+      response.writeHead(200, { "content-type": file.contentType, "content-disposition": `attachment; filename="${file.filename}"`, "x-content-type-options": "nosniff" })
+      response.end(file.buffer)
+      return
+    }
+    if (path === "/api/v1/integrations/tokens") {
+      if (method === "GET") sendJson(response, 200, integrationService.list(currentUser))
+      else if (method === "POST") sendJson(response, 201, integrationService.issue(currentUser, await readJson(request)))
+      else throw new HttpError(405, "method_not_allowed", "متد مجاز نیست.")
+      return
+    }
+    const tokenMatch = path.match(/^\/api\/v1\/integrations\/tokens\/([^/]+)$/)
+    if (tokenMatch && method === "DELETE") {
+      integrationService.revoke(currentUser, tokenMatch[1])
+      response.writeHead(204)
+      response.end()
+      return
+    }
+
     if (path === "/api/v1/assistant/chat" && method === "POST") {
       const input = await readJson(request)
       if (!Array.isArray(input?.messages) || input.messages.length === 0 || input.messages.length > assistantMessageLimits.maxMessages) {
@@ -352,18 +410,17 @@ const server = createServer(async (request, response) => {
         return { role: message.role, content }
       })
       if (messages.at(-1)?.role !== "user") throw new HttpError(400, "invalid_messages", "آخرین پیام باید از طرف کاربر باشد.")
+      if (activeChats.has(currentUser.id)) throw new HttpError(429, "assistant_busy", "پاسخ قبلی هنوز در حال آماده‌شدن است.")
+      activeChats.add(currentUser.id)
       try {
-        const reply = await aiService.reply(messages)
-        sendJson(response, 200, { reply })
-      } catch (error) {
-        const status = error?.code === "assistant_not_configured" ? 503 : 502
-        const message = error?.code === "assistant_provider_auth"
-          ? "کلید سرویس هوش مصنوعی معتبر نیست؛ تنظیمات بک‌اند را بررسی کنید."
-          : error?.code === "assistant_not_configured"
-            ? "دستیار هنوز پیکربندی نشده است."
-            : "دستیار فعلاً پاسخ نمی‌دهد؛ کمی بعد دوباره تلاش کنید."
-        sendJson(response, status, { error: { code: error?.code ?? "assistant_unavailable", message } })
-      }
+        const requireActiveSession = () => {
+          if (!authRepository.getSession(sessionToken)) throw new HttpError(401, "unauthenticated", "نشست منقضی شده است.")
+        }
+        const guardedAgent = { run(user, name, args) { requireActiveSession(); return agentService.run(user, name, args) } }
+        const result = await aiService.reply(messages, { user: currentUser, agent: guardedAgent, locale: input.locale === "en" ? "en" : "fa" })
+        requireActiveSession()
+        sendJson(response, 200, result)
+      } finally { activeChats.delete(currentUser.id) }
       return
     }
 
@@ -581,26 +638,14 @@ const server = createServer(async (request, response) => {
       return
     }
     if (path === "/api/v1/tasks" && method === "POST") {
-      const input = validateTaskInput(await readJson(request))
-      if (!organizationRepository.canAccessProject(currentUser.id, input.projectId)) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
-      const actor = { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl }
-      delete input.actorId
-      delete input.actorName
-      const { task } = inTransaction(() => {
-        const createdTask = repository.createTask(validateTaskInput(input))
-        const project = organizationRepository.getProject(createdTask.projectId, currentUser.id)
-        if (!project) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
-        organizationActivityRepository.create(project.organizationId, actor, "task_created", { title: createdTask.title }, createdTask.id)
-        return { task: createdTask }
-      })
-      notificationRepository.createTaskAssignmentNotifications(task, actor)
+      const task = taskService.create(currentUser, await readJson(request))
       sendJson(response, 201, task)
       return
     }
 
     if (path === "/api/v1/notifications" && method === "GET") {
       const recipientName = currentUser.name
-      sendJson(response, 200, notificationRepository.listForRecipient(recipientName))
+      sendJson(response, 200, notificationRepository.listForRecipient(recipientName, currentUser.id))
       return
     }
 
@@ -608,7 +653,7 @@ const server = createServer(async (request, response) => {
     if (notificationReadMatch && method === "PATCH") {
       const id = decodeURIComponent(notificationReadMatch[1])
       await readJson(request)
-      if (!notificationRepository.markRead(id, currentUser.name)) throw new HttpError(404, "not_found", "اعلان پیدا نشد.")
+      if (!notificationRepository.markRead(id, currentUser.name, currentUser.id)) throw new HttpError(404, "not_found", "اعلان پیدا نشد.")
       response.writeHead(204)
       response.end()
       return
@@ -624,27 +669,7 @@ const server = createServer(async (request, response) => {
         return
       }
       if (method === "PATCH") {
-        const input = validateTaskInput(await readJson(request), { partial: true })
-        const actor = { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl }
-        delete input.actorId
-        delete input.actorName
-        const previous = repository.getTask(id)
-        if (!previous || !organizationRepository.canAccessProject(currentUser.id, previous.projectId)) throw new HttpError(404, "not_found", "تسک پیدا نشد.")
-        if (input.projectId && !organizationRepository.canAccessProject(currentUser.id, input.projectId)) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
-        const patch = validateTaskInput(input, { partial: true })
-        const task = inTransaction(() => {
-          const updatedTask = repository.updateTask(id, patch)
-          if (!updatedTask) throw new HttpError(404, "not_found", "تسک پیدا نشد.")
-          if (previous.status !== updatedTask.status) {
-            const project = organizationRepository.getProject(updatedTask.projectId, currentUser.id)
-            if (!project) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
-            organizationActivityRepository.create(project.organizationId, actor, "task_status_changed", { title: updatedTask.title, from: previous.status, to: updatedTask.status }, updatedTask.id)
-          }
-          return updatedTask
-        })
-        const previousAssignees = new Set(previous?.assigneeNames ?? [])
-        const newlyAssigned = (task.assigneeNames ?? []).filter((name) => !previousAssignees.has(name))
-        if (newlyAssigned.length) notificationRepository.createTaskAssignmentNotifications({ ...task, assigneeNames: newlyAssigned }, actor)
+        const task = taskService.update(currentUser, id, await readJson(request))
         sendJson(response, 200, task)
         return
       }
@@ -743,7 +768,7 @@ const server = createServer(async (request, response) => {
       response.destroy()
       return
     }
-    if (error instanceof HttpError) {
+    if (error instanceof HttpError || error instanceof DomainError) {
       sendJson(response, error.status, { error: { code: error.code, message: error.message } })
       return
     }
@@ -760,7 +785,7 @@ const server = createServer(async (request, response) => {
   }
 })
 
-server.listen(port, host, () => console.log(`Quire API listening at http://${host}:${port}`))
+server.listen(port, host, () => console.log(`Quire API listening at http://${host}:${server.address().port}`))
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => server.close(() => { repository.close(); process.exit(0) }))
 }

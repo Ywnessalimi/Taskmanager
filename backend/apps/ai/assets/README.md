@@ -1,0 +1,2 @@
+# Report font
+IRANSansX-Regular.ttf is decompressed from the existing frontend public/fonts/iransansx/IRANSansX-Regular.woff2 using wawoff2. The font is embedded by report-export.js. A TTF avoids corrupt transformed WOFF2 glyph subsets in the current PDF font stack. No system font or converter is required at runtime. pdf-text.js uses bidi-js to preserve mixed Persian/Latin text and numeric identifiers.

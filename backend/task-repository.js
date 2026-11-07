@@ -13,6 +13,7 @@ function toTask(row) {
     projectId: row.project_id,
     title: row.title,
     assigneeNames: parseJson(row.assignee_names, []),
+    assigneeIds: parseJson(row.assignee_ids, []),
     priority: row.priority,
     startDate: row.start_date ?? undefined,
     dueDate: row.due_date ?? undefined,
@@ -128,6 +129,7 @@ export function createTaskRepository(database) {
       now,
     )
 
+    database.prepare('UPDATE tasks SET assignee_ids = ? WHERE id = ?').run(JSON.stringify(input.assigneeIds ?? []), id)
     return getTask(id)
   }
 
@@ -163,6 +165,7 @@ export function createTaskRepository(database) {
       id,
     )
 
+    database.prepare('UPDATE tasks SET assignee_ids = ? WHERE id = ?').run(JSON.stringify(next.assigneeIds ?? []), id)
     return getTask(id)
   }
 

@@ -32,17 +32,24 @@ export function createNotificationRepository(database) {
 
   function createTaskAssignmentNotifications(task, actor) {
     if (!actor?.id || !actor?.name || !Array.isArray(task.assigneeNames)) return []
-    const recipients = [...new Set(task.assigneeNames.map((name) => name.trim()).filter(Boolean))]
     const project = database.prepare("SELECT name FROM projects WHERE id = ?").get(task.projectId)
+    const members = database.prepare('SELECT u.id, u.name FROM users u JOIN organization_members m ON m.user_id = u.id JOIN projects p ON p.organization_id = m.organization_id WHERE p.id = ?').all(task.projectId)
+    const recipients = task.assigneeIds?.length
+      ? [...new Set(task.assigneeIds)].map(id => members.find(member => member.id === id)).filter(Boolean)
+      : [...new Set(task.assigneeNames.map(name => name.trim()).filter(Boolean))].map(name => {
+        const matches = members.filter(member => member.name === name)
+        return { id: matches.length === 1 ? matches[0].id : null, name }
+      })
     const now = new Date().toISOString()
-    const notifications = recipients.map((recipientName) => ({
-      id: randomUUID(), recipientName, actorId: actor.id, actorName: actor.name,
+    const notifications = recipients.map(recipient => ({
+      id: randomUUID(), recipientId: recipient.id, recipientName: recipient.name, actorId: actor.id, actorName: actor.name,
       verb: "taskAssigned", target: { type: "task", id: task.id, label: task.title, projectId: task.projectId },
       status: "unread", requiresApproval: false, createdAt: now,
     }))
     for (const notification of notifications) {
       insert.run(notification.id, notification.recipientName, notification.actorId, notification.actorName,
         notification.target.id, notification.target.label, notification.target.projectId, now)
+      database.prepare('UPDATE notifications SET recipient_id = ? WHERE id = ?').run(notification.recipientId, notification.id)
     }
     return notifications.map((notification) => ({ ...notification, projectName: project?.name ?? "" }))
   }
@@ -57,22 +64,24 @@ export function createNotificationRepository(database) {
     }
     insertTicketAssignment.run(notification.id, notification.recipientName, notification.actorId, notification.actorName,
       notification.target.id, notification.target.label, notification.target.projectId ?? null, now)
+    database.prepare('UPDATE notifications SET recipient_id = ? WHERE id = ?').run(recipient.id, notification.id)
     return notification
   }
 
-  function listForRecipient(recipientName) {
+  function listForRecipient(recipientName, recipientId) {
     return database.prepare(`
       SELECT notifications.*, tasks.priority AS target_priority
       FROM notifications
       LEFT JOIN tasks ON notifications.target_type = 'task' AND notifications.target_id = tasks.id
-      WHERE notifications.recipient_name = ?
+      WHERE notifications.recipient_id = ? OR (notifications.recipient_id IS NULL AND notifications.recipient_name = ?
+        AND (SELECT count(*) FROM users WHERE name = ?) = 1)
       ORDER BY notifications.created_at DESC, notifications.rowid DESC
     `)
-      .all(recipientName).map(toNotification)
+      .all(recipientId ?? null, recipientName, recipientName).map(toNotification)
   }
 
-  function markRead(id, recipientName) {
-    const result = database.prepare("UPDATE notifications SET status = 'read' WHERE id = ? AND recipient_name = ?").run(id, recipientName)
+  function markRead(id, recipientName, recipientId) {
+    const result = database.prepare("UPDATE notifications SET status = 'read' WHERE id = ? AND (recipient_id = ? OR (recipient_id IS NULL AND recipient_name = ? AND (SELECT count(*) FROM users WHERE name = ?) = 1))").run(id, recipientId ?? null, recipientName, recipientName)
     return Number(result.changes) > 0
   }
 

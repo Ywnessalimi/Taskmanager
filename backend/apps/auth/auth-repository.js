@@ -29,6 +29,8 @@ function publicUser(row) {
     email: row.email,
     avatarUrl: row.avatar_url ?? undefined,
     bio: row.bio ?? undefined,
+    jobTitle: row.job_title ?? '',
+    skills: JSON.parse(row.skills ?? '[]'),
     notifications: { taskAssigned: true, taskComments: true, weeklyDigest: false },
     attachments: [],
   }
@@ -135,8 +137,10 @@ export function createAuthRepository(database) {
       return publicUser(getUserById.get(id))
     },
 
-    updateProfile(id, { name, email, bio, avatarUrl }) {
+    updateProfile(id, { name, email, bio, avatarUrl, jobTitle, skills }) {
       const result = updateProfileStatement.run(name, email, bio || null, avatarUrl || null, id)
+      if (jobTitle !== undefined) database.prepare('UPDATE users SET job_title = ? WHERE id = ?').run(jobTitle, id)
+      if (skills !== undefined) database.prepare('UPDATE users SET skills = ? WHERE id = ?').run(JSON.stringify(skills), id)
       return Number(result.changes) ? publicUser(getUserById.get(id)) : undefined
     },
   }
