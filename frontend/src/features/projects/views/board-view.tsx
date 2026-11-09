@@ -8,6 +8,7 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
+  getScrollableAncestors,
   pointerWithin,
   rectIntersection,
   useDraggable,
@@ -119,7 +120,65 @@ class BoardTouchSensor extends TouchSensor {
   }]
 }
 
-const boardCollisionDetection: CollisionDetection = (args) => {
+function isMobileBoardTouch(event: Event) {
+  return event.type === "touchstart" && window.matchMedia("(max-width: 1023px)").matches
+}
+
+function startTouchEdgeScroll(board: HTMLDivElement, fingerId: number) {
+  const page = document.scrollingElement
+  const verticalScroller = getScrollableAncestors(board).find((element) =>
+    element !== page && element.scrollHeight > element.clientHeight && /auto|scroll|overlay/.test(getComputedStyle(element).overflowY)
+  ) ?? page
+  let finger: Touch | undefined
+  let frame = 0
+
+  function trackFinger(event: TouchEvent) {
+    finger = Array.from(event.touches).find((touch) => touch.identifier === fingerId)
+  }
+
+  function edgeStep(position: number, start: number, end: number) {
+    const zone = Math.min(64, (end - start) / 3)
+    if (zone <= 0 || position < start || position > end) return 0
+    if (position < start + zone) return -Math.ceil(16 * (start + zone - position) / zone)
+    if (position > end - zone) return Math.ceil(16 * (position - end + zone) / zone)
+    return 0
+  }
+
+  function scroll() {
+    if (finger) {
+      const bounds = board.getBoundingClientRect()
+      const dx = edgeStep(finger.clientX, Math.max(0, bounds.left), Math.min(window.innerWidth, bounds.right))
+      // In RTL scrollLeft starts at zero on the right and goes negative to the left.
+      if (dx) board.scrollLeft += dx
+
+      if (verticalScroller) {
+        const viewport = verticalScroller === page ? null : verticalScroller.getBoundingClientRect()
+        const dy = edgeStep(finger.clientY, Math.max(0, viewport?.top ?? 0), Math.min(window.innerHeight, viewport?.bottom ?? window.innerHeight))
+        if (dy) verticalScroller.scrollTop += dy
+      }
+    }
+    frame = requestAnimationFrame(scroll)
+  }
+
+  window.addEventListener("touchmove", trackFinger, { capture: true, passive: true })
+  frame = requestAnimationFrame(scroll)
+  return () => {
+    cancelAnimationFrame(frame)
+    window.removeEventListener("touchmove", trackFinger, true)
+  }
+}
+
+const boardCollisionDetection = (args: Parameters<CollisionDetection>[0], mobileTouchDrag: boolean) => {
+  if (mobileTouchDrag) {
+    const cardKind = args.active.data.current?.kind === "ticket" ? "ticket-target" : "task"
+    const hits = pointerWithin({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(({ data }) => data.current?.kind === cardKind || data.current?.kind === "column"),
+    })
+    const card = hits.find(({ data }) => data?.droppableContainer.data.current?.kind === cardKind)
+    return card ? [card] : hits
+  }
+
   if (args.active.data.current?.kind === "ticket") {
     const ticketDropTargets = args.droppableContainers.filter((container) => {
       const kind = container.data.current?.kind
@@ -228,7 +287,7 @@ function BoardTicketCard({
   const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `ticket:${ticket.id}`,
-    data: { kind: "ticket", ticketId: ticket.id },
+    data: { kind: "ticket", ticketId: ticket.id, parentTaskId },
   })
   const assignedMember = members.find((member) => member.id === ticket.assigneeId)
   const creatorAvatar = ticket.createdByAvatarUrl ?? (ticket.createdById ? TICKET_USER_AVATARS[ticket.createdById] : undefined)
@@ -261,7 +320,7 @@ function BoardTicketCard({
       data-ticket-drop-task={parentTaskId}
       aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
       data-board-card
-      className={`flex min-w-0 [touch-action:auto] items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+      className={`flex min-w-0 [touch-action:auto] items-center gap-2 border border-border bg-background text-start text-text2 max-lg:select-none max-lg:[-webkit-touch-callout:none] ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
     >
       <AvatarGroup className="shrink-0 rtl:space-x-reverse">
         <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
@@ -566,7 +625,7 @@ function SortableTaskCard({
       {...listeners}
       onClick={() => panel?.openTaskDetail(task)}
       data-board-card
-      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
+      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start max-lg:select-none max-lg:[-webkit-touch-callout:none] ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
@@ -922,11 +981,15 @@ export function BoardView({
   const [customColors, setCustomColors] = useState<string[]>([])
   const [order, setOrder] = useState<Record<string, string[]>>(() => ({ ...buildInitialOrder(initialTasks), ...(figmaStyle ? { cancelled: [] } : {}) }))
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [mobileTouchDrag, setMobileTouchDrag] = useState(false)
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
   const [ticketTargetTaskId, setTicketTargetTaskId] = useState<string | null>(null)
   const [ticketTargetIndex, setTicketTargetIndex] = useState<number | null>(null)
   const dragStartOrder = useRef<Record<string, string[]>>({})
   const boardPan = useRef<{ pointerId: number; x: number; scrollLeft: number; dragging: boolean } | null>(null)
+  const boardScroll = useRef<HTMLDivElement>(null)
+  const stopTouchScroll = useRef<(() => void) | null>(null)
+  useEffect(() => () => stopTouchScroll.current?.(), [])
   const panel = useTaskPanel()
   const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
   const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
@@ -1148,6 +1211,11 @@ export function BoardView({
   }
 
   function handleDragStart(event: DragStartEvent) {
+    if (isMobileBoardTouch(event.activatorEvent)) {
+      const finger = (event.activatorEvent as TouchEvent).changedTouches[0]
+      setMobileTouchDrag(true)
+      if (finger && boardScroll.current) stopTouchScroll.current = startTouchEdgeScroll(boardScroll.current, finger.identifier)
+    }
     setActiveId(String(event.active.id))
     dragStartOrder.current = order
     setTicketTargetTaskId(null)
@@ -1156,11 +1224,18 @@ export function BoardView({
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
+    const mobile = isMobileBoardTouch(event.activatorEvent)
     if (active.data.current?.kind === "ticket") {
       const columnId = over?.data.current?.kind === "column" ? String(over.data.current.columnId) : null
       setDragOverColumnId(columnId)
       const taskId = over?.data.current?.kind === "ticket-target" ? String(over.data.current.taskId) : null
       const ticketId = String(active.data.current.ticketId)
+      // The normal placeholder removes the dragged ticket from its original task.
+      if (mobile && taskId === active.data.current.parentTaskId) {
+        setTicketTargetTaskId(null)
+        setTicketTargetIndex(null)
+        return
+      }
       setTicketTargetTaskId(taskId)
       setTicketTargetIndex(taskId ? getTicketInsertionIndex(taskId, ticketId, active.rect.current.translated) : null)
       return
@@ -1180,6 +1255,8 @@ export function BoardView({
     const activeContainer = findContainer(order, activeTaskId)
     const overContainer = findContainer(order, overId)
     setDragOverColumnId(overContainer ?? null)
+    // Keep the native touch target mounted until touchend.
+    if (mobile) return
     if (!activeContainer || !overContainer || activeContainer === overContainer) return
 
     setOrder((prev) => {
@@ -1195,12 +1272,20 @@ export function BoardView({
     })
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
+  function clearDrag() {
+    stopTouchScroll.current?.()
+    stopTouchScroll.current = null
+    setMobileTouchDrag(false)
     setActiveId(null)
     setDragOverColumnId(null)
     setTicketTargetTaskId(null)
     setTicketTargetIndex(null)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    const mobile = isMobileBoardTouch(event.activatorEvent)
+    clearDrag()
 
     if (active.data.current?.kind === "ticket") {
       const ticketId = String(active.data.current.ticketId)
@@ -1243,6 +1328,16 @@ export function BoardView({
       const items = prev[container]
       const activeIndex = items.indexOf(activeTaskId)
       const overIndex = items.indexOf(overId)
+      if (mobile && activeIndex === -1) {
+        const source = findContainer(prev, activeTaskId)
+        if (!source) return prev
+        const insertAt = overIndex === -1 ? items.length : overIndex
+        return {
+          ...prev,
+          [source]: prev[source].filter((id) => id !== activeTaskId),
+          [container]: [...items.slice(0, insertAt), activeTaskId, ...items.slice(insertAt)],
+        }
+      }
       if (activeIndex === -1 || overIndex === -1 || activeIndex === overIndex) return prev
       return { ...prev, [container]: arrayMove(items, activeIndex, overIndex) }
     })
@@ -1292,19 +1387,14 @@ export function BoardView({
     <DndContext
       id={`board-${projectId ?? "my-tasks"}`}
       sensors={sensors}
-      autoScroll={{ threshold: { x: 0.15, y: 0.15 }, acceleration: 8 }}
-      collisionDetection={boardCollisionDetection}
+      autoScroll={mobileTouchDrag ? false : { threshold: { x: 0.15, y: 0.15 }, acceleration: 8 }}
+      collisionDetection={(args) => boardCollisionDetection(args, mobileTouchDrag)}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => {
-        setActiveId(null)
-        setDragOverColumnId(null)
-        setTicketTargetTaskId(null)
-        setTicketTargetIndex(null)
-      }}
+      onDragCancel={clearDrag}
     >
-      <div data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto [touch-action:auto] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto [touch-action:auto] pb-2"}>
+      <div ref={boardScroll} data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto [touch-action:auto] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto [touch-action:auto] pb-2"}>
       <div className={figmaStyle ? "flex w-max min-w-full gap-6 overflow-visible py-2" : "flex w-max min-w-full gap-4"}>
         {columns.map((column) => (
           <Column
