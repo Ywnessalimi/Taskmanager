@@ -53,6 +53,9 @@ import { backendRequest } from "@/lib/api/backend-client"
 import { showWorkspaceToast } from "@/lib/workspace-toast"
 
 type BoardColumn = StoredBoardColumn & { projectId?: string; projectName?: string }
+type MobileDropTarget =
+  | { columnId: string; position: "tasks-end" | "tickets-end" }
+  | { columnId: string; taskId: string; position: "before" | "after" }
 
 const COLUMN_ICONS = [
   { id: "figma-progress", label: "board.iconProgress" },
@@ -110,6 +113,16 @@ class BoardPointerSensor extends PointerSensor {
 }
 
 class BoardTouchSensor extends TouchSensor {
+  constructor(props: ConstructorParameters<typeof TouchSensor>[0]) {
+    super({
+      ...props,
+      options: {
+        ...props.options,
+        activationConstraint: { delay: isMobileBoardTouch(props.event) ? 1000 : 2000, tolerance: 12 },
+      },
+    })
+  }
+
   static activators: typeof TouchSensor.activators = [{
     eventName: "onTouchStart",
     handler: (...args) => {
@@ -287,7 +300,7 @@ function BoardTicketCard({
   const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `ticket:${ticket.id}`,
-    data: { kind: "ticket", ticketId: ticket.id, parentTaskId },
+    data: { kind: "ticket", ticketId: ticket.id },
   })
   const assignedMember = members.find((member) => member.id === ticket.assigneeId)
   const creatorAvatar = ticket.createdByAvatarUrl ?? (ticket.createdById ? TICKET_USER_AVATARS[ticket.createdById] : undefined)
@@ -571,12 +584,18 @@ function TaskCardBody({
   )
 }
 
-/**
- * کارت واقعی — قابل‌درگ (`useSortable`) و قابل‌کلیک: کلیک ساده (بدون حرکت بیش از حد فعال‌سازی
- * سنسور) پنل جزئیات تسک را باز می‌کند؛ کلیک-و-نگه‌داشتن-و-کشیدن درگ را شروع می‌کند. پیل‌های
- * فیلد (مسئول/تاریخ/اولویت) با `stopPropagation` روی pointerdown/click هم از فعال‌سازی درگ و
- * هم از باز شدن پنل جزئیات مستقل می‌مانند.
- */
+function MobileDropSlot({ edge }: { edge?: "before" | "after" }) {
+  const t = useT()
+  // Keep a marker on a card out of its layout so the collision target stays put.
+  const placement = edge ? `absolute inset-x-1 z-10 ${edge === "before" ? "top-0" : "bottom-0"}` : ""
+  return (
+    <div aria-hidden="true" className={`pointer-events-none grid min-h-8 place-items-center rounded-lg border border-dashed border-text3 bg-bg2 px-2 py-1 text-xs text-text2 ${placement}`}>
+      {t("board.dropPosition")}
+    </div>
+  )
+}
+
+/** کارت قابل جابه‌جایی که با لمس یا کلیک کوتاه جزئیات تسک را باز می‌کند. */
 function SortableTaskCard({
   task,
   projectId,
@@ -589,6 +608,7 @@ function SortableTaskCard({
   ticketDropEnabled,
   isTicketTarget,
   ticketDropIndex,
+  mobileDropEdge,
 }: {
   task: Task
   projectId?: string
@@ -601,6 +621,7 @@ function SortableTaskCard({
   ticketDropEnabled: boolean
   isTicketTarget: boolean
   ticketDropIndex: number | null
+  mobileDropEdge?: "before" | "after"
 }) {
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -625,10 +646,11 @@ function SortableTaskCard({
       {...listeners}
       onClick={() => panel?.openTaskDetail(task)}
       data-board-card
-      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start max-lg:select-none max-lg:[-webkit-touch-callout:none] ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
+      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start max-lg:select-none max-lg:[-webkit-touch-callout:none] ${mobileDropEdge ? "relative" : ""} ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
+      {mobileDropEdge && <MobileDropSlot edge={mobileDropEdge} />}
       <TaskCardBody
         task={task}
         projectId={projectId}
@@ -666,6 +688,8 @@ function Column({
   ticketDropEnabled,
   ticketTargetTaskId,
   ticketTargetIndex,
+  mobileTouchDrag,
+  mobileDropTarget,
   projectId,
   isDragOver,
   onAddTask,
@@ -688,6 +712,8 @@ function Column({
   ticketDropEnabled: boolean
   ticketTargetTaskId: string | null
   ticketTargetIndex: number | null
+  mobileTouchDrag: boolean
+  mobileDropTarget: MobileDropTarget | null
   projectId?: string
   isDragOver: boolean
   onAddTask: () => void
@@ -750,7 +776,7 @@ function Column({
         </>}
       </div>
 
-      <SortableContext id={column.id} items={taskIds} strategy={verticalListSortingStrategy}>
+      <SortableContext id={column.id} items={taskIds} strategy={mobileTouchDrag ? () => null : verticalListSortingStrategy}>
         <div className="flex min-h-10 flex-col gap-2 p-2">
           {taskIds.map((taskId) => {
             const task = tasksById.get(taskId)
@@ -768,14 +794,17 @@ function Column({
                 ticketDropEnabled={ticketDropEnabled}
                 isTicketTarget={ticketTargetTaskId === task.id}
                 ticketDropIndex={ticketTargetTaskId === task.id ? ticketTargetIndex : null}
+                mobileDropEdge={mobileDropTarget && "taskId" in mobileDropTarget && mobileDropTarget.taskId === task.id ? mobileDropTarget.position : undefined}
               />
             ) : null
           })}
+          {mobileDropTarget?.position === "tasks-end" && <MobileDropSlot />}
           {ticketIds.map((ticketId) => {
             const ticket = ticketsById.get(ticketId)
             return ticket ? <BoardTicketCard key={ticket.id} ticket={ticket} members={ticketAssignees} onAssigneeChange={(member) => onTicketAssigneeChange(ticket.id, member)} /> : null
           })}
-          {itemCount === 0 && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
+          {mobileDropTarget?.position === "tickets-end" && <MobileDropSlot />}
+          {itemCount === 0 && !mobileDropTarget && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
         </div>
       </SortableContext>
 
@@ -982,6 +1011,7 @@ export function BoardView({
   const [order, setOrder] = useState<Record<string, string[]>>(() => ({ ...buildInitialOrder(initialTasks), ...(figmaStyle ? { cancelled: [] } : {}) }))
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mobileTouchDrag, setMobileTouchDrag] = useState(false)
+  const [mobileDropTarget, setMobileDropTarget] = useState<MobileDropTarget | null>(null)
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
   const [ticketTargetTaskId, setTicketTargetTaskId] = useState<string | null>(null)
   const [ticketTargetIndex, setTicketTargetIndex] = useState<number | null>(null)
@@ -1127,7 +1157,7 @@ export function BoardView({
 
   const sensors = useSensors(
     useSensor(BoardPointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(BoardTouchSensor, { activationConstraint: { delay: 2000, tolerance: 12 } })
+    useSensor(BoardTouchSensor)
   )
 
   function updateTask(taskId: string, patch: Partial<Task>) {
@@ -1230,10 +1260,16 @@ export function BoardView({
       setDragOverColumnId(columnId)
       const taskId = over?.data.current?.kind === "ticket-target" ? String(over.data.current.taskId) : null
       const ticketId = String(active.data.current.ticketId)
-      // The normal placeholder removes the dragged ticket from its original task.
-      if (mobile && taskId === active.data.current.parentTaskId) {
-        setTicketTargetTaskId(null)
-        setTicketTargetIndex(null)
+      if (mobile) {
+        const taskColumnId = taskId ? findContainer(order, taskId) : undefined
+        const column = columns.find((entry) => entry.id === columnId)
+        if (taskId && taskColumnId) {
+          setMobileDropTarget({ columnId: taskColumnId, taskId, position: "before" })
+        } else if (column && !column.projectId && STATUS_COLUMN_IDS.has(column.id)) {
+          setMobileDropTarget({ columnId: column.id, position: "tickets-end" })
+        } else {
+          setMobileDropTarget(null)
+        }
         return
       }
       setTicketTargetTaskId(taskId)
@@ -1242,6 +1278,7 @@ export function BoardView({
     }
 
     if (!over) {
+      setMobileDropTarget(null)
       setDragOverColumnId(null)
       setTicketTargetTaskId(null)
       setTicketTargetIndex(null)
@@ -1256,7 +1293,20 @@ export function BoardView({
     const overContainer = findContainer(order, overId)
     setDragOverColumnId(overContainer ?? null)
     // Keep the native touch target mounted until touchend.
-    if (mobile) return
+    if (mobile) {
+      const task = tasksById.get(activeTaskId)
+      const column = columns.find((entry) => entry.id === overContainer)
+      if (!task || !column || overId === activeTaskId || (column.projectId && column.projectId !== resolveProjectId(task, projectId))) {
+        setMobileDropTarget(null)
+      } else if (overId === column.id) {
+        setMobileDropTarget({ columnId: column.id, position: "tasks-end" })
+      } else {
+        const items = order[column.id]
+        const movesDown = activeContainer === column.id && items.indexOf(activeTaskId) < items.indexOf(overId)
+        setMobileDropTarget({ columnId: column.id, taskId: overId, position: movesDown ? "after" : "before" })
+      }
+      return
+    }
     if (!activeContainer || !overContainer || activeContainer === overContainer) return
 
     setOrder((prev) => {
@@ -1276,6 +1326,7 @@ export function BoardView({
     stopTouchScroll.current?.()
     stopTouchScroll.current = null
     setMobileTouchDrag(false)
+    setMobileDropTarget(null)
     setActiveId(null)
     setDragOverColumnId(null)
     setTicketTargetTaskId(null)
@@ -1337,6 +1388,9 @@ export function BoardView({
           [source]: prev[source].filter((id) => id !== activeTaskId),
           [container]: [...items.slice(0, insertAt), activeTaskId, ...items.slice(insertAt)],
         }
+      }
+      if (mobile && activeIndex !== -1 && overId === container && activeIndex !== items.length - 1) {
+        return { ...prev, [container]: arrayMove(items, activeIndex, items.length - 1) }
       }
       if (activeIndex === -1 || overIndex === -1 || activeIndex === overIndex) return prev
       return { ...prev, [container]: arrayMove(items, activeIndex, overIndex) }
@@ -1411,6 +1465,8 @@ export function BoardView({
             ticketDropEnabled={includeTickets}
             ticketTargetTaskId={ticketTargetTaskId}
             ticketTargetIndex={ticketTargetIndex}
+            mobileTouchDrag={mobileTouchDrag}
+            mobileDropTarget={mobileDropTarget?.columnId === column.id ? mobileDropTarget : null}
             projectId={projectId}
             isDragOver={dragOverColumnId === column.id}
             onAddTask={() => { if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/tasks/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`); else panel?.openNewTask(projectId) }}

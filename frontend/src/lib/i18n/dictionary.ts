@@ -233,6 +233,7 @@ const fa = {
   "board.addColor": "افزودن رنگ",
   "board.changeColor": "تغییر رنگ ستون",
   "board.dropTicket": "تیکت را اینجا رها کنید",
+  "board.dropPosition": "محل قرارگیری",
 
   "pageHeader.back": "بازگشت",
   "pageHeader.moreOptions": "گزینه‌های بیشتر",
@@ -907,6 +908,7 @@ const en: Record<keyof typeof fa, string> = {
   "board.addColor": "Add color",
   "board.changeColor": "Change column color",
   "board.dropTicket": "Drop ticket here",
+  "board.dropPosition": "Drop here",
 
   "pageHeader.back": "Back",
   "pageHeader.moreOptions": "More options",
