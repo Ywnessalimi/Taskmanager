@@ -21,7 +21,7 @@
 - `quire-https.service`: TLS proxy روی `0.0.0.0:443`؛ گواهی از نسخهٔ اختصاصی برنامه در `/var/lib/quire/tls/` خوانده می‌شود. سرویس با `CAP_NET_BIND_SERVICE` اجرا می‌شود تا کاربر غیرریشه‌ای `quire` بتواند پورت privileged 443 را bind کند.
 - `quire-cert-sync.timer`: هر پنج دقیقه گواهی تمدیدشدهٔ میزبان را به مسیر برنامه کپی می‌کند؛ proxy تغییر گواهی را خودکار بارگذاری می‌کند.
 
-تنظیمات دستیار هوش مصنوعی باید روی سرور در `/etc/quire/quire-ai.env` قرار بگیرند؛ فایل محلی `backend/.env.local` به سرویس systemd منتقل نمی‌شود. فایل فقط باید شامل `AI_API_BASE_URL`، `AI_API_KEY` و `AI_MODEL` باشد، با مالک `root:quire` و مجوز `0640`. فایل unit در `backend/deploy/quire-api.service` آن را به‌عنوان `EnvironmentFile` بارگذاری می‌کند. پس از ساخت یا تغییر فایل:
+تنظیمات دستیار هوش مصنوعی باید روی سرور در `/etc/quire/quire-ai.env` قرار بگیرند؛ فایل محلی `backend/.env.local` به سرویس systemd منتقل نمی‌شود. فایل شامل `AI_API_BASE_URL`، `AI_API_KEY` و `AI_MODEL` باشد، با مالک `root:quire` و مجوز `0640`. فایل unit در `backend/deploy/quire-api.service` آن را به‌عنوان `EnvironmentFile` بارگذاری می‌کند. پس از ساخت یا تغییر فایل:
 
 ```bash
 systemctl daemon-reload
@@ -78,3 +78,7 @@ ufw delete allow 9444/tcp
 ```
 
 پورت‌های `9011` (SSH)، `9443` (Radius HTTPS)، `8443` و سرویس‌های موجود را برای استقرار Quire تغییر ندهید. 443 تنها مسیر عمومی برنامه است؛ دو سرویس داخلی بک‌اند و Next روی loopback باقی می‌مانند. پورت 9444 دیگر listener یا قانون UFW ندارد.
+
+## وابستگی‌های نسخهٔ دستیار
+
+قبل از ساخت باندل، در backend با package-lock.json دستور npm ci --omit=dev اجرا شود؛ backend/node_modules و apps/ai/assets/IRANSansX-Regular.ttf باید همراه کد و migrationها در release باشند. وابستگی‌های مقصد در محیط سازگار با سیستم‌عامل سرور آماده شوند. تنظیمات محیط علاوه بر AI_API_KEY، AI_API_BASE_URL و AI_MODEL، می‌تواند AI_TOOL_MODE=json داشته باشد. FRONTEND_ORIGINS باید origin عمومی برنامه (با پورت، در صورت وجود) باشد تا درخواست پنل رد نشود. فایل‌های data و env محلی داخل باندل نروند. این تغییر در Git تحویل می‌شود و انتشار روی محیط زنده جداگانه است.

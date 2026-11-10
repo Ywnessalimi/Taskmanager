@@ -46,7 +46,7 @@ function toProject(row, members) {
 export function createOrganizationRepository(database) {
   const memberRow = database.prepare(`
     SELECT m.id AS membership_id, m.organization_id, m.user_id, m.role, m.permissions, m.created_at,
-      u.name, u.email, u.avatar_url
+      u.name, u.email, u.avatar_url, u.job_title, u.skills, u.bio
     FROM organization_members m JOIN users u ON u.id = m.user_id
     WHERE m.organization_id = ? ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END, m.created_at, m.rowid
   `)
@@ -71,6 +71,9 @@ export function createOrganizationRepository(database) {
     return memberRow.all(organizationId).map((row) => ({
       id: row.user_id,
       name: row.name,
+      jobTitle: row.job_title,
+      skills: JSON.parse(row.skills ?? '[]'),
+      bio: row.bio ?? '',
       email: row.email,
       role: row.role,
       permissions: parsePermissions(row.permissions),

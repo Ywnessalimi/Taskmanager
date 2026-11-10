@@ -25,11 +25,13 @@ export function ProfileDialog({
   onSave,
 }: {
   user: CurrentUser
-  onSave: (patch: Pick<CurrentUser, "name" | "email" | "bio" | "avatarUrl">) => Promise<void>
+  onSave: (patch: Pick<CurrentUser, "name" | "email" | "bio" | "avatarUrl" | "jobTitle" | "skills">) => Promise<void>
 }) {
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [bio, setBio] = useState(user.bio ?? "")
+  const [jobTitle, setJobTitle] = useState(user.jobTitle ?? "")
+  const [skills, setSkills] = useState((user.skills ?? []).join("، "))
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "")
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -41,6 +43,8 @@ export function ProfileDialog({
     setName(user.name)
     setEmail(user.email)
     setBio(user.bio ?? "")
+    setJobTitle(user.jobTitle ?? "")
+    setSkills((user.skills ?? []).join("، "))
     setAvatarUrl(user.avatarUrl ?? "")
     setError(null)
   }
@@ -81,7 +85,7 @@ export function ProfileDialog({
     setSaving(true)
     setError(null)
     try {
-      await onSave({ name: name.trim(), email: email.trim(), bio: bio.trim(), avatarUrl: avatarUrl || undefined })
+      await onSave({ name: name.trim(), email: email.trim(), bio: bio.trim(), avatarUrl: avatarUrl || undefined, jobTitle: jobTitle.trim(), skills: [...new Set(skills.split(/[,،\n]/).map(skill => skill.trim()).filter(Boolean))] })
       setOpen(false)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("account.profileSaveError"))
@@ -97,7 +101,7 @@ export function ProfileDialog({
         {t("account.edit")}
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("account.editProfileTitle")}</DialogTitle>
         </DialogHeader>
@@ -128,6 +132,14 @@ export function ProfileDialog({
             />
           </label>
 
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs text-text2">{t("account.jobTitle")}</span>
+            <input value={jobTitle} maxLength={120} onChange={event => setJobTitle(event.target.value)} className={FIELD_CLASS} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs text-text2">{t("account.skills")}</span>
+            <textarea value={skills} rows={2} onChange={event => setSkills(event.target.value)} className={FIELD_CLASS} placeholder={t("account.skillsHint")} />
+          </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs text-text2">{t("account.bio")}</span>
             <textarea

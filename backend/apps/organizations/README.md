@@ -5,3 +5,5 @@
 `PATCH /organizations/:organizationId/divisions/:divisionId/settings` نام و اعضای منتخب معاونت را با مجوز `editDivision` ذخیره می‌کند؛ اعضا باید عضو همان سازمان باشند و این roster به‌تنهایی دسترسی پروژه نمی‌دهد. ساخت معاونت اعضای فعلی سازمان را به‌طور پیش‌فرض انتخاب می‌کند؛ انتقال معاونت فقط اعضای مشترک با سازمان مقصد را نگه می‌دارد. `PATCH /projects/:projectId/settings` نام و توضیحات پروژه را با مجوز `editProject` ذخیره می‌کند؛ slug پروژه هنگام ویرایش ثابت می‌ماند.
 
 وابستگی‌ها: جداول `users`, `organizations`, `organization_members`, `division_members`, `organization_activity`, `divisions`, `projects` و migrationهای `008_organizations_and_divisions.sql`, `010_organization_settings_and_members.sql`, `011_organization_activity.sql`, `012_division_members.sql`. مسیرهای HTTP در `server.js` آن را مصرف می‌کنند. فرانت‌اند `lib/api/organizations.ts`, `projects.ts` و `features/organizations/organization-activity-feed.tsx` و درخت `features/projects/organization-project-tree.tsx` از این API استفاده می‌کنند.
+
+عضو قابل‌دسترسی اکنون jobTitle، skills و bio نیز دارد؛ دستیار برای پیشنهاد مسئول این داده را می‌خواند. سیاست دسترسی پروژه همچنان سازمانی است.

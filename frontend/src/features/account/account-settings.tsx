@@ -68,7 +68,7 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
   const { locale, setLocale, t } = useLocale()
   const taskPanel = useTaskPanel()
 
-  async function saveProfile(patch: Pick<CurrentUser, "name" | "email" | "bio" | "avatarUrl">) {
+  async function saveProfile(patch: Pick<CurrentUser, "name" | "email" | "bio" | "avatarUrl" | "jobTitle" | "skills">) {
     const savedUser = await updateCurrentUser(patch)
     setUser(savedUser)
     taskPanel?.updateUser(savedUser)

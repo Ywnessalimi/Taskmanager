@@ -1,4 +1,4 @@
-function apiBaseUrl() {
+export function apiBaseUrl() {
   if (typeof window !== "undefined") return (process.env.NEXT_PUBLIC_QUIRE_API_URL ?? "/api/v1").replace(/\/$/, "")
   return `${(process.env.QUIRE_API_ORIGIN ?? "http://127.0.0.1:4000").replace(/\/$/, "")}/api/v1`
 }

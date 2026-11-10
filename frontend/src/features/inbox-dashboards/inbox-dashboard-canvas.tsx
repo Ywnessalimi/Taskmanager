@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { getMyTasks } from "@/lib/api/my-tasks"
 import { getNotifications } from "@/lib/api/notifications"
+import { backendRequest } from "@/lib/api/backend-client"
 import type { CurrentUser, MyTask, Notification } from "@/lib/api/types"
 import { StatusDonutChart } from "@/components/charts/status-donut-chart"
 import { formatRelativeTime, TARGET_ICON, targetHref, VERB_KEY } from "@/features/notifications/notification-format"
@@ -25,8 +26,9 @@ const widgetIcon: Record<InboxWidgetType, string> = {
   "task-status-donut": "donut-chart-line",
 }
 
-function WidgetTitle({ type, count }: { type: InboxWidgetType; count?: number }) {
+function WidgetTitle({ type, count, teamScope }: { type: InboxWidgetType; count?: number; teamScope?: boolean }) {
   const t = useT()
+  const { locale } = useLocale()
   const titleKeys: Record<InboxWidgetType, TranslationKey> = {
     tickets: "inboxDashboards.myTickets",
     tasks: "inboxDashboards.myTasks",
@@ -36,7 +38,7 @@ function WidgetTitle({ type, count }: { type: InboxWidgetType; count?: number })
   }
   return <div className="flex min-w-0 items-center gap-2">
     <RemixIcon name={widgetIcon[type]} className="shrink-0 text-base text-icon2" />
-    <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{t(titleKeys[type])}</h3>
+    <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{teamScope && type === "tasks" ? (locale === "fa" ? "تسک‌های تیم" : "Team tasks") : t(titleKeys[type])}</h3>
     {typeof count === "number" && <span className="shrink-0 text-xs tabular-nums text-text3">{count}</span>}
   </div>
 }
@@ -112,7 +114,7 @@ function WidgetRows({ slot, tickets, tasks, notifications, loading, error }: {
   </div>
 }
 
-function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing, onRemove }: {
+function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing, onRemove, teamScope }: {
   slot: InboxDashboardSlot
   tickets: LocalTicket[]
   tasks: MyTask[]
@@ -120,6 +122,7 @@ function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing
   loading: boolean
   error: boolean
   editing: boolean
+  teamScope?: boolean
   onRemove: (slotId: string) => void
 }) {
   const t = useT()
@@ -131,13 +134,13 @@ function SlotCard({ slot, tickets, tasks, notifications, loading, error, editing
 
   return <article className={`relative flex aspect-square min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background p-2.5 ${editing ? "pt-10" : ""}`}>
     <div className="flex min-w-0 items-center justify-between gap-1">
-      <WidgetTitle type={slot.widget} count={!loading && !error ? count : undefined} />
+      <WidgetTitle type={slot.widget} count={!loading && !error ? count : undefined} teamScope={teamScope} />
       {editing && <button type="button" onClick={() => onRemove(slot.id)} aria-label={t("inboxDashboards.removeWidget")} title={t("inboxDashboards.removeWidget")} className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-text3 hover:bg-bg2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><RemixIcon name="delete-bin-line" className="text-base" /></button>}
     </div>
     <WidgetRows slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={loading} error={error} />
-    <a href={viewAllHref} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
+    {!(teamScope && (slot.widget === "tasks" || slot.widget.startsWith("task-status-"))) && <a href={viewAllHref} onClick={() => { if (slot.widget === "tickets") selectDashboard("main") }} className="mt-auto flex min-h-8 items-center gap-1 border-t border-border pt-2 text-xs text-text2 hover:text-brand">
       {t("inboxDashboards.viewAll")}<RemixIcon name="arrow-left-line" className="text-sm rtl:rotate-180" />
-    </a>
+    </a>}
   </article>
 }
 
@@ -160,7 +163,7 @@ type DashboardWidgetData = {
 export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError, ticketLoading }: { dashboard: CustomInboxDashboard; tickets: LocalTicket[]; user: CurrentUser; ticketLoadError: boolean; ticketLoading: boolean }) {
   const t = useT()
   const { locale } = useLocale()
-  const { saveSlots } = useInboxDashboard()
+  const { saveSlots, error: saveError } = useInboxDashboard()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<InboxDashboardSlot[]>([])
   const [removeId, setRemoveId] = useState<string | null>(null)
@@ -168,13 +171,13 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
   const [widgetData, setWidgetData] = useState<DashboardWidgetData | null>(null)
   const [pickerSlot, setPickerSlot] = useState<string | null>(null)
   const requiredWidgets = useMemo(() => slots.map((slot) => slot.widget).filter((widget): widget is InboxWidgetType => Boolean(widget)), [slots])
-  const widgetSignature = [...new Set(requiredWidgets)].sort().join(",")
+  const widgetSignature = `${dashboard.id}:${dashboard.version ?? 0}:` + [...new Set(requiredWidgets)].sort().join(",")
 
   useEffect(() => {
     if (!widgetSignature) return
     let active = true
     const taskRequest = widgetSignature.includes("tasks") || widgetSignature.includes("task-status-")
-      ? getMyTasks().then((value) => ({ value, error: false as const })).catch(() => ({ value: [] as MyTask[], error: true as const }))
+      ? (dashboard.remote ? backendRequest<MyTask[]>(`/dashboards/${dashboard.id}/tasks`) : getMyTasks()).then((value) => ({ value, error: false as const })).catch(() => ({ value: [] as MyTask[], error: true as const }))
       : Promise.resolve({ value: [] as MyTask[], error: false as const })
     const notificationRequest = widgetSignature.includes("notifications")
       ? getNotifications(user.name).then((value) => ({ value, error: false as const })).catch(() => ({ value: [] as Notification[], error: true as const }))
@@ -190,7 +193,7 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
       })
     })
     return () => { active = false }
-  }, [user.name, widgetSignature])
+  }, [user.name, widgetSignature, dashboard.remote, dashboard.id])
 
   const currentData = widgetData?.signature === widgetSignature ? widgetData : null
   const tasks = currentData?.tasks ?? []
@@ -199,12 +202,13 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
   const widgetError = (widget: InboxWidgetType) => widget === "tasks" || widget.startsWith("task-status-") ? currentData?.taskError ?? false : widget === "notifications" ? currentData?.notificationError ?? false : ticketLoadError
 
   return <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-3 [scrollbar-width:thin]">
+    {saveError && <p role="alert" className="mb-2 text-sm text-destructive">{saveError}</p>}
     <div className="mb-3 flex min-h-9 items-center justify-between gap-3">
       <div className="min-w-0">
         <h2 className="truncate text-base font-medium text-foreground">{dashboard.name}</h2>
         {editing && <p className="mt-0.5 text-xs text-text3">{t("inboxDashboards.canvasHint")}</p>}
       </div>
-      <Button type="button" variant={editing ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => { if (editing) { saveSlots(dashboard.id, draft); setEditing(false) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
+      <Button type="button" variant={editing ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => { if (editing) { void saveSlots(dashboard.id, draft).then(() => setEditing(false)).catch(() => {}) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
     </div>
     {slots.length === 0 && !editing ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 py-8 text-center">
       <Image src="/images/inbox-dashboards/empty-widgets-ui.webp" alt="" width={512} height={512} unoptimized className="size-44 object-contain" />
@@ -213,7 +217,7 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
         <RemixIcon name="add-line" />{t("inboxDashboards.emptySlot")}
       </Button>
     </div> : <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
-      {slots.map((slot) => <SlotCard key={slot.id} slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={slot.widget === "tickets" ? ticketLoading : loading} error={slot.widget ? widgetError(slot.widget) : false} editing={editing} onRemove={setRemoveId} />)}
+      {slots.map((slot) => <SlotCard key={slot.id} slot={slot} tickets={tickets} tasks={tasks} notifications={notifications} loading={slot.widget === "tickets" ? ticketLoading : loading} error={slot.widget ? widgetError(slot.widget) : false} editing={editing} onRemove={setRemoveId} teamScope={dashboard.remote} />)}
       {editing && <button type="button" onClick={() => setPickerSlot("new")} aria-label={t("inboxDashboards.emptySlot")} className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background/70 text-text3 hover:text-brand focus-visible:outline-2 focus-visible:outline-ring"><span className="grid size-9 place-items-center rounded-full border border-border bg-background"><RemixIcon name="add-line" className="text-lg" /></span><span className="text-xs">{t("inboxDashboards.emptySlot")}</span></button>}
     </div>}
     <Dialog open={removeId !== null} onOpenChange={(open) => { if (!open) setRemoveId(null) }}>

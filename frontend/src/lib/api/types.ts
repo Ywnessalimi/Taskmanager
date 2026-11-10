@@ -257,6 +257,8 @@ export type CurrentUser = {
   avatarUrl?: string
   /** توضیح کوتاه کاربر (Bio) */
   bio?: string
+  jobTitle?: string
+  skills?: string[]
   notifications: NotificationPreferences
   /** فایل‌های پیوست‌شده‌ی کاربر (بخش پروفایل در Overview صفحهٔ «تسک‌های من») */
   attachments: UserAttachment[]

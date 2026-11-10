@@ -13,5 +13,14 @@
     "seed:demo": "node seed-demo.js",
     "seed:report-demo": "node seed-report-demo.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "bidi-js": "1.0.3",
+    "docx": "9.15.2",
+    "exceljs": "4.4.0",
+    "pdfkit": "0.20.2",
+    "zod": "3.25.76",
+    "zod-to-json-schema": "3.25.2"
   }
 }

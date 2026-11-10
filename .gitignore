@@ -23,6 +23,7 @@ backend/.venv/
 backend/venv/
 backend/db.sqlite3
 /backend/data/
+backend/node_modules/
 backend/*.sqlite
 backend/*.sqlite-*
 backend/.env*
