@@ -9,7 +9,7 @@ export type Member = {
   id: string
   name: string
   role: MemberRole
-  /** سطح فعالیت روزانه (هر عدد بین ۰ تا ۴) برای ردیف فعالیت این عضو در صفحه‌ی سازمان */
+  /** تعداد رخدادهای روزانهٔ ثبت‌شده برای ردیف فعالیت این عضو؛ شدت رنگ در نما محدود می‌شود. */
   activity: number[]
   /** آدرس عکس پروفایل عضو؛ در fixtureها پرتره‌ی ساختگی است. */
   avatarUrl?: string
@@ -45,6 +45,13 @@ export type ProjectHealth = {
  * واقعی ذخیره‌شده؛ آخرین مقدار هر آرایه همیشه با همان متریک در `ProjectHealth` یکی است.
  */
 export type ProjectHealthTrend = Record<keyof ProjectHealth, number[]>
+
+export type ProjectStatusHistory = {
+  from: string
+  to: string
+  timeZone: "UTC"
+  days: { day: string; todo: number; inProgress: number; completed: number }[]
+}
 
 export type StatusDistribution = {
   todo: number
@@ -118,13 +125,14 @@ export type Project = {
   description?: string
   health: ProjectHealth
   healthTrend?: ProjectHealthTrend
+  statusHistory?: ProjectStatusHistory
   statusDistribution: StatusDistribution
   tasks: Task[]
   /** سطح فعالیت روزانه برای ActivityHeatmap (هر عدد بین ۰ تا ۴) */
   activity: number[]
-  /** اعضای پروژه — از اعضای سازمان مالک پروژه مشتق می‌شود (رجوع به `getProject`)، نه فیلد مستقل Mock */
+  /** اعضای پروژه، انتخاب‌شده از اعضای سازمان مالک. */
   members: OrganizationMember[]
-  /** ساعت آخرین به‌روزرسانی نمودار «فعالیت اعضا» به‌صورت ۲۴ساعته "HH:MM" — فعلاً Mock ثابت */
+  /** زمان UTC دریافت دادهٔ فعالیت اعضا. */
   activityUpdatedAt: string
 }
 

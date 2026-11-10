@@ -30,6 +30,7 @@ import { ProfileDialog } from "./profile-dialog"
 import { ROW_BASE, SettingsGroup, SettingsLinkRow, SettingsToggleRow } from "./settings-row"
 import { updateCurrentUser } from "@/lib/api/users"
 import { useTaskPanel } from "@/components/providers/task-panel-provider"
+import { AssistantConnections } from "@/features/ai/assistant-connections"
 
 const NOTIFICATION_ROWS: {
   key: keyof NotificationPreferences
@@ -107,6 +108,20 @@ export function AccountSettings({ user: initialUser }: { user: CurrentUser }) {
           />
           <LanguagePickerRow locale={locale} onChange={setLocale} />
           <AppearancePickerRow />
+        </SettingsGroup>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionTitle>{t("account.sectionPlugins")}</SectionTitle>
+        <SettingsGroup>
+          <details className="group">
+            <summary className={`${ROW_BASE} cursor-pointer list-none hover:bg-bg2`}>
+              <RemixIcon name="plug-line" className="text-base text-icon2" />
+              <span className="flex-1 text-sm text-foreground">{t("account.toolConnections")}</span>
+              <RemixIcon name="arrow-down-s-line" className="text-base text-icon2 transition-transform group-open:rotate-180" />
+            </summary>
+            <AssistantConnections />
+          </details>
         </SettingsGroup>
       </section>
 

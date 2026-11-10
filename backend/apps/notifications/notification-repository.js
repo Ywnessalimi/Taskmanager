@@ -33,7 +33,7 @@ export function createNotificationRepository(database) {
   function createTaskAssignmentNotifications(task, actor) {
     if (!actor?.id || !actor?.name || !Array.isArray(task.assigneeNames)) return []
     const project = database.prepare("SELECT name FROM projects WHERE id = ?").get(task.projectId)
-    const members = database.prepare('SELECT u.id, u.name FROM users u JOIN organization_members m ON m.user_id = u.id JOIN projects p ON p.organization_id = m.organization_id WHERE p.id = ?').all(task.projectId)
+    const members = database.prepare('SELECT u.id, u.name FROM users u JOIN organization_members m ON m.user_id = u.id JOIN projects p ON p.organization_id = m.organization_id JOIN project_members pm ON pm.project_id = p.id AND pm.organization_member_id = m.id WHERE p.id = ?').all(task.projectId)
     const recipients = task.assigneeIds?.length
       ? [...new Set(task.assigneeIds)].map(id => members.find(member => member.id === id)).filter(Boolean)
       : [...new Set(task.assigneeNames.map(name => name.trim()).filter(Boolean))].map(name => {

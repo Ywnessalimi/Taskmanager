@@ -1,11 +1,13 @@
 import { currentJalaliDate, isBefore } from "@/lib/jalali"
 import { backendRequest } from "./backend-client"
-import type { Project, ProjectHealth, ProjectRef, Task } from "./types"
+import type { Project, ProjectHealth, ProjectRef, ProjectStatusHistory, Task } from "./types"
 
 type ProjectRecord = Omit<Project, "health" | "statusDistribution" | "tasks" | "activity" | "activityUpdatedAt" | "healthTrend"> & {
   taskCount: number
   completedCount: number
 }
+
+type ProjectActivity = { from: string; to: string; timeZone: "UTC"; counts: { actorId: string; day: string; count: number }[] }
 
 function summarizeTasks(tasks: Task[]): { health: ProjectHealth; statusDistribution: Project["statusDistribution"] } {
   const statusDistribution = {
@@ -35,18 +37,31 @@ export async function getProjects(): Promise<ProjectRef[]> {
   }))
 }
 
+export function addProjectMember(projectId: string, userId: string): Promise<{ added: boolean }> {
+  return backendRequest(`/projects/${encodeURIComponent(projectId)}/members`, { method: "POST", body: JSON.stringify({ userId }) })
+}
+
 async function enrichProject(projectRequest: Promise<ProjectRecord>): Promise<Project | undefined> {
   try {
     const project = await projectRequest
-    const tasks = await backendRequest<Task[]>(`/projects/${encodeURIComponent(project.id)}/tasks`)
+    const [tasks, memberActivity, statusHistory] = await Promise.all([
+      backendRequest<Task[]>(`/projects/${encodeURIComponent(project.id)}/tasks`),
+      backendRequest<ProjectActivity>(`/projects/${encodeURIComponent(project.id)}/member-activity`),
+      backendRequest<ProjectStatusHistory>(`/projects/${encodeURIComponent(project.id)}/status-history`),
+    ])
     const { health, statusDistribution } = summarizeTasks(tasks)
+    const end = Date.parse(memberActivity.to)
+    const days = Array.from({ length: 20 }, (_, i) => new Date(end - (20 - i) * 86_400_000).toISOString().slice(0, 10))
+    const counts = new Map(memberActivity.counts.map(item => [`${item.actorId}:${item.day}`, item.count]))
     return {
       ...project,
+      members: project.members.map(member => ({ ...member, activity: days.map(day => counts.get(`${member.id}:${day}`) ?? 0) })),
       tasks,
       health,
+      statusHistory,
       statusDistribution,
       activity: [],
-      activityUpdatedAt: "",
+      activityUpdatedAt: new Date().toISOString(),
     }
   } catch (error) {
     if ((error as { status?: number })?.status === 404) return undefined

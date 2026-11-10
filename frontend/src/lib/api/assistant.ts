@@ -20,6 +20,12 @@ export async function sendAssistantMessage(messages: AssistantMessage[], locale:
   })
 }
 
+export function readAssistantAttachment(file: File): Promise<{ text: string }> {
+  return backendRequest(`/assistant/attachments?name=${encodeURIComponent(file.name)}`, {
+    method: "POST", headers: { "content-type": "application/octet-stream" }, body: file,
+  })
+}
+
 export const confirmAssistantPreview = (id: string, selectedKeys: string[]) => backendRequest<SavedItems>(`/assistant/previews/${encodeURIComponent(id)}/confirm`, { method: "POST", body: JSON.stringify({ selectedKeys }) })
 export const cancelAssistantPreview = (id: string) => backendRequest(`/assistant/previews/${encodeURIComponent(id)}/cancel`, { method: "POST", body: "{}" })
 export const listIntegrationTokens = () => backendRequest<IntegrationToken[]>("/integrations/tokens")

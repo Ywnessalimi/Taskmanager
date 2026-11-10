@@ -2,9 +2,11 @@
 
 ## سرور IP جدید
 
-نسخهٔ فعال روی `37.152.187.159` در مسیر `/opt/quire/releases/merge-ai-00e55ce` نصب شده و `/opt/quire/live` به آن اشاره دارد. آدرس عمومی `https://37.152.187.159:8444` است؛ API و Next به‌ترتیب تنها روی `127.0.0.1:4000` و `127.0.0.1:4001` گوش می‌دهند. سرویس‌های `quire-api`، `quire-web` و `quire-https` با کاربر سیستمی `quire` اجرا می‌شوند و دیتابیس مستقل در `/var/lib/quire/quire.sqlite` است. پشتیبان پیش از ادغام دستیار در `/var/backups/quire/before-merge-ai-00e55ce.sqlite` قرار دارد. رمزهای سرور و برنامه در فایل‌های `.env.server-root-password` و `.env.server-app-password` پوشهٔ `backend` دستگاه توسعه با مجوز ۶۰۰ نگه‌داری می‌شوند و در Git نیستند.
+نسخهٔ فعال روی `37.152.187.159` در مسیر `/opt/quire/releases/plugins-attachments-20261110` نصب شده و `/opt/quire/live` به آن اشاره دارد. آدرس عمومی `https://37.152.187.159:8444` است؛ API و Next به‌ترتیب تنها روی `127.0.0.1:4000` و `127.0.0.1:4001` گوش می‌دهند. سرویس‌های `quire-api`، `quire-web` و `quire-https` با کاربر سیستمی `quire` اجرا می‌شوند و دیتابیس مستقل در `/var/lib/quire/quire.sqlite` است. پشتیبان پیش از استقرار پیوست‌ها در `/var/backups/quire/before-plugins-attachments-20261110.sqlite` و نسخهٔ قبلی در `/opt/quire/releases/ai-json-retry-20261110` قرار دارند. رمزهای سرور و برنامه در فایل‌های `.env.server-root-password` و `.env.server-app-password` پوشهٔ `backend` دستگاه توسعه با مجوز ۶۰۰ نگه‌داری می‌شوند و در Git نیستند.
 
 مبدأ مجاز مرورگر در drop-in سرویس `/etc/systemd/system/quire-api.service.d/frontend-origin.conf` با مقدار `FRONTEND_ORIGINS=https://37.152.187.159:8444` تنظیم شده است. هنگام تغییر آدرس عمومی باید این مقدار نیز با مبدأ کامل و پورت جدید به‌روزرسانی و پس از `systemctl daemon-reload` سرویس `quire-api` بازراه‌اندازی شود؛ وگرنه درخواست‌های دستیار، داشبورد و integration مرورگر با خطای مبدأ رد می‌شوند.
+
+حالت ابزار مدل در drop-in سرویس `/etc/systemd/system/quire-api.service.d/ai-tool-mode.conf` با `AI_TOOL_MODE=native` تنظیم شده است. این حالت با مدل فعلی در سناریوهای ساخت تسک و گزارش با دادهٔ ساختگی بررسی شده است؛ پس از تغییر ارائه‌دهنده یا مدل باید پشتیبانی function calling دوباره بررسی شود.
 
 گواهی معتبر IP از Let's Encrypt با پروفایل کوتاه‌مدت و `acme.sh` گرفته شده است. فایل `/etc/cron.d/quire-cert-renew` هر دو روز تمدید را با اعتبارسنجی پورت ۸۰ و بارگذاری مجدد `quire-https` اجرا می‌کند؛ کلید و زنجیره در `/var/lib/quire/tls` قرار دارند. باز بودن پورت ۸۰ برای تمدید و ۸۴۴۴ برای دسترسی عمومی لازم است. تنظیمات سرویس و مسیر همگام‌سازی مربوط به سرور قدیمی در بخش بعدی برای آن سرور باقی مانده‌اند.
 
@@ -55,6 +57,8 @@ cp -a public .next/standalone/public
 ```
 
 باندل باید شامل `frontend/.next/standalone` و کد/مهاجرت‌های `backend/` باشد؛ `backend/data` و فایل SQLite محلی را وارد باندل نکنید. نسخهٔ جدید را در release تازه داخل `/opt/quire/releases/` استخراج کنید، symlink `/opt/quire/live` را جابه‌جا کنید و این سرویس‌ها را restart کنید:
+
+وابستگی‌های بومی باید با لینوکس x64 سازگار باشند؛ برای Next علاوه بر بستهٔ `sharp`، نسخهٔ هماهنگ `@img/sharp-linux-x64` و `@img/sharp-libvips-linux-x64` نیز باید در باندل موجود باشند. فایل‌خوان پیوست PDF نیز وابستگی بومی متناسب با سرور دارد.
 
 > **release فعال را پیش از آماده‌شدن نسخهٔ جدید متوقف یا حذف نکنید.** ابتدا باندل را کامل در release جداگانه استخراج کنید، سپس symlink را به نسخهٔ جدید ببرید و سرویس‌ها را restart کنید؛ این کار نسخهٔ قبلی را برای بازگشت نگه می‌دارد.
 

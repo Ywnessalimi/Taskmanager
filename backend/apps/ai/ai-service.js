@@ -67,8 +67,26 @@ export function createAIService({
       const usedSkills = []
       let reply = ''
       for (let round = 0; round < 6; round++) {
-        const message = await completion(conversation, native)
-        const decoded = decode(message, native)
+        let message = await completion(conversation, native)
+        let decoded
+        try {
+          decoded = decode(message, native)
+        } catch (error) {
+          if (native || error.code !== 'invalid_model_response') throw error
+          // Retry the same step without executing any calls from the invalid response.
+          const retryMessages = [...conversation, { role: 'assistant', content: message.content }, {
+            role: 'user', content: 'Your previous response was invalid JSON. Return only one complete JSON object with a string reply and a calls array. Do not use Markdown.',
+          }]
+          try {
+            message = await completion(retryMessages, false)
+            decoded = decode(message, false)
+          } catch (retryError) {
+            if (retryError.code === 'invalid_model_response' && widgets.some(widget => widget.type === 'report')) {
+              return { reply: locale === 'fa' ? 'گزارش آماده است؛ می‌توانید فایل را از بخش دریافت فایل در گزارش دریافت کنید.' : 'The report is ready; use its download controls to export the file.', widgets, usedSkills }
+            }
+            throw retryError
+          }
+        }
         reply = decoded.reply
         if (!decoded.calls.length) return { reply, widgets, usedSkills }
         if (decoded.calls.length > 6) throw new DomainError(502, 'tool_limit', 'تعداد ابزارهای یک پاسخ بیش از حد مجاز است.')

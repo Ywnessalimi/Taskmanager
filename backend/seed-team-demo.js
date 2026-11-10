@@ -41,6 +41,7 @@ try {
     for (const division of divisions) divisionStmt.run(division.id, orgId, division.name, now)
     const projectStmt = db.prepare('INSERT INTO projects (id,name,organization_id,organization_name,division_id,division_name,start_date,end_date,description,slug) VALUES (?,?,?,?,?,?,?,?,?,?)')
     for (const project of projects) projectStmt.run(project.id, project.name, orgId, orgName, divisions[project.division].id, divisions[project.division].name, '1405/07/01', '1405/10/30', 'Ongoing work with completed milestones and active follow-ups.', project.slug)
+    db.prepare('INSERT INTO project_members (project_id, organization_member_id, created_at) SELECT p.id, m.id, ? FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id WHERE p.organization_id = ?').run(now, orgId)
     const taskStmt = db.prepare("INSERT INTO tasks (id,display_id,project_id,title,assignee_names,priority,status,start_date,due_date,tags,description,subtasks,followers,is_favorite,time_spent_minutes,activity_log,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,'[]','[]',0,?,'[]',?,?)")
     const sequence = db.prepare('UPDATE task_display_sequence SET last_value = last_value + 1 WHERE id = 1 RETURNING last_value')
     const taskRecords = []

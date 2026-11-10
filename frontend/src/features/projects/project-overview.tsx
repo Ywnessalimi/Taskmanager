@@ -7,6 +7,7 @@ import { DeadlineCalendar } from "./deadline-calendar"
 import { MemberActivitySection } from "./member-activity-section"
 import { ProjectHealthSection } from "./project-health"
 import { ProjectOverviewHeader } from "./project-overview-header"
+import { ProjectStatusTrend } from "./project-status-trend"
 import type { Project } from "@/lib/api/types"
 
 export function ProjectOverview({ project }: { project: Project }) {
@@ -48,6 +49,8 @@ export function ProjectOverview({ project }: { project: Project }) {
       </div>
 
       <MemberActivitySection members={project.members} updatedAt={project.activityUpdatedAt} />
+
+      <ProjectStatusTrend history={project.statusHistory} />
     </div>
   )
 }
