@@ -46,20 +46,31 @@ function OrganizationField({ icon, label, children }: { icon: string; label: str
 }
 
 /** نمای سازمان از قاب workspace تسک استفاده می‌کند و محتوای اصلی را با داده‌های سازمان پر می‌کند. */
-export function OrganizationOverview({ organization, initialDivisionId, modal = false }: { organization: Organization; initialDivisionId?: string; modal?: boolean }) {
+export function OrganizationOverview({ organization, initialDivisionId, modal = false, initialTab = "details", settingsContent, closeHref }: { organization: Organization; initialDivisionId?: string; modal?: boolean; initialTab?: "details" | "activities" | "settings"; settingsContent?: ReactNode; closeHref?: string }) {
   const t = useT()
   const router = useRouter()
   const displayName = organization.name
   const [divisions, setDivisions] = useState(organization.divisions)
   const [divisionId, setDivisionId] = useState(initialDivisionId && organization.divisions.some((division) => division.id === initialDivisionId) ? initialDivisionId : organization.divisions[0]?.id ?? "")
   const selectedDivision = initialDivisionId ? divisions.find((division) => division.id === initialDivisionId) : undefined
+  const settingsHref = `/home/organizations/${encodeURIComponent(organization.id)}/settings${selectedDivision ? `?divisionId=${encodeURIComponent(selectedDivision.id)}` : ""}`
   const canCreateProject = organization.currentUserRole === "owner" || organization.currentUserPermissions?.createProject === true
   const projects = divisions.flatMap((division) => division.projects)
   const [addingProject, setAddingProject] = useState(false)
   const [draftProjectName, setDraftProjectName] = useState("")
   const [savingProject, setSavingProject] = useState(false)
-  const [showActivities, setShowActivities] = useState(false)
+  const [activeTab, setActiveTab] = useState<"details" | "activities" | "settings">(initialTab)
   const [error, setError] = useState("")
+  const showActivities = activeTab === "activities"
+  const showSettings = activeTab === "settings" && Boolean(settingsContent)
+  const mobileTabClass = (active: boolean) => selectedDivision
+    ? `relative inline-flex h-full flex-none items-center gap-2 whitespace-nowrap px-1.5 text-xs font-medium text-[var(--task-workspace-secondary)] after:absolute after:inset-x-0 after:bottom-0 after:h-[5px] after:rounded-t-[4px] after:bg-[#141a1a] after:transition-opacity ${active ? "text-[var(--task-workspace-text)] after:opacity-100" : "after:opacity-0"}`
+    : `flex-1 py-2 text-sm ${active ? "border-b-2 border-brand" : ""}`
+  const mobileTabs = [
+    { value: "details" as const, label: t("org.details") },
+    { value: "activities" as const, label: t("org.recentActivity") },
+    ...(selectedDivision ? [{ value: "settings" as const, label: t("org.settingsTab") }] : []),
+  ]
 
   async function commitNewProject() {
     const name = draftProjectName.trim()
@@ -81,7 +92,7 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
   }
 
   return (
-    <section className={`mx-auto flex min-h-0 w-full max-w-[1072px] flex-1 flex-col overflow-hidden border-0 bg-background text-[var(--task-workspace-text)] ${modal ? "" : "lg:rounded-2xl lg:border lg:border-[var(--task-workspace-border)]"}`}>
+    <section className={`mx-auto flex ${selectedDivision ? "h-full" : ""} min-h-0 w-full max-w-[1072px] flex-1 flex-col overflow-hidden border-0 bg-background text-[var(--task-workspace-text)] ${modal ? "" : "lg:rounded-2xl lg:border lg:border-[var(--task-workspace-border)]"}`}>
       <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-[var(--task-workspace-border)] px-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-[var(--task-workspace-soft)] text-[var(--task-workspace-secondary)]">
@@ -92,20 +103,32 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
           <span className="truncate text-sm text-[var(--task-workspace-text)]">{selectedDivision?.name ?? displayName}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link href={`/home/organizations/${organization.id}/settings`} aria-label={t("org.settings")} className="grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)]">
+          <Link href={settingsHref} aria-label={t("org.settings")} className={`grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)] ${selectedDivision ? "hidden lg:grid" : ""}`}>
             <RemixIcon name="settings-3-line" className="text-base" />
           </Link>
-          {modal ? <DialogClose aria-label={t("taskDetail.close")} className="grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)]"><RemixIcon name="close-line" className="text-base" /></DialogClose> : <Link href="/projects" aria-label={t("projects.all")} className="grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)]"><RemixIcon name="close-line" className="text-base" /></Link>}
+          {modal ? <DialogClose aria-label={t("taskDetail.close")} className="grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)]"><RemixIcon name="close-line" className="text-base" /></DialogClose> : <Link href={closeHref ?? "/projects"} aria-label={t(closeHref ? "taskDetail.close" : "projects.all")} className="grid size-8 place-items-center rounded-lg text-[var(--task-workspace-secondary)] hover:bg-[var(--task-workspace-soft)]"><RemixIcon name="close-line" className="text-base" /></Link>}
         </div>
       </header>
 
-      <div className="flex shrink-0 border-b border-border bg-background lg:hidden">
-        <button type="button" onClick={() => setShowActivities(false)} aria-pressed={!showActivities} className={`flex-1 py-2 text-sm ${!showActivities ? "border-b-2 border-brand" : ""}`}>{t("org.details")}</button>
-        <button type="button" onClick={() => setShowActivities(true)} aria-pressed={showActivities} className={`flex-1 py-2 text-sm ${showActivities ? "border-b-2 border-brand" : ""}`}>{t("org.recentActivity")}</button>
+      <div className={`flex shrink-0 border-b border-border lg:hidden ${selectedDivision ? "h-12 items-center justify-start gap-4 bg-[var(--task-workspace-bg)] px-4 py-0" : "bg-background"}`}>
+        {mobileTabs.map((tab) => {
+          const active = activeTab === tab.value
+          const icon = tab.value === "details"
+            ? active ? "file-text-fill" : "file-text-line"
+            : tab.value === "activities"
+              ? active ? "chat-follow-up-fill" : "chat-follow-up-line"
+              : active ? "settings-3-fill" : "settings-3-line"
+          const content = <>{selectedDivision && <RemixIcon name={icon} className="text-base" />}{tab.label}</>
+          if (tab.value === "settings" && !settingsContent) {
+            return <Link key={tab.value} href={settingsHref} aria-current={active ? "page" : undefined} className={mobileTabClass(active)}>{content}</Link>
+          }
+          return <button key={tab.value} type="button" onClick={() => setActiveTab(tab.value)} aria-pressed={active} className={mobileTabClass(active)}>{content}</button>
+        })}
       </div>
 
       <div className="flex h-full min-h-0 flex-1">
-        <main className={`${showActivities ? "hidden lg:flex" : "flex"} min-w-0 flex-1 flex-col`}>
+        {settingsContent && <div className={`${showSettings ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-4 pb-6 pt-4 sm:px-6`}>{settingsContent}</div>}
+        <main className={`${showSettings ? "hidden" : showActivities ? "hidden lg:flex" : "flex"} min-w-0 flex-1 flex-col`}>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 sm:px-6">
             <div className="flex min-h-13 items-center justify-between gap-3 pt-3">
               <span className="text-sm text-[var(--task-workspace-muted)]" dir="ltr">{organization.slug ? `/${organization.slug}` : organization.id}</span>
@@ -176,7 +199,7 @@ export function OrganizationOverview({ organization, initialDivisionId, modal = 
           </div>
         </main>
 
-        <aside className={`${showActivities ? "flex" : "hidden"} h-full min-h-0 flex-1 flex-col border-s border-[var(--task-workspace-border)] bg-[var(--task-workspace-bg)] lg:flex lg:w-[361px] lg:flex-none`} aria-label={t("org.recentActivity")}>
+        <aside className={`${showSettings ? "hidden" : showActivities ? "flex lg:flex" : "hidden lg:flex"} h-full min-h-0 flex-1 flex-col ${selectedDivision ? "overflow-hidden" : ""} border-s border-[var(--task-workspace-border)] bg-[var(--task-workspace-bg)] lg:w-[361px] lg:flex-none`} aria-label={t("org.recentActivity")}>
           <div className="flex h-14 shrink-0 items-center border-b border-[var(--task-workspace-border)] bg-background px-4">
             <h2 className="text-base font-medium">{t("org.recentActivity")}</h2>
           </div>

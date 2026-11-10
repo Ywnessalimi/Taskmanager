@@ -71,6 +71,13 @@ export function createDivision(organizationId: string, name: string) {
   })
 }
 
+export function updateDivisionSettings(organizationId: string, divisionId: string, settings: { name: string; memberIds: string[] }) {
+  return backendRequest<{ id: string; organizationId: string; name: string; memberIds: string[] }>(`/organizations/${encodeURIComponent(organizationId)}/divisions/${encodeURIComponent(divisionId)}/settings`, {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  })
+}
+
 export function createProject(divisionId: string, name: string) {
   return backendRequest<{ id: string; name: string; organizationId: string; divisionId: string }>(`/divisions/${encodeURIComponent(divisionId)}/projects`, {
     method: "POST",

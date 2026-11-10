@@ -132,6 +132,8 @@ export type Division = {
   id: string
   organizationId: string
   name: string
+  /** اعضای منتخب از roster اعضای سازمان؛ این فهرست به‌تنهایی مجوز دسترسی نمی‌دهد. */
+  memberIds: string[]
   projects: ProjectRef[]
 }
 

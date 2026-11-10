@@ -56,6 +56,7 @@ backend/
     009_ticket_assignment_notifications.sql → اعلان ارجاع Ticket و مقصد Ticket
     010_organization_settings_and_members.sql → slug، تصویر و عضویت/مجوزهای سازمان
     011_organization_activity.sql → رخدادهای سازمان و کامنت‌های فید
+    012_division_members.sql → اعضای منتخب معاونت‌ها
   test/
     task-repository.test.js    → تست migration و CRUD روی دیتابیس موقت
   data/                         → quire.sqlite (ساخته می‌شود، در Git نیست)
@@ -148,7 +149,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 
 ### `organizations` و `organization_members`
 
-سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود. `organization_activity` رویدادهای ساخت تسک، تغییر وضعیت تسک و کامنت سازمان را با عامل، زمان UTC، شناسهٔ تسک اختیاری و جزئیات JSON ذخیره می‌کند؛ پاک‌شدن سازمان رخدادهایش را نیز پاک می‌کند. فید از تازه‌ترین ردیف شروع می‌شود و برای صفحه‌های قدیمی‌تر از cursor پایدار `rowid` استفاده می‌کند.
+سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. `division_members` اعضای منتخب هر معاونت را از میان اعضای همان سازمان نگه می‌دارد؛ مهاجرت 012 برای معاونت‌های موجود همهٔ اعضای فعلی سازمان را seed می‌کند. این فهرست به‌تنهایی مجوز دسترسی به پروژه نمی‌دهد و عضویت سازمان همچنان لازم است. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود. `organization_activity` رویدادهای ساخت تسک، تغییر وضعیت تسک و کامنت سازمان را با عامل، زمان UTC، شناسهٔ تسک اختیاری و جزئیات JSON ذخیره می‌کند؛ پاک‌شدن سازمان رخدادهایش را نیز پاک می‌کند. فید از تازه‌ترین ردیف شروع می‌شود و برای صفحه‌های قدیمی‌تر از cursor پایدار `rowid` استفاده می‌کند.
 
 ## ۵. API نسخهٔ ۱
 
@@ -180,6 +181,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug` | خواندن سازمان برای مسیر خوانا با عضویت معتبر |
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug/projects/:projectSlug` | خواندن پروژه با slug سازمان/پروژه برای عضو مجاز |
 | `POST` | `/api/v1/organizations/:organizationId/divisions` | ساخت معاونت با مجوز `createDivision` |
+| `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId/settings` | ذخیرهٔ نام و اعضای منتخب معاونت با مجوز `editDivision`؛ اعضا باید عضو همان سازمان باشند |
 | `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId` | انتقال معاونت به سازمان مقصد؛ مالکیت سازمان مبدأ و مقصد در نشست بررسی می‌شود و تعارض نام `409` است |
 | `POST` | `/api/v1/divisions/:divisionId/projects` | ساخت پروژه با مجوز `createProject` |
 | `PATCH` | `/api/v1/projects/:projectId/location` | انتقال پروژه به معاونت مقصد؛ مالکیت پروژهٔ مبدأ و معاونت مقصد در نشست بررسی می‌شود |

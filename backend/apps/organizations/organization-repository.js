@@ -79,6 +79,14 @@ export function createOrganizationRepository(database) {
     }))
   }
 
+  function memberIdsForDivision(divisionId) {
+    return database.prepare(`
+      SELECT om.user_id FROM division_members dm
+      JOIN organization_members om ON om.id = dm.organization_member_id
+      WHERE dm.division_id = ? ORDER BY om.created_at, om.rowid
+    `).all(divisionId).map((row) => row.user_id)
+  }
+
   function projectRows(userId, { organizationId, divisionId, projectId, organizationSlug, projectSlug } = {}) {
     const clauses = ["EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = o.id AND om.user_id = ?)"]
     const params = [userId]
@@ -103,6 +111,7 @@ export function createOrganizationRepository(database) {
       id: division.id,
       organizationId: row.id,
       name: division.name,
+      memberIds: memberIdsForDivision(division.id),
       projects: projects.filter((project) => project.divisionId === division.id).map(toProjectRef),
     }))
     const organizationProjects = projects.filter((project) => project.organizationId === row.id)
@@ -241,8 +250,37 @@ export function createOrganizationRepository(database) {
     createDivision(userId, organizationId, name) {
       if (!can(userId, organizationId, "createDivision")) return undefined
       const id = randomUUID(), createdAt = new Date().toISOString()
-      database.prepare("INSERT INTO divisions (id, organization_id, name, created_at) VALUES (?, ?, ?, ?)").run(id, organizationId, name, createdAt)
-      return { id, organizationId, name, createdAt }
+      database.exec("BEGIN IMMEDIATE")
+      try {
+        database.prepare("INSERT INTO divisions (id, organization_id, name, created_at) VALUES (?, ?, ?, ?)").run(id, organizationId, name, createdAt)
+        database.prepare(`INSERT INTO division_members (division_id, organization_member_id, created_at)
+          SELECT ?, id, ? FROM organization_members WHERE organization_id = ?`).run(id, createdAt, organizationId)
+        database.exec("COMMIT")
+      } catch (error) { database.exec("ROLLBACK"); throw error }
+      return { id, organizationId, name, memberIds: memberIdsForDivision(id), createdAt }
+    },
+    updateDivisionSettings(userId, organizationId, divisionId, { name, memberIds }) {
+      if (!this.hasAccess(userId, organizationId)) return undefined
+      if (!can(userId, organizationId, "editDivision")) return { forbidden: true }
+      const division = database.prepare("SELECT id FROM divisions WHERE id = ? AND organization_id = ?").get(divisionId, organizationId)
+      if (!division) return undefined
+      if (database.prepare("SELECT id FROM divisions WHERE organization_id = ? AND name = ? AND id <> ?").get(organizationId, name, divisionId)) return { conflict: true }
+
+      const memberships = database.prepare("SELECT id, user_id FROM organization_members WHERE organization_id = ?").all(organizationId)
+      const membershipsByUserId = new Map(memberships.map((membership) => [membership.user_id, membership.id]))
+      if (memberIds.some((memberId) => !membershipsByUserId.has(memberId))) return { invalidMembers: true }
+
+      const createdAt = new Date().toISOString()
+      database.exec("BEGIN IMMEDIATE")
+      try {
+        database.prepare("UPDATE divisions SET name = ? WHERE id = ?").run(name, divisionId)
+        database.prepare("UPDATE projects SET division_name = ? WHERE division_id = ?").run(name, divisionId)
+        database.prepare("DELETE FROM division_members WHERE division_id = ?").run(divisionId)
+        const insertMember = database.prepare("INSERT INTO division_members (division_id, organization_member_id, created_at) VALUES (?, ?, ?)")
+        for (const memberId of memberIds) insertMember.run(divisionId, membershipsByUserId.get(memberId), createdAt)
+        database.exec("COMMIT")
+      } catch (error) { database.exec("ROLLBACK"); throw error }
+      return { id: divisionId, organizationId, name, memberIds: memberIdsForDivision(divisionId) }
     },
     createProject(userId, divisionId, name) {
       const division = database.prepare(`SELECT d.*, o.name AS organization_name, o.slug AS organization_slug FROM divisions d JOIN organizations o ON o.id = d.organization_id WHERE d.id = ?`).get(divisionId)
@@ -274,10 +312,19 @@ export function createOrganizationRepository(database) {
       const target = getOrganizationRow(targetOrganizationId)
       if (!division || !target) return undefined
       if (database.prepare("SELECT id FROM divisions WHERE organization_id = ? AND name = ? AND id <> ?").get(targetOrganizationId, division.name, divisionId)) return { conflict: true }
+      const selectedUserIds = memberIdsForDivision(divisionId)
       database.exec("BEGIN IMMEDIATE")
       try {
         database.prepare("UPDATE divisions SET organization_id = ? WHERE id = ?").run(targetOrganizationId, divisionId)
         database.prepare("UPDATE projects SET organization_id = ?, organization_name = ? WHERE division_id = ?").run(targetOrganizationId, target.name, divisionId)
+        database.prepare("DELETE FROM division_members WHERE division_id = ?").run(divisionId)
+        const targetMemberIds = database.prepare("SELECT id, user_id FROM organization_members WHERE organization_id = ?").all(targetOrganizationId)
+        const targetMembershipsByUserId = new Map(targetMemberIds.map((membership) => [membership.user_id, membership.id]))
+        const insertMember = database.prepare("INSERT INTO division_members (division_id, organization_member_id, created_at) VALUES (?, ?, ?)")
+        for (const userId of selectedUserIds) {
+          const membershipId = targetMembershipsByUserId.get(userId)
+          if (membershipId) insertMember.run(divisionId, membershipId, new Date().toISOString())
+        }
         database.exec("COMMIT")
       } catch (error) { database.exec("ROLLBACK"); throw error }
       return { id: divisionId, organizationId: targetOrganizationId, name: division.name }

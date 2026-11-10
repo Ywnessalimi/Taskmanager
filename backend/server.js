@@ -169,6 +169,14 @@ function validateNameInput(value) {
   return value.name.trim()
 }
 
+function validateDivisionSettingsInput(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.memberIds)
+    || value.memberIds.some((memberId) => typeof memberId !== "string" || !memberId.trim())) {
+    throw new HttpError(400, "invalid_division_settings", "اطلاعات تنظیمات معاونت معتبر نیست.")
+  }
+  return { name: validateNameInput(value), memberIds: [...new Set(value.memberIds.map((memberId) => memberId.trim()))] }
+}
+
 function validateOrganizationSettingsInput(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new HttpError(400, "invalid_body", "اطلاعات سازمان معتبر نیست.")
   const input = {}
@@ -479,6 +487,20 @@ const server = createServer(async (request, response) => {
         throw new HttpError(403, "forbidden", "اجازهٔ ساخت معاونت در این سازمان را ندارید.")
       }
       sendJson(response, 201, division)
+      return
+    }
+
+    const divisionSettingsMatch = path.match(/^\/api\/v1\/organizations\/([^/]+)\/divisions\/([^/]+)\/settings$/)
+    if (divisionSettingsMatch && method === "PATCH") {
+      const organizationId = decodeURIComponent(divisionSettingsMatch[1])
+      const divisionId = decodeURIComponent(divisionSettingsMatch[2])
+      const input = validateDivisionSettingsInput(await readJson(request))
+      const result = organizationRepository.updateDivisionSettings(currentUser.id, organizationId, divisionId, input)
+      if (!result) throw new HttpError(404, "not_found", "معاونت پیدا نشد.")
+      if (result.forbidden) throw new HttpError(403, "forbidden", "اجازهٔ ویرایش این معاونت را ندارید.")
+      if (result.conflict) throw new HttpError(409, "duplicate_division", "در این سازمان معاونتی با همین نام وجود دارد.")
+      if (result.invalidMembers) throw new HttpError(400, "invalid_division_members", "همهٔ اعضای انتخاب‌شده باید عضو همین سازمان باشند.")
+      sendJson(response, 200, result)
       return
     }
 

@@ -4,13 +4,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { useLocale, useT } from "@/components/providers/locale-provider"
 import { organizationPath, projectPath } from "@/lib/organization-paths"
-import { createDivision, createOrganization, createProject, moveDivision, moveProject } from "@/lib/api/organizations"
+import { moveDivision, moveProject } from "@/lib/api/organizations"
 import type { CurrentUser, Organization } from "@/lib/api/types"
+import { ProjectEntityCreateDialog, type ProjectEntityCreateTarget } from "./project-entity-create-dialog"
 
 function toggle(set: Set<string>, id: string) {
   const next = new Set(set)
@@ -28,9 +28,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
   const [openDivisions, setOpenDivisions] = useState(() => new Set<string>())
   const [treeStateLoaded, setTreeStateLoaded] = useState(false)
   const treeStateKey = `quire:projects-tree:${user.id}`
-  const [createTarget, setCreateTarget] = useState<{ kind: "organization" | "division" | "project"; organizationId?: string; divisionId?: string } | null>(null)
-  const [newName, setNewName] = useState("")
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [createTarget, setCreateTarget] = useState<ProjectEntityCreateTarget | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
@@ -141,33 +139,6 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
     else { draggedItem.current = null; setDropTarget(null) }
   }
 
-  async function createItem(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const target = createTarget
-    const name = newName.trim()
-    if (!target || !name) return
-    setCreateError(null)
-    try {
-      if (target.kind === "organization") {
-        const organization = await createOrganization(name)
-        setOpenOrganizations((current) => new Set(current).add(organization.id))
-      } else if (target.kind === "division" && target.organizationId) {
-        const division = await createDivision(target.organizationId, name)
-        setOpenOrganizations((current) => new Set(current).add(target.organizationId!))
-        setOpenDivisions((current) => new Set(current).add(division.id))
-      } else if (target.kind === "project" && target.divisionId) {
-        await createProject(target.divisionId, name)
-        setOpenOrganizations((current) => new Set(current).add(target.organizationId!))
-        setOpenDivisions((current) => new Set(current).add(target.divisionId!))
-      }
-      setNewName("")
-      setCreateTarget(null)
-      router.refresh()
-    } catch (cause) {
-      setCreateError(cause instanceof Error ? cause.message : t("projects.createFailed"))
-    }
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background px-0 py-0 lg:mx-0 lg:w-full lg:max-w-none lg:flex-1 lg:items-stretch lg:justify-start lg:bg-[#f7f7f7] lg:px-2 lg:pt-2">
       <section className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto bg-background lg:flex-none">
@@ -185,19 +156,19 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-xl font-medium text-foreground">{user.name}</h1>
-              <p className="text-sm text-text2">{t("projects.myOrganizations")}</p>
+              <p className="truncate text-sm text-text2">{user.bio?.trim() || t("inbox.memberRole")}</p>
             </div>
           </div>
         </header>
 
         <div className="flex flex-1 flex-col gap-4 px-6 py-3 lg:flex-none">
-          <a href="/home/projects/MyTasks" className="flex items-center gap-2 px-1 text-xs leading-normal font-medium text-[#595959] hover:text-foreground">
+          <a href="/home/projects/MyTasks" className="flex w-full items-center gap-2 rounded-lg border border-border bg-background p-2 text-xs leading-normal font-medium text-[#595959] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:text-foreground lg:w-auto lg:rounded-none lg:border-0 lg:bg-transparent lg:px-1 lg:py-0 lg:shadow-none">
             <Image src="/images/figma/project-navigation/tasks.svg" width={16} height={16} alt="" />
             {t("nav.myTasks")}
           </a>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-text2">{t("projects.myOrganizations")}</p>
-            <Button variant="ghost" onClick={() => setCreateTarget({ kind: "organization" })}>
+            <Button variant="outline" className="text-foreground" onClick={() => setCreateTarget({ kind: "organization" })}>
               <RemixIcon name="add-line" />{t("projects.addOrganization")}
             </Button>
           </div>
@@ -212,19 +183,14 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                   onDrop={(event) => handleOrganizationDrop(event, organization.id)}
                   className={`flex min-h-9 items-center justify-between gap-3 rounded-md transition-[background-color,outline-color,transform] duration-200 ease-out motion-reduce:transition-none ${dropTarget === `organization:${organization.id}` ? "scale-[1.01] bg-blue-50 outline outline-1 outline-blue-500" : ""}`}
                 >
-                  <button
-                    type="button"
-                    aria-label={`${organizationOpen ? t("projects.collapse") : t("projects.expand")} ${organizationName}`}
-                    aria-expanded={organizationOpen}
-                    onClick={() => setOpenOrganizations((current) => toggle(current, organization.id))}
-                    className="flex min-w-0 flex-1 items-center justify-start gap-2 text-start text-base font-medium text-foreground"
-                  >
+                  <button type="button" aria-label={`${organizationOpen ? t("projects.collapse") : t("projects.expand")} ${organizationName}`} aria-expanded={organizationOpen} onClick={() => setOpenOrganizations((current) => toggle(current, organization.id))} className="grid size-6 shrink-0 place-items-center text-text2">
                     <RemixIcon name="arrow-down-s-fill" className={`shrink-0 text-base transition-transform ${organizationOpen ? "" : collapsedChevronDirection}`} />
+                  </button>
+                  <Link draggable={false} href={organizationPath(organization)} className="flex min-w-0 flex-1 items-center justify-start gap-2 text-start text-base font-medium text-foreground">
                     <span className="relative grid size-6 shrink-0 place-items-center overflow-hidden rounded-lg bg-bg2 text-text2" aria-hidden="true"><Image src={organization.imageUrl && organization.preferences?.showSidebarIcon === true ? organization.imageUrl : "/images/divisions/general.jpg"} alt="" fill sizes="24px" unoptimized className="object-cover" /></span>
                     <span className="min-w-0 truncate">{organizationName}</span>
-                  </button>
+                  </Link>
                   <div className="ms-auto flex shrink-0 items-center gap-1">
-                    <Link draggable={false} href={organizationPath(organization)} aria-label={`${organizationName} — ${t("projects.openOrganization")}`} title={t("projects.openOrganization")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-xl" /></Link>
                     <Link draggable={false} href={`/home/organizations/${organization.id}/settings`} aria-label={`${t("projects.settings")} — ${organizationName}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
                     {hasPermission(organization.id, "createDivision") && <button type="button" draggable={false} aria-label={`${t("projects.addDivision")} — ${organizationName}`} title={t("projects.addDivision")} onClick={() => setCreateTarget({ kind: "division", organizationId: organization.id })} className="grid size-6 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="add-line" className="text-xl" /></button>}
                   </div>
@@ -247,19 +213,15 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                           onDragEnd={() => { draggedItem.current = null; setDraggedItemId(null); setDropTarget(null) }}
                           className={`group/division-header flex min-h-10 items-center gap-1 rounded-md transition-opacity duration-150 ${canManage(organization.id) ? "cursor-grab active:cursor-grabbing" : ""} ${draggedItemId === division.id ? "opacity-45" : ""}`}
                         >
-                          <button
-                            type="button"
-                            draggable={false}
-                            aria-expanded={divisionOpen}
-                            onClick={() => setOpenDivisions((current) => toggle(current, division.id))}
-                            className="flex min-w-0 flex-1 items-center gap-2 rounded-md ps-2 text-start"
-                          >
+                          <button type="button" draggable={false} aria-label={`${divisionOpen ? t("projects.collapse") : t("projects.expand")} ${division.name}`} aria-expanded={divisionOpen} onClick={() => setOpenDivisions((current) => toggle(current, division.id))} className="grid size-7 shrink-0 place-items-center rounded-md text-text2 hover:bg-bg2">
                             <RemixIcon name="arrow-down-s-line" className={`shrink-0 text-base text-icon2 transition-transform ${divisionOpen ? "" : collapsedChevronDirection}`} />
+                          </button>
+                          <Link draggable={false} href={`/home/organizations/${organization.id}?divisionId=${encodeURIComponent(division.id)}`} className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-start">
                             <RemixIcon name="folder-line" className="shrink-0 text-base text-text2" />
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground">{division.name}</span>
-                          </button>
+                          </Link>
                           <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/division-header:opacity-100 lg:group-focus-within/division-header:opacity-100">
-                            <Link draggable={false} href={`/home/organizations/${organization.id}?divisionId=${encodeURIComponent(division.id)}`} aria-label={`${t("projects.settings")} — ${division.name}`} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
+                            <Link draggable={false} href={`/home/organizations/${organization.id}/divisions/${encodeURIComponent(division.id)}/settings`} aria-label={`${t("projects.settings")} — ${division.name}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
                             {hasPermission(organization.id, "createProject") && <button type="button" draggable={false} aria-label={`${t("projects.addProject")} — ${division.name}`} onClick={() => setCreateTarget({ kind: "project", organizationId: organization.id, divisionId: division.id })} className="grid size-6 place-items-center rounded text-icon2 hover:text-foreground"><RemixIcon name="add-line" className="text-xl" /></button>}
                           </div>
                         </div>
@@ -278,7 +240,7 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
                                 <RemixIcon name="list-check-2" className="shrink-0 text-base text-icon2" />
                                 <span className="min-w-0 flex-1 truncate">{project.name}</span>
                               </Link>
-                              <div className="ms-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover/project:opacity-100 lg:group-focus-within/project:opacity-100">
+                              <div className="ms-auto flex shrink-0 items-center gap-1">
                                 <Link draggable={false} href={projectPath({ ...project, organizationSlug: organization.slug })} aria-label={`${project.name} — ${t("projects.openProject")}`} title={t("projects.openProject")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="arrow-right-up-line" className="text-xl" /></Link>
                                 <Link draggable={false} href={`/home/projects/${encodeURIComponent(project.id)}/settings`} aria-label={`${t("projects.settings")} — ${project.name}`} title={t("projects.settings")} className="grid size-7 place-items-center rounded text-icon2 hover:bg-bg2 hover:text-foreground"><RemixIcon name="settings-3-line" className="text-xl" /></Link>
                               </div>
@@ -307,23 +269,21 @@ export function OrganizationProjectTree({ organizations, user }: { organizations
           {organizations.length === 0 && <p className="py-8 text-center text-sm text-text3">{t("projects.noAccessibleCompanies")}</p>}
         </div>
       </section>
-      <Dialog open={Boolean(createTarget)} onOpenChange={(open) => { if (!open) { setCreateTarget(null); setNewName("") } }}>
-        <DialogContent variant="center" showCloseButton={false} className="max-w-sm">
-          <div className="flex items-center justify-end gap-2">
-            {(createTarget?.kind === "division" || createTarget?.kind === "project") && <Button type="submit" form="organization-project-create-form" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button>}
-            <DialogClose aria-label={t("taskDetail.close")} className="grid size-7 place-items-center rounded-lg bg-bg2"><RemixIcon name="close-line" className="text-base" /></DialogClose>
-          </div>
-          <DialogHeader>
-            <DialogTitle>{t(createTarget?.kind === "organization" ? "projects.addOrganization" : createTarget?.kind === "division" ? "projects.addDivision" : "projects.addProject")}</DialogTitle>
-            <DialogDescription>{t(createTarget?.kind === "organization" ? "projects.addOrganizationDescription" : createTarget?.kind === "division" ? "projects.addDivisionDescription" : "projects.addProjectDescription")}</DialogDescription>
-          </DialogHeader>
-          <form id="organization-project-create-form" onSubmit={createItem} className="flex flex-col gap-4">
-            <input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} aria-label={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} placeholder={t(createTarget?.kind === "organization" ? "projects.organizationName" : createTarget?.kind === "division" ? "projects.divisionName" : "projects.projectName")} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-            {createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}
-            {createTarget?.kind === "organization" && <div className="flex justify-end pt-1"><Button type="submit" disabled={!newName.trim()} className="h-8 min-w-20 rounded-lg text-xs">{t("workspace.register")}</Button></div>}
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ProjectEntityCreateDialog
+        target={createTarget}
+        onClose={() => setCreateTarget(null)}
+        onCreated={(target, createdId) => {
+          if (target.kind === "organization") setOpenOrganizations((current) => new Set(current).add(createdId))
+          if (target.kind === "division") {
+            setOpenOrganizations((current) => new Set(current).add(target.organizationId))
+            setOpenDivisions((current) => new Set(current).add(createdId))
+          }
+          if (target.kind === "project") {
+            setOpenOrganizations((current) => new Set(current).add(target.organizationId))
+            setOpenDivisions((current) => new Set(current).add(target.divisionId))
+          }
+        }}
+      />
     </div>
   )
 }
