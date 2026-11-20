@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
@@ -8,6 +8,7 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
+  getScrollableAncestors,
   pointerWithin,
   rectIntersection,
   useDraggable,
@@ -52,6 +53,11 @@ import { backendRequest } from "@/lib/api/backend-client"
 import { showWorkspaceToast } from "@/lib/workspace-toast"
 
 type BoardColumn = StoredBoardColumn & { projectId?: string; projectName?: string }
+type MobileDropTarget = {
+  columnId: string
+  beforeId: string | null
+  parentTaskId?: string
+}
 
 const COLUMN_ICONS = [
   { id: "figma-progress", label: "board.iconProgress" },
@@ -109,6 +115,16 @@ class BoardPointerSensor extends PointerSensor {
 }
 
 class BoardTouchSensor extends TouchSensor {
+  constructor(props: ConstructorParameters<typeof TouchSensor>[0]) {
+    super({
+      ...props,
+      options: {
+        ...props.options,
+        activationConstraint: { delay: isMobileBoardTouch(props.event) ? 1000 : 2000, tolerance: 12 },
+      },
+    })
+  }
+
   static activators: typeof TouchSensor.activators = [{
     eventName: "onTouchStart",
     handler: (...args) => {
@@ -117,6 +133,55 @@ class BoardTouchSensor extends TouchSensor {
       return TouchSensor.activators[0].handler(...args)
     },
   }]
+}
+
+function isMobileBoardTouch(event: Event) {
+  return event.type === "touchstart" && window.matchMedia("(max-width: 1023px)").matches
+}
+
+function startTouchEdgeScroll(board: HTMLDivElement, fingerId: number, onPosition: (x: number, y: number) => void) {
+  const page = document.scrollingElement
+  const verticalScroller = getScrollableAncestors(board).find((element) =>
+    element !== page && element.scrollHeight > element.clientHeight && /auto|scroll|overlay/.test(getComputedStyle(element).overflowY)
+  ) ?? page
+  let finger: Touch | undefined
+  let frame = 0
+
+  function trackFinger(event: TouchEvent) {
+    finger = Array.from(event.touches).find((touch) => touch.identifier === fingerId)
+  }
+
+  function edgeStep(position: number, start: number, end: number) {
+    const zone = Math.min(64, (end - start) / 3)
+    if (zone <= 0 || position < start || position > end) return 0
+    if (position < start + zone) return -Math.ceil(16 * (start + zone - position) / zone)
+    if (position > end - zone) return Math.ceil(16 * (position - end + zone) / zone)
+    return 0
+  }
+
+  function scroll() {
+    if (finger) {
+      const bounds = board.getBoundingClientRect()
+      const dx = edgeStep(finger.clientX, Math.max(0, bounds.left), Math.min(window.innerWidth, bounds.right))
+      // In RTL scrollLeft starts at zero on the right and goes negative to the left.
+      if (dx) board.scrollLeft += dx
+
+      if (verticalScroller) {
+        const viewport = verticalScroller === page ? null : verticalScroller.getBoundingClientRect()
+        const dy = edgeStep(finger.clientY, Math.max(0, viewport?.top ?? 0), Math.min(window.innerHeight, viewport?.bottom ?? window.innerHeight))
+        if (dy) verticalScroller.scrollTop += dy
+      }
+      onPosition(finger.clientX, finger.clientY)
+    }
+    frame = requestAnimationFrame(scroll)
+  }
+
+  window.addEventListener("touchmove", trackFinger, { capture: true, passive: true })
+  frame = requestAnimationFrame(scroll)
+  return () => {
+    cancelAnimationFrame(frame)
+    window.removeEventListener("touchmove", trackFinger, true)
+  }
 }
 
 const boardCollisionDetection: CollisionDetection = (args) => {
@@ -261,7 +326,8 @@ function BoardTicketCard({
       data-ticket-drop-task={parentTaskId}
       aria-label={`${ticket.title || t("ticket.name")}, ${ticket.createdByName ?? ""}${assigneeName ? `, ${assigneeName}` : ""}`}
       data-board-card
-      className={`flex min-w-0 [touch-action:auto] items-center gap-2 border border-border bg-background text-start text-text2 ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
+      data-board-card-id={parentTaskId ? undefined : `ticket:${ticket.id}`}
+      className={`flex min-w-0 [touch-action:auto] items-center gap-2 border border-border bg-background text-start text-text2 max-lg:select-none max-lg:[-webkit-touch-callout:none] ${compact ? "rounded-md ps-4 pe-2 py-1" : "rounded-xl ps-4 pe-3 py-2"} ${isDragging ? "opacity-40" : "cursor-grab"}`}
     >
       <AvatarGroup className="shrink-0 rtl:space-x-reverse">
         <Avatar title={ticket.createdByName} className={`${avatarSize} shrink-0`}>
@@ -512,12 +578,21 @@ function TaskCardBody({
   )
 }
 
-/**
- * کارت واقعی — قابل‌درگ (`useSortable`) و قابل‌کلیک: کلیک ساده (بدون حرکت بیش از حد فعال‌سازی
- * سنسور) پنل جزئیات تسک را باز می‌کند؛ کلیک-و-نگه‌داشتن-و-کشیدن درگ را شروع می‌کند. پیل‌های
- * فیلد (مسئول/تاریخ/اولویت) با `stopPropagation` روی pointerdown/click هم از فعال‌سازی درگ و
- * هم از باز شدن پنل جزئیات مستقل می‌مانند.
- */
+function MobileDropSlot({ height }: { height: number }) {
+  const t = useT()
+  return (
+    <div
+      aria-hidden="true"
+      data-mobile-drop-slot
+      style={{ minHeight: height }}
+      className="grid shrink-0 place-items-center rounded-lg border border-dashed border-text3 bg-bg2 px-2 py-1 text-xs text-text2"
+    >
+      {t("board.dropPosition")}
+    </div>
+  )
+}
+
+/** کارت قابل جابه‌جایی که با لمس یا کلیک کوتاه جزئیات تسک را باز می‌کند. */
 function SortableTaskCard({
   task,
   projectId,
@@ -530,6 +605,7 @@ function SortableTaskCard({
   ticketDropEnabled,
   isTicketTarget,
   ticketDropIndex,
+  mobileTicketSlotHeight,
 }: {
   task: Task
   projectId?: string
@@ -542,6 +618,7 @@ function SortableTaskCard({
   ticketDropEnabled: boolean
   isTicketTarget: boolean
   ticketDropIndex: number | null
+  mobileTicketSlotHeight?: number
 }) {
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -566,7 +643,8 @@ function SortableTaskCard({
       {...listeners}
       onClick={() => panel?.openTaskDetail(task)}
       data-board-card
-      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
+      data-board-card-id={task.id}
+      className={`flex [touch-action:auto] flex-col gap-2 border border-border bg-background px-3 py-2 text-start max-lg:select-none max-lg:[-webkit-touch-callout:none] ${figmaStyle ? "rounded-2xl" : "rounded-4xl"} ${
         isDragging ? "opacity-40" : "cursor-pointer"
       }`}
     >
@@ -581,6 +659,7 @@ function SortableTaskCard({
         isTicketTarget={isTicketTarget}
         ticketDropIndex={ticketDropIndex}
       />
+      {mobileTicketSlotHeight !== undefined && <MobileDropSlot height={mobileTicketSlotHeight} />}
     </div>
   )
 }
@@ -607,6 +686,10 @@ function Column({
   ticketDropEnabled,
   ticketTargetTaskId,
   ticketTargetIndex,
+  mobileTouchDrag,
+  mobileDropTarget,
+  mobileDropHeight,
+  cardIds,
   projectId,
   isDragOver,
   onAddTask,
@@ -629,6 +712,10 @@ function Column({
   ticketDropEnabled: boolean
   ticketTargetTaskId: string | null
   ticketTargetIndex: number | null
+  mobileTouchDrag: boolean
+  mobileDropTarget: MobileDropTarget | null
+  mobileDropHeight: number
+  cardIds: string[]
   projectId?: string
   isDragOver: boolean
   onAddTask: () => void
@@ -647,6 +734,7 @@ function Column({
   return (
     <div
       ref={setNodeRef}
+      data-board-column={column.id}
       className={`flex shrink-0 flex-col transition-colors duration-150 ${figmaStyle ? "w-[297px] self-start overflow-visible rounded-2xl" : "w-72 overflow-hidden rounded-4xl"} ${
         isDragOver ? "bg-bg3" : figmaStyle ? column.id === "in-progress" ? "bg-[var(--project-column-green)]" : column.id === "cancelled" ? "bg-[var(--project-column-red)]" : "bg-[var(--project-column-blue)]" : "bg-bg2"
       }`}
@@ -691,32 +779,36 @@ function Column({
         </>}
       </div>
 
-      <SortableContext id={column.id} items={taskIds} strategy={verticalListSortingStrategy}>
+      <SortableContext id={column.id} items={taskIds} strategy={mobileTouchDrag ? () => null : verticalListSortingStrategy}>
         <div className="flex min-h-10 flex-col gap-2 p-2">
-          {taskIds.map((taskId) => {
-            const task = tasksById.get(taskId)
-            return task ? (
-              <SortableTaskCard
-                key={task.id}
-                task={task}
-                projectId={projectId}
-                onUpdate={(patch) => onUpdateTask(task.id, patch)}
-                figmaStyle={figmaStyle}
-                attachedTickets={attachedTicketsByTask.get(task.id) ?? []}
-                ticketAssignees={ticketAssignees}
-                onTicketAssigneeChange={onTicketAssigneeChange}
-                draggedTicketId={draggedTicketId}
-                ticketDropEnabled={ticketDropEnabled}
-                isTicketTarget={ticketTargetTaskId === task.id}
-                ticketDropIndex={ticketTargetTaskId === task.id ? ticketTargetIndex : null}
-              />
-            ) : null
+          {cardIds.map((cardId) => {
+            const task = tasksById.get(cardId)
+            const ticket = cardId.startsWith("ticket:") ? ticketsById.get(cardId.slice(7)) : undefined
+            return (
+              <Fragment key={cardId}>
+                {mobileDropTarget?.beforeId === cardId && !mobileDropTarget.parentTaskId && <MobileDropSlot height={mobileDropHeight} />}
+                {task && (
+                  <SortableTaskCard
+                    task={task}
+                    projectId={projectId}
+                    onUpdate={(patch) => onUpdateTask(task.id, patch)}
+                    figmaStyle={figmaStyle}
+                    attachedTickets={attachedTicketsByTask.get(task.id) ?? []}
+                    ticketAssignees={ticketAssignees}
+                    onTicketAssigneeChange={onTicketAssigneeChange}
+                    draggedTicketId={draggedTicketId}
+                    ticketDropEnabled={ticketDropEnabled}
+                    isTicketTarget={ticketTargetTaskId === task.id}
+                    ticketDropIndex={ticketTargetTaskId === task.id ? ticketTargetIndex : null}
+                    mobileTicketSlotHeight={mobileDropTarget?.parentTaskId === task.id ? mobileDropHeight : undefined}
+                  />
+                )}
+                {ticket && <BoardTicketCard ticket={ticket} members={ticketAssignees} onAssigneeChange={(member) => onTicketAssigneeChange(ticket.id, member)} />}
+              </Fragment>
+            )
           })}
-          {ticketIds.map((ticketId) => {
-            const ticket = ticketsById.get(ticketId)
-            return ticket ? <BoardTicketCard key={ticket.id} ticket={ticket} members={ticketAssignees} onAssigneeChange={(member) => onTicketAssigneeChange(ticket.id, member)} /> : null
-          })}
-          {itemCount === 0 && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
+          {mobileDropTarget && !mobileDropTarget.beforeId && !mobileDropTarget.parentTaskId && <MobileDropSlot height={mobileDropHeight} />}
+          {itemCount === 0 && !mobileDropTarget && <p className="py-2 text-center text-xs text-text3">{t("board.empty")}</p>}
         </div>
       </SortableContext>
 
@@ -922,11 +1014,31 @@ export function BoardView({
   const [customColors, setCustomColors] = useState<string[]>([])
   const [order, setOrder] = useState<Record<string, string[]>>(() => ({ ...buildInitialOrder(initialTasks), ...(figmaStyle ? { cancelled: [] } : {}) }))
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [mobileTouchDrag, setMobileTouchDrag] = useState(false)
+  const [mobileDropTarget, setMobileDropTarget] = useState<MobileDropTarget | null>(null)
+  const [mobileDropHeight, setMobileDropHeight] = useState(32)
+  const mobileDropRef = useRef<MobileDropTarget | null>(null)
+  useLayoutEffect(() => {
+    mobileDropRef.current = mobileDropTarget
+  }, [mobileDropTarget])
+  const [mobileCardOrder, setMobileCardOrder] = useState<Record<string, string[]>>({})
+  const [mobileViewport, setMobileViewport] = useState(false)
+  const ownMobileDrop = useRef(false)
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)")
+    const update = () => setMobileViewport(media.matches)
+    update()
+    media.addEventListener("change", update)
+    return () => media.removeEventListener("change", update)
+  }, [])
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
   const [ticketTargetTaskId, setTicketTargetTaskId] = useState<string | null>(null)
   const [ticketTargetIndex, setTicketTargetIndex] = useState<number | null>(null)
   const dragStartOrder = useRef<Record<string, string[]>>({})
   const boardPan = useRef<{ pointerId: number; x: number; scrollLeft: number; dragging: boolean } | null>(null)
+  const boardScroll = useRef<HTMLDivElement>(null)
+  const stopTouchScroll = useRef<(() => void) | null>(null)
+  useEffect(() => () => stopTouchScroll.current?.(), [])
   const panel = useTaskPanel()
   const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
   const ticketsById = useMemo(() => new Map(tickets.map((ticket) => [ticket.id, ticket])), [tickets])
@@ -989,7 +1101,10 @@ export function BoardView({
   },[])
 
   useEffect(() => {
-    const refreshOrder = () => setOrder(buildOrderForColumns(tasksByIdRef.current.size ? [...tasksByIdRef.current.values()] : initialTasksRef.current, columns, readTaskBoardColumnAssignments(), projectId))
+    const refreshOrder = () => {
+      if (ownMobileDrop.current) return
+      setOrder(buildOrderForColumns(tasksByIdRef.current.size ? [...tasksByIdRef.current.values()] : initialTasksRef.current, columns, readTaskBoardColumnAssignments(), projectId))
+    }
     window.addEventListener("quire:task-board-columns-changed", refreshOrder)
     return () => window.removeEventListener("quire:task-board-columns-changed", refreshOrder)
   }, [columns, projectId])
@@ -1036,6 +1151,13 @@ export function BoardView({
     }
     return byColumn
   }, [attachedTicketIds, columns, tickets])
+  function getColumnCardIds(columnId: string) {
+    const ids = [...(order[columnId] ?? []), ...(ticketIdsByColumn[columnId] ?? []).map((id) => `ticket:${id}`)]
+    if (!mobileViewport) return ids
+    const saved = mobileCardOrder[columnId] ?? []
+    return [...saved.filter((id) => ids.includes(id)), ...ids.filter((id) => !saved.includes(id))]
+  }
+
   const activeTask = activeId ? tasksById.get(activeId) : undefined
   const activeTicket = activeId?.startsWith("ticket:") ? ticketsById.get(activeId.slice("ticket:".length)) : undefined
 
@@ -1064,7 +1186,7 @@ export function BoardView({
 
   const sensors = useSensors(
     useSensor(BoardPointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(BoardTouchSensor, { activationConstraint: { delay: 2000, tolerance: 12 } })
+    useSensor(BoardTouchSensor)
   )
 
   function updateTask(taskId: string, patch: Partial<Task>) {
@@ -1110,17 +1232,22 @@ export function BoardView({
     }).catch(() => undefined)
   }
 
-  function updateTicketStatus(ticketId: string, status: LocalTicket["status"]) {
+  async function updateTicketStatus(ticketId: string, status: LocalTicket["status"]) {
     const ticket = ticketsById.get(ticketId)
-    if (!ticket || ticket.status === status) return
+    if (!ticket) return false
+    if (ticket.status === status) return true
     const updated = { ...ticket, status }
     setTickets((previous) => previous.map((item) => item.id === ticketId ? updated : item))
-    void getCurrentUser().then(async (user) => {
+    try {
+      const user = await getCurrentUser()
       await saveTicket(ticketId, updated, { id: user.id, name: user.name, avatarUrl: user.avatarUrl })
       window.dispatchEvent(new Event("tickets-changed"))
-    }).catch(() => {
+      return true
+    } catch (error) {
       setTickets((previous) => previous.map((item) => item.id === ticketId ? ticket : item))
-    })
+      showWorkspaceToast(error instanceof Error ? error.message : "تغییر وضعیت تیکت انجام نشد.")
+      return false
+    }
   }
 
   function updateColumnColor(columnId: string, color: string) {
@@ -1147,7 +1274,50 @@ export function BoardView({
     setCustomColors((prev) => (prev.includes(color) ? prev : [...prev, color]))
   }
 
+  function trackMobileDrop(board: HTMLDivElement, cardId: string, x: number, y: number) {
+    const hit = document.elementFromPoint(x, y)
+    const columnNode = hit?.closest<HTMLElement>("[data-board-column]")
+    const column = columns.find((item) => item.id === columnNode?.dataset.boardColumn)
+    let next: MobileDropTarget | null = null
+    if (column && columnNode && board.contains(columnNode)) {
+      if (hit?.closest("[data-mobile-drop-slot]")) return
+      const isTicket = cardId.startsWith("ticket:")
+      const task = tasksById.get(cardId)
+      const card = hit?.closest<HTMLElement>("[data-board-card-id]")
+      const targetTaskId = card?.dataset.boardCardId
+      const bounds = card?.getBoundingClientRect()
+      // The middle of a task accepts a linked ticket. Its edges are for ordering column cards.
+      if (isTicket && includeTickets && targetTaskId && tasksById.has(targetTaskId) && bounds &&
+          y > bounds.top + bounds.height / 3 && y < bounds.bottom - bounds.height / 3) {
+        next = { columnId: column.id, beforeId: null, parentTaskId: targetTaskId }
+      } else if (isTicket
+        ? !column.projectId && STATUS_COLUMN_IDS.has(column.id)
+        : task && (!column.projectId || column.projectId === resolveProjectId(task, projectId))) {
+        const before = Array.from(columnNode.querySelectorAll<HTMLElement>("[data-board-card-id]")).find((node) => {
+          if (node.dataset.boardCardId === cardId) return false
+          const rect = node.getBoundingClientRect()
+          return y < rect.top + rect.height / 2
+        })
+        next = { columnId: column.id, beforeId: before?.dataset.boardCardId ?? null }
+      }
+    }
+    const previous = mobileDropRef.current
+    if (previous?.columnId === next?.columnId && previous?.beforeId === next?.beforeId && previous?.parentTaskId === next?.parentTaskId) return
+    setMobileDropTarget(next)
+    setDragOverColumnId(next?.columnId ?? null)
+  }
+
   function handleDragStart(event: DragStartEvent) {
+    if (isMobileBoardTouch(event.activatorEvent)) {
+      const finger = (event.activatorEvent as TouchEvent).changedTouches[0]
+      setMobileTouchDrag(true)
+      const board = boardScroll.current
+      if (finger && board) {
+        const source = finger.target instanceof Element ? finger.target.closest("[data-board-card]") : null
+        setMobileDropHeight(source?.getBoundingClientRect().height ?? 32)
+        stopTouchScroll.current = startTouchEdgeScroll(board, finger.identifier, (x, y) => trackMobileDrop(board, String(event.active.id), x, y))
+      }
+    }
     setActiveId(String(event.active.id))
     dragStartOrder.current = order
     setTicketTargetTaskId(null)
@@ -1156,6 +1326,7 @@ export function BoardView({
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
+    if (isMobileBoardTouch(event.activatorEvent)) return
     if (active.data.current?.kind === "ticket") {
       const columnId = over?.data.current?.kind === "column" ? String(over.data.current.columnId) : null
       setDragOverColumnId(columnId)
@@ -1195,12 +1366,70 @@ export function BoardView({
     })
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
+  function clearDrag() {
+    stopTouchScroll.current?.()
+    stopTouchScroll.current = null
+    setMobileTouchDrag(false)
+    mobileDropRef.current = null
+    setMobileDropTarget(null)
     setActiveId(null)
     setDragOverColumnId(null)
     setTicketTargetTaskId(null)
     setTicketTargetIndex(null)
+  }
+
+  async function placeMobileCard(cardId: string, target: MobileDropTarget) {
+    const { columnId, parentTaskId, beforeId } = target
+    const ticketId = cardId.startsWith("ticket:") ? cardId.slice(7) : undefined
+    if (ticketId && parentTaskId) {
+      const index = (attachedTicketsByTask.get(parentTaskId) ?? []).filter((ticket) => ticket.id !== ticketId).length
+      setTicketTaskLinks(linkTicketToTask(ticketId, parentTaskId, index, ticketTaskLinks))
+      return
+    }
+
+    const cards = getColumnCardIds(columnId).filter((id) => id !== cardId)
+    const before = beforeId ? cards.indexOf(beforeId) : -1
+    cards.splice(before === -1 ? cards.length : before, 0, cardId)
+    if (ticketId) {
+      const moved = await updateTicketStatus(ticketId, columnId as LocalTicket["status"])
+      if (!moved) return
+      setTicketTaskLinks(unlinkTicketFromTask(ticketId, ticketTaskLinks))
+      setMobileCardOrder((previous) => ({ ...previous, [columnId]: cards }))
+      return
+    }
+
+    const source = findContainer(order, cardId)
+    const task = tasksById.get(cardId)
+    if (!source || !task) return
+    setMobileCardOrder((previous) => ({ ...previous, [columnId]: cards }))
+    setOrder((previous) => ({
+      ...previous,
+      [source]: previous[source].filter((id) => id !== cardId),
+      [columnId]: cards.filter((id) => !id.startsWith("ticket:")),
+    }))
+    // This board already applied the move. Its own storage event must not rebuild from the old status.
+    ownMobileDrop.current = true
+    try {
+      if (STATUS_COLUMN_IDS.has(columnId)) {
+        void updateTaskStatus(cardId, columnId as Task["status"], order)
+      } else {
+        const taskProjectId = resolveProjectId(task, projectId)
+        if (taskProjectId) writeTaskBoardColumnAssignment(cardId, { projectId: taskProjectId, columnId })
+      }
+    } finally {
+      ownMobileDrop.current = false
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    const mobile = isMobileBoardTouch(event.activatorEvent)
+    const target = mobileDropRef.current
+    clearDrag()
+    if (mobile) {
+      if (target) void placeMobileCard(String(active.id), target)
+      return
+    }
 
     if (active.data.current?.kind === "ticket") {
       const ticketId = String(active.data.current.ticketId)
@@ -1292,19 +1521,14 @@ export function BoardView({
     <DndContext
       id={`board-${projectId ?? "my-tasks"}`}
       sensors={sensors}
-      autoScroll={{ threshold: { x: 0.15, y: 0.15 }, acceleration: 8 }}
-      collisionDetection={boardCollisionDetection}
+      autoScroll={mobileTouchDrag ? false : { threshold: { x: 0.15, y: 0.15 }, acceleration: 8 }}
+      collisionDetection={mobileTouchDrag ? () => [] : boardCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => {
-        setActiveId(null)
-        setDragOverColumnId(null)
-        setTicketTargetTaskId(null)
-        setTicketTargetIndex(null)
-      }}
+      onDragCancel={clearDrag}
     >
-      <div data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto [touch-action:auto] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto [touch-action:auto] pb-2"}>
+      <div ref={boardScroll} data-slot="board-scroll" onPointerDown={startBoardPan} onPointerMove={moveBoardPan} onPointerUp={stopBoardPan} onPointerCancel={stopBoardPan} className={figmaStyle ? "-mx-4 overflow-x-auto [touch-action:auto] px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "overflow-x-auto [touch-action:auto] pb-2"}>
       <div className={figmaStyle ? "flex w-max min-w-full gap-6 overflow-visible py-2" : "flex w-max min-w-full gap-4"}>
         {columns.map((column) => (
           <Column
@@ -1321,6 +1545,10 @@ export function BoardView({
             ticketDropEnabled={includeTickets}
             ticketTargetTaskId={ticketTargetTaskId}
             ticketTargetIndex={ticketTargetIndex}
+            mobileTouchDrag={mobileTouchDrag}
+            mobileDropHeight={mobileDropHeight}
+            cardIds={getColumnCardIds(column.id)}
+            mobileDropTarget={mobileDropTarget?.columnId === column.id ? mobileDropTarget : null}
             projectId={projectId}
             isDragOver={dragOverColumnId === column.id}
             onAddTask={() => { if (window.matchMedia("(max-width: 1023px)").matches) router.push(`/tasks/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`); else panel?.openNewTask(projectId) }}
@@ -1336,7 +1564,7 @@ export function BoardView({
       </div>
       </div>
 
-      <DragOverlay>
+      <DragOverlay style={mobileTouchDrag ? { pointerEvents: "none" } : undefined}>
         {activeTicket ? <BoardTicketOverlay ticket={activeTicket} /> : activeTask ? <TaskCardOverlay task={activeTask} projectId={projectId} /> : null}
       </DragOverlay>
     </DndContext>

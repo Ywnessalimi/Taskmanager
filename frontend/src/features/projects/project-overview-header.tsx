@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ProjectMembersDialog } from "./project-members-dialog"
 import { RemixIcon } from "@/components/ui/remix-icon"
 import { t, type Locale } from "@/lib/i18n/dictionary"
 import type { Project } from "@/lib/api/types"
@@ -116,8 +116,6 @@ function ProjectAttachments({ locale }: { locale: Locale }) {
  * عمدی با فایل طرح.
  */
 export function ProjectOverviewHeader({ project, locale }: { project: Project; locale: Locale }) {
-  const members = project.members ?? []
-  const overflowCount = Math.max(0, members.length - 5)
   return (
     <div className="flex items-start gap-4">
       <ProjectCover name={project.name} />
@@ -142,19 +140,7 @@ export function ProjectOverviewHeader({ project, locale }: { project: Project; l
             <RemixIcon name="calendar-line" className="text-base" />
             {project.startDate} — {project.endDate}
           </span>
-          <div role="group" aria-label={t(locale, "members.title")} className="flex w-fit items-center">
-            {members.slice(0, 5).map((member) => (
-              <Avatar key={member.id} size="sm" className="-ms-2 ring-2 ring-background first:ms-0">
-                {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
-                <AvatarFallback>{member.name.slice(0, 1)}</AvatarFallback>
-              </Avatar>
-            ))}
-            {overflowCount > 0 && (
-              <span className="-ms-2 flex size-6 items-center justify-center rounded-full bg-bg2 text-[10px] text-text2 ring-2 ring-background">
-                +{overflowCount}
-              </span>
-            )}
-          </div>
+          <ProjectMembersDialog key={project.id} project={project} />
         </div>
 
         {project.description ? (

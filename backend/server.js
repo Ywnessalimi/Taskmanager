@@ -8,12 +8,14 @@ import { createNotificationRepository } from "./apps/notifications/notification-
 import { createAuthRepository, authSessionTtlSeconds } from "./apps/auth/auth-repository.js"
 import { createOrganizationRepository, organizationPermissionKeys } from "./apps/organizations/organization-repository.js"
 import { createOrganizationActivityRepository } from "./apps/organizations/organization-activity-repository.js"
+import { projectStatusHistory } from "./apps/organizations/project-status-history.js"
 import { assistantMessageLimits, createAIService } from "./apps/ai/ai-service.js"
 import { AssistantAttachmentError, readAssistantAttachments } from "./apps/ai/attachment-reader.js"
 import { createTaskService, DomainError, validateTaskInput } from "./apps/tasks/task-service.js"
 import { createAssistantStore } from "./apps/ai/assistant-store.js"
 import { createAgentService } from "./apps/ai/agent-service.js"
 import { exportReport } from "./apps/ai/report-export.js"
+import { attachmentLimits, extractAttachmentText } from "./apps/ai/attachment-text.js"
 import { createIntegrationService } from "./apps/integrations/integration-service.js"
 import { createDashboardService } from "./apps/dashboards/dashboard-service.js"
 
@@ -154,6 +156,14 @@ function validateNameInput(value) {
     throw new HttpError(400, "invalid_name", "نام باید بین ۱ تا ۲۰۰ نویسه باشد.")
   }
   return value.name.trim()
+}
+
+function validateDivisionSettingsInput(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.memberIds)
+    || value.memberIds.some((memberId) => typeof memberId !== "string" || !memberId.trim())) {
+    throw new HttpError(400, "invalid_division_settings", "اطلاعات تنظیمات معاونت معتبر نیست.")
+  }
+  return { name: validateNameInput(value), memberIds: [...new Set(value.memberIds.map((memberId) => memberId.trim()))] }
 }
 
 function validateOrganizationSettingsInput(value) {
@@ -395,6 +405,20 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    if (path === "/api/v1/assistant/attachments" && method === "POST") {
+      const filename = url.searchParams.get("name") ?? ""
+      if (!filename || filename.length > 200 || /[\x00-\x1f/\\]/.test(filename)) throw new HttpError(400, "invalid_filename", "نام فایل معتبر نیست.")
+      const chunks = []
+      let size = 0
+      for await (const chunk of request) {
+        size += chunk.length
+        if (size > attachmentLimits.bytes) throw new HttpError(413, "attachment_too_large", "اندازهٔ فایل نباید بیشتر از ۳ مگابایت باشد.")
+        chunks.push(chunk)
+      }
+      sendJson(response, 200, { text: await extractAttachmentText(filename, Buffer.concat(chunks)) })
+      return
+    }
+
     if (path === "/api/v1/assistant/chat" && method === "POST") {
       const input = await readJson(request, 6_000_000)
       if (!Array.isArray(input?.messages) || input.messages.length === 0 || input.messages.length > assistantMessageLimits.maxMessages) {
@@ -464,7 +488,7 @@ const server = createServer(async (request, response) => {
         const requestedBefore = rawBefore === null ? undefined : Number(rawBefore)
         if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedBefore !== undefined && (!Number.isSafeInteger(requestedBefore) || requestedBefore < 1)) throw new HttpError(400, "invalid_pagination", "محدودهٔ فعالیت معتبر نیست.")
         const limit = Math.min(requestedLimit, 50)
-        sendJson(response, 200, organizationActivityRepository.list(organizationId, { limit, before: requestedBefore }))
+        sendJson(response, 200, organizationActivityRepository.list(organizationId, { limit, before: requestedBefore, userId: currentUser.id }))
         return
       }
       if (method === "POST") {
@@ -555,6 +579,20 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    const divisionSettingsMatch = path.match(/^\/api\/v1\/organizations\/([^/]+)\/divisions\/([^/]+)\/settings$/)
+    if (divisionSettingsMatch && method === "PATCH") {
+      const organizationId = decodeURIComponent(divisionSettingsMatch[1])
+      const divisionId = decodeURIComponent(divisionSettingsMatch[2])
+      const input = validateDivisionSettingsInput(await readJson(request))
+      const result = organizationRepository.updateDivisionSettings(currentUser.id, organizationId, divisionId, input)
+      if (!result) throw new HttpError(404, "not_found", "معاونت پیدا نشد.")
+      if (result.forbidden) throw new HttpError(403, "forbidden", "اجازهٔ ویرایش این معاونت را ندارید.")
+      if (result.conflict) throw new HttpError(409, "duplicate_division", "در این سازمان معاونتی با همین نام وجود دارد.")
+      if (result.invalidMembers) throw new HttpError(400, "invalid_division_members", "همهٔ اعضای انتخاب‌شده باید عضو همین سازمان باشند.")
+      sendJson(response, 200, result)
+      return
+    }
+
     const divisionMoveMatch = path.match(/^\/api\/v1\/organizations\/([^/]+)\/divisions\/([^/]+)$/)
     if (divisionMoveMatch && method === "PATCH") {
       const sourceOrganizationId = decodeURIComponent(divisionMoveMatch[1])
@@ -598,6 +636,47 @@ const server = createServer(async (request, response) => {
       const project = organizationRepository.updateProjectSettings(currentUser.id, projectId, { name, description: body.description })
       if (!project) throw new HttpError(403, "forbidden", "اجازهٔ ویرایش این پروژه را ندارید.")
       sendJson(response, 200, project)
+      return
+    }
+
+    const projectStatusHistoryMatch = path.match(/^\/api\/v1\/projects\/([^/]+)\/status-history$/)
+    if (projectStatusHistoryMatch && method === 'GET') {
+      const projectId = decodeURIComponent(projectStatusHistoryMatch[1])
+      const project = organizationRepository.getProject(projectId, currentUser.id)
+      if (!project) throw new HttpError(404, 'not_found', 'پروژه پیدا نشد.')
+      const now = new Date()
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - 12 * 86_400_000).toISOString()
+      const changes = organizationActivityRepository.projectStatusChanges(projectId, project.organizationId, start)
+      sendJson(response, 200, projectStatusHistory(repository.listTasks({ projectId }), changes, now))
+      return
+    }
+
+    const projectMemberMatch = path.match(/^\/api\/v1\/projects\/([^/]+)\/members$/)
+    if (projectMemberMatch && method === "POST") {
+      const projectId = decodeURIComponent(projectMemberMatch[1])
+      const input = await readJson(request)
+      if (!input || typeof input.userId !== 'string' || !input.userId.trim() || input.userId.length > 200) throw new HttpError(400, 'invalid_member', 'عضو انتخاب‌شده معتبر نیست.')
+      const result = organizationRepository.addProjectMember(currentUser.id, projectId, input.userId.trim())
+      if (!result) throw new HttpError(404, 'not_found', 'پروژه پیدا نشد.')
+      if (result.forbidden) throw new HttpError(403, 'forbidden', 'اجازهٔ افزودن عضو به پروژه را ندارید.')
+      if (result.invalidMember) throw new HttpError(400, 'member_not_in_organization', 'این کاربر عضو سازمان نیست؛ ابتدا او را به سازمان اضافه کنید.')
+      if (result.alreadyMember) throw new HttpError(409, 'already_member', 'این کاربر از قبل عضو پروژه است.')
+      sendJson(response, 201, result)
+      return
+    }
+
+    const projectActivityMatch = path.match(/^\/api\/v1\/projects\/([^/]+)\/member-activity$/)
+    if (projectActivityMatch && method === "GET") {
+      const projectId = decodeURIComponent(projectActivityMatch[1])
+      const project = organizationRepository.getProject(projectId, currentUser.id)
+      if (!project) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
+      const today = new Date()
+      const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1))
+      const start = new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000)
+      sendJson(response, 200, {
+        from: start.toISOString(), to: end.toISOString(), timeZone: "UTC",
+        counts: organizationActivityRepository.projectDailyCounts(projectId, project.organizationId, start.toISOString(), end.toISOString()),
+      })
       return
     }
 
@@ -661,7 +740,7 @@ const server = createServer(async (request, response) => {
 
     if (path === "/api/v1/notifications" && method === "GET") {
       const recipientName = currentUser.name
-      sendJson(response, 200, notificationRepository.listForRecipient(recipientName, currentUser.id))
+      sendJson(response, 200, notificationRepository.listForRecipient(recipientName, currentUser.id).filter(item => !item.target.projectId || organizationRepository.canAccessProject(currentUser.id, item.target.projectId)))
       return
     }
 
@@ -703,19 +782,20 @@ const server = createServer(async (request, response) => {
     const ticketCommentsMatch = path.match(/^\/api\/v1\/tickets\/([^/]+)\/comments$/)
     const ticketActivityMatch = path.match(/^\/api\/v1\/tickets\/([^/]+)\/activity$/)
     const ticketMatch = path.match(/^\/api\/v1\/tickets\/([^/]+)$/)
+    const canReadTicket = ticket => !ticket?.projectId || organizationRepository.canAccessProject(currentUser.id, ticket.projectId)
     if (path === "/api/v1/tickets" && method === "GET") {
-      sendJson(response, 200, ticketRepository.list())
+      sendJson(response, 200, ticketRepository.list().filter(canReadTicket))
       return
     }
     if (path === "/api/v1/tickets/inbox" && method === "GET") {
-      sendJson(response, 200, ticketRepository.listForInbox(currentUser.id))
+      sendJson(response, 200, ticketRepository.listForInbox(currentUser.id).filter(canReadTicket))
       return
     }
     if (ticketMatch) {
       const ticketId = decodeURIComponent(ticketMatch[1])
       if (method === "GET") {
         const ticket = ticketRepository.get(ticketId)
-        if (!ticket) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
+        if (!ticket || !canReadTicket(ticket)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
         sendJson(response, 200, ticket)
         return
       }
@@ -725,6 +805,7 @@ const server = createServer(async (request, response) => {
         const ticket = validateTicketInput(body.ticket)
         if (ticket.projectId && !organizationRepository.getProject(ticket.projectId, currentUser.id)) throw new HttpError(404, "not_found", "پروژه پیدا نشد.")
         const previous = ticketRepository.get(ticketId)
+        if (previous && !canReadTicket(previous)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
         let assignee
         if (ticket.assigneeId) {
           assignee = authRepository.getUser(ticket.assigneeId)
@@ -747,6 +828,8 @@ const server = createServer(async (request, response) => {
         return
       }
       if (method === "DELETE") {
+        const ticket = ticketRepository.get(ticketId)
+        if (!ticket || !canReadTicket(ticket)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
         if (!ticketRepository.delete(ticketId)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
         response.writeHead(204); response.end(); return
       }
@@ -754,13 +837,16 @@ const server = createServer(async (request, response) => {
     }
     if (ticketActivityMatch) {
       const ticketId = decodeURIComponent(ticketActivityMatch[1])
-      if (!ticketRepository.get(ticketId)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
+      const ticket = ticketRepository.get(ticketId)
+      if (!ticket || !canReadTicket(ticket)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
       if (method !== "GET") throw new HttpError(405, "method_not_allowed", "این متد پشتیبانی نمی‌شود.")
       sendJson(response, 200, ticketRepository.activity(ticketId)); return
     }
     if (ticketCommentsMatch) {
       const ticketId = decodeURIComponent(ticketCommentsMatch[1])
       if (!ticketId.trim()) throw new HttpError(400, "invalid_ticket", "شناسهٔ تیکت الزامی است.")
+      const ticket = ticketRepository.get(ticketId)
+      if (ticket && !canReadTicket(ticket)) throw new HttpError(404, "not_found", "تیکت پیدا نشد.")
       if (method === "GET") {
         sendJson(response, 200, ticketCommentRepository.list(ticketId))
         return

@@ -74,14 +74,14 @@ export function createTaskRepository(database) {
 
   function listProjects(ownerId) {
     const rows = ownerId
-      ? database.prepare("SELECT p.* FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id WHERE m.user_id = ? ORDER BY p.rowid").all(ownerId)
+      ? database.prepare("SELECT p.* FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id JOIN project_members pm ON pm.project_id = p.id AND pm.organization_member_id = m.id WHERE m.user_id = ? ORDER BY p.rowid").all(ownerId)
       : database.prepare("SELECT * FROM projects ORDER BY rowid").all()
     return rows.map(toProject)
   }
 
   function getProject(id, ownerId) {
     const row = ownerId
-      ? database.prepare("SELECT p.* FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id WHERE p.id = ? AND m.user_id = ?").get(id, ownerId)
+      ? database.prepare("SELECT p.* FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id JOIN project_members pm ON pm.project_id = p.id AND pm.organization_member_id = m.id WHERE p.id = ? AND m.user_id = ?").get(id, ownerId)
       : database.prepare("SELECT * FROM projects WHERE id = ?").get(id)
     return toProject(row)
   }

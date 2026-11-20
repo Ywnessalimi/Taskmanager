@@ -65,7 +65,7 @@ const definitions = [
   },
   {
     name: 'project_propose', title: 'ساخت پروژه', effect: 'preview',
-    description: 'Prepare a project in an existing division for confirmation. Requires createProject permission. This tool uses current organization-based project access.',
+    description: 'Prepare a project in an existing division for confirmation. Requires createProject permission. The creator becomes a project member.',
     schema: z.object({ divisionId: id, name: z.string().trim().min(1).max(120) }).strict(),
   },
   {

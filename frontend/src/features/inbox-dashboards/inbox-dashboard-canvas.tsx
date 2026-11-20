@@ -208,7 +208,7 @@ export function InboxDashboardCanvas({ dashboard, tickets, user, ticketLoadError
         <h2 className="truncate text-base font-medium text-foreground">{dashboard.name}</h2>
         {editing && <p className="mt-0.5 text-xs text-text3">{t("inboxDashboards.canvasHint")}</p>}
       </div>
-      <Button type="button" variant={editing ? "default" : "outline"} size="sm" className="shrink-0" onClick={() => { if (editing) { void saveSlots(dashboard.id, draft).then(() => setEditing(false)).catch(() => {}) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
+      <Button type="button" variant={editing ? "default" : "outline"} size="sm" className={`shrink-0 ${editing ? "" : "bg-white"}`} onClick={() => { if (editing) { void saveSlots(dashboard.id, draft).then(() => setEditing(false)).catch(() => {}) } else { setDraft(dashboard.slots.filter((slot) => slot.widget)); setEditing(true) } }}><RemixIcon name={editing ? "check-line" : "edit-line"} />{t(editing ? "inboxDashboards.saveWidgets" : "inboxDashboards.editWidgets")}</Button>
     </div>
     {slots.length === 0 && !editing ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 py-8 text-center">
       <Image src="/images/inbox-dashboards/empty-widgets-ui.webp" alt="" width={512} height={512} unoptimized className="size-44 object-contain" />

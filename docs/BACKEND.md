@@ -60,6 +60,10 @@ backend/
     009_ticket_assignment_notifications.sql → اعلان ارجاع Ticket و مقصد Ticket
     010_organization_settings_and_members.sql → slug، تصویر و عضویت/مجوزهای سازمان
     011_organization_activity.sql → رخدادهای سازمان و کامنت‌های فید
+    012_division_members.sql → اعضای منتخب معاونت‌ها
+    013_assistant.sql → پیش‌نمایش‌ها، گزارش‌ها و اتصال دستیار
+    014_assistant_dashboards.sql → کارتابل‌های دستیار
+    015_project_members.sql → عضویت و دسترسی مستقل پروژه با حفظ اعضای فعلی
   test/
     task-repository.test.js    → تست migration و CRUD روی دیتابیس موقت
   data/                         → quire.sqlite (ساخته می‌شود، در Git نیست)
@@ -152,7 +156,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 
 ### `organizations` و `organization_members`
 
-سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود. `organization_activity` رویدادهای ساخت تسک، تغییر وضعیت تسک و کامنت سازمان را با عامل، زمان UTC، شناسهٔ تسک اختیاری و جزئیات JSON ذخیره می‌کند؛ پاک‌شدن سازمان رخدادهایش را نیز پاک می‌کند. فید از تازه‌ترین ردیف شروع می‌شود و برای صفحه‌های قدیمی‌تر از cursor پایدار `rowid` استفاده می‌کند.
+سازمان `slug` یکتا از حروف هر زبان، عدد و خط تیره، توضیحات، تصویر data URL محدود و `preferences_json` برای گزینه‌های سازمان دارد. `organization_members` کلید سازمان/کاربر دارد و نقش‌های `owner`, `admin`, `custom` را نگه‌داری می‌کند؛ مجوزهای نقش سفارشی در JSON با کلیدهای `editOrganization`, `createDivision`, `editDivision`, `createProject`, `editProject`, `inviteMembers`, `removeMembers`, `manageAccess` قرار دارند. migration `010_organization_settings_and_members.sql` مالک فعلی را به عضویت owner تبدیل می‌کند. `division_members` اعضای منتخب هر معاونت را از میان اعضای همان سازمان نگه می‌دارد؛ مهاجرت 012 برای معاونت‌های موجود همهٔ اعضای فعلی سازمان را seed می‌کند. این فهرست به‌تنهایی مجوز دسترسی به پروژه نمی‌دهد و عضویت سازمان همچنان لازم است. نقش admin فقط `manageAccess` دارد؛ تنها یک owner مجاز است و repository انتقال مالکیت را اتمیک انجام می‌دهد. دعوت عضو در این فاز به ایمیل حساب موجود متصل می‌شود. `organization_activity` رویدادهای ساخت تسک، تغییر وضعیت تسک و کامنت سازمان را با عامل، زمان UTC، شناسهٔ تسک اختیاری و جزئیات JSON ذخیره می‌کند؛ پاک‌شدن سازمان رخدادهایش را نیز پاک می‌کند. فید از تازه‌ترین ردیف شروع می‌شود و برای صفحه‌های قدیمی‌تر از cursor پایدار `rowid` استفاده می‌کند.
 
 ## ۵. API نسخهٔ ۱
 
@@ -160,7 +164,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 
 مسیر دستیار حداکثر ۲۰ پیام با محتوای حداکثر ۶۰۰۰ نویسه می‌پذیرد و فقط وقتی آخرین پیام از نقش `user` باشد درخواست را می‌فرستد. پیام سیستمی سمت سرور اضافه می‌شود؛ پیشنهاد ساخت یا ویرایش برای نمایش و تأیید به فرانت برمی‌گردد و در مسیر گفت‌وگو عملیات تغییردهنده اجرا نمی‌شود. فرانت برای اجرا همان API احراز‌شدهٔ Task را صدا می‌زند؛ کنترل دسترسی جاری ساخت و ویرایش، دسترسی کاربر به پروژه است و مجوز تفکیک‌شدهٔ ساخت/ویرایش تسک وجود ندارد. پاسخ ارائه‌دهنده به متن محدود است و خطاهای upstream بدون بدنه یا کلید به کلاینت برمی‌گردند. درخواست از مسیر `POST /chat/completions` با Bearer token و قرارداد OpenAI-compatible ارسال می‌شود.
 
-در پیاده‌سازی فعلی، `canAccessProject` عضویت کاربر در سازمان صاحب پروژه را بررسی می‌کند؛ عضویت مستقل در هر پروژه و مجوزهای جداگانهٔ ساخت و ویرایش تسک هنوز در API اعمال نشده‌اند. دستیار دقیقاً از همین محدودیت‌های فعلی API پیروی می‌کند.
+`canAccessProject` عضویت کاربر در پروژه و سازمان صاحب آن را بررسی می‌کند. migration 015 دسترسی اعضای فعلی سازمان به پروژه‌های موجود را حفظ می‌کند؛ مجوزهای جداگانهٔ ساخت و ویرایش تسک هنوز تعریف نشده‌اند. دستیار و MCP از همین مرز پروژه پیروی می‌کنند.
 
 | Method | Path | رفتار |
 |---|---|---|
@@ -172,6 +176,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 | `DELETE` | `/api/v1/auth/sessions/:sessionId` | لغو نشست متعلق به کاربر جاری؛ لغو نشست جاری cookie را نیز پاک می‌کند |
 | `POST` | `/api/v1/auth/logout` | حذف نشست و پاک‌کردن cookie |
 | `POST` | `/api/v1/assistant/chat` | ارسال تاریخچهٔ محدود گفت‌وگو به Nokod؛ نشست معتبر لازم دارد |
+| `POST` | `/api/v1/assistant/attachments?name=:filename` | استخراج متن پیوست متنی، PDF، DOCX یا XLSX برای گفت‌وگوی کاربر با نشست معتبر؛ محتوای فایل ذخیره نمی‌شود |
 | `GET` | `/api/v1/organizations` | سلسله‌مراتب سازمان/معاونت/پروژه برای عضو نشست |
 | `POST` | `/api/v1/organizations` | ساخت سازمان و عضویت owner برای کاربر جاری |
 | `GET` | `/api/v1/organizations/:organizationId/members` | اعضا و مجوزهای سازمان برای عضو مجاز |
@@ -184,6 +189,7 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug` | خواندن سازمان برای مسیر خوانا با عضویت معتبر |
 | `GET` | `/api/v1/organizations/by-slug/:organizationSlug/projects/:projectSlug` | خواندن پروژه با slug سازمان/پروژه برای عضو مجاز |
 | `POST` | `/api/v1/organizations/:organizationId/divisions` | ساخت معاونت با مجوز `createDivision` |
+| `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId/settings` | ذخیرهٔ نام و اعضای منتخب معاونت با مجوز `editDivision`؛ اعضا باید عضو همان سازمان باشند |
 | `PATCH` | `/api/v1/organizations/:organizationId/divisions/:divisionId` | انتقال معاونت به سازمان مقصد؛ مالکیت سازمان مبدأ و مقصد در نشست بررسی می‌شود و تعارض نام `409` است |
 | `POST` | `/api/v1/divisions/:divisionId/projects` | ساخت پروژه با مجوز `createProject` |
 | `PATCH` | `/api/v1/projects/:projectId/location` | انتقال پروژه به معاونت مقصد؛ مالکیت پروژهٔ مبدأ و معاونت مقصد در نشست بررسی می‌شود |
@@ -191,6 +197,9 @@ Ticket با شناسهٔ پایدار، بدنهٔ JSON قرارداد فران�
 | `GET` | `/api/v1/projects` | پروژه‌های مرجع |
 | `GET` | `/api/v1/projects/:projectId` | یک پروژه یا `404` |
 | `GET` | `/api/v1/projects/:projectId/tasks` | Taskهای ریشهٔ پروژه با Subtaskهایشان |
+| `GET` | `/api/v1/projects/:projectId/member-activity` | تعداد رخدادهای ثبت‌شدهٔ ساخت تسک و تغییر وضعیت، به تفکیک عامل و روز UTC در ۹۰ روز اخیر؛ نیازمند دسترسی پروژه |
+| `GET` | `/api/v1/projects/:projectId/status-history` | روند ۱۲روزهٔ وضعیت تسک‌های موجود با بازسازی از تغییرات وضعیت ثبت‌شده؛ نیازمند عضویت پروژه، روزها UTC |
+| `POST` | `/api/v1/projects/:projectId/members` | افزودن عضو سازمان به پروژه با مجوز `editProject` و عضویت فعلی درخواست‌کننده در پروژه |
 | `GET` | `/api/v1/projects/:projectId/pages` | صفحه‌های سند/چت پروژه |
 | `PUT` | `/api/v1/projects/:projectId/pages/:kind` | ذخیرهٔ عنوان و متن صفحه (`kind`: `document` یا `chat`)؛ هر نوع برای هر پروژه یکتا است |
 | `GET` | `/api/v1/projects/:projectId/chat` | پیام‌های چت پروژه به ترتیب زمان |

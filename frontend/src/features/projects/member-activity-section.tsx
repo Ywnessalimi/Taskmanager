@@ -1,11 +1,8 @@
 "use client"
 
-import { LEVEL_CLASSES } from "@/components/charts/activity-heatmap"
-import { MemberActivityGrid } from "@/components/charts/member-activity-grid"
-import { OverviewCard } from "@/components/layout/section"
+import { MEMBER_ACTIVITY_LEVEL_CLASSES, MemberActivityGrid } from "@/components/charts/member-activity-grid"
 import { useLocale } from "@/components/providers/locale-provider"
 import type { Member } from "@/lib/api/types"
-import { buildDateLabels } from "./project-health"
 
 /**
  * بخش «فعالیت اعضا» در نمای‌کلی پروژه — طبق طرح Figma «Member Activity»: عنوان/زیرعنوان
@@ -20,34 +17,33 @@ export function MemberActivitySection({
 }) {
   const { locale, t } = useLocale()
   const length = members[0]?.activity.length ?? 0
-  const dateLabels = buildDateLabels(locale, length)
+  const end = new Date(updatedAt)
+  const hasTimestamp = !Number.isNaN(end.getTime())
+  const midnight = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1)
+  const dateLabels = Array.from({ length }, (_, i) => hasTimestamp ? new Date(midnight - (length - i) * 86_400_000).toLocaleDateString(locale === "fa" ? "fa-IR" : "en-US", { day: "numeric", month: "short", timeZone: "UTC" }) : "")
 
   return (
-    <OverviewCard
-      title={t("project.memberActivity")}
-      subtitle={`${members.length} ${t("members.membersUnit")}`}
-    >
-      <div className="flex flex-col gap-3">
+    <section className="flex flex-col gap-[18px] rounded-2xl border border-border bg-background p-4">
+      <h3 className="text-base font-semibold text-foreground">{t("project.memberActivity")}</h3>
+      <div className="flex flex-col gap-4">
         {members.length > 0 ? (
-          <MemberActivityGrid members={members} dateLabels={dateLabels} />
+          <MemberActivityGrid members={members} dateLabels={dateLabels} direction={locale === "fa" ? "rtl" : "ltr"} />
         ) : (
           <p className="py-4 text-center text-sm text-text3">{t("project.noMembers")}</p>
         )}
 
-        <div className="flex items-center justify-end gap-2 text-xs text-text2">
-          <span>
-            {t("project.activityUpdatedAt")} {updatedAt}
-          </span>
-          <span>·</span>
+        <p className="text-xs text-text3">{t("projectMembers.activityCoverage")}</p>
+
+        <div className="flex items-center justify-end gap-2 text-xs font-semibold text-text2">
           <span>{t("activity.less")}</span>
           <div className="flex items-center gap-1">
-            {LEVEL_CLASSES.map((cls, i) => (
-              <span key={i} className={`size-3 rounded-sm ${cls}`} />
+            {MEMBER_ACTIVITY_LEVEL_CLASSES.map((cls, i) => (
+              <span key={i} className={`h-3 w-[14px] rounded ${cls}`} />
             ))}
           </div>
           <span>{t("activity.more")}</span>
         </div>
       </div>
-    </OverviewCard>
+    </section>
   )
 }

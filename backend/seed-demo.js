@@ -104,6 +104,7 @@ try {
         }
       }
 
+      database.prepare('INSERT INTO project_members (project_id, organization_member_id, created_at) SELECT p.id, m.id, ? FROM projects p JOIN organization_members m ON m.organization_id = p.organization_id WHERE p.organization_id = ?').run(now, organizations[0].id)
       const insertTask = database.prepare(`
         INSERT INTO tasks (
           id, display_id, project_id, title, assignee_names, priority, status, start_date, due_date,

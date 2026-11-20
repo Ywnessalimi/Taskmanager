@@ -35,7 +35,7 @@ const DEFAULTS: Omit<OrgSettings, "name" | "slug" | "description" | "imageUrl"> 
   properties: [],
 }
 
-export function OrganizationSettingsPage({ organization, user }: { organization: Organization; user: CurrentUser }) {
+export function OrganizationSettingsPage({ organization, user, embedded = false }: { organization: Organization; user: CurrentUser; embedded?: boolean }) {
   const { t } = useLocale()
   const router = useRouter()
   const [active, setActive] = useState<Tab>("general")
@@ -168,10 +168,10 @@ export function OrganizationSettingsPage({ organization, user }: { organization:
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      <header className="border-b border-border px-5 py-4 lg:px-10">
+      {!embedded && <header className="border-b border-border px-5 py-4 lg:px-10">
         <h1 className="text-xl font-semibold text-foreground">{t("orgSettings.title")}</h1>
-      </header>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-5 py-6 md:flex-row lg:gap-12 lg:px-10 lg:py-8">
+      </header>}
+      <div className={`mx-auto flex w-full flex-1 flex-col gap-6 md:flex-row ${embedded ? "px-0 py-0 lg:gap-8" : "max-w-6xl px-5 py-6 lg:gap-12 lg:px-10 lg:py-8"}`}>
         <nav aria-label={t("orgSettings.navigation")} className="flex shrink-0 gap-1 overflow-x-auto md:w-44 md:flex-col md:gap-0">
           {mainNav.map((item) => <NavButton key={item.id} selected={active === item.id} onClick={() => setActive(item.id)}>{item.label}</NavButton>)}
           <p className="hidden px-2 pb-1 pt-4 text-sm font-semibold text-foreground md:block">{t("orgSettings.options")}</p>

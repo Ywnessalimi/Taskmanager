@@ -1,3 +1,5 @@
+import { useEffect, useId, useRef, useState } from "react"
+
 export type TrendSeries = {
   key: string
   /** مقدار CSS رنگ (معمولاً var(--token))، نه هگز خام — رجوع به docs/FRONTEND.md بخش «لایه‌ی رنگی» */
@@ -100,4 +102,46 @@ export function LineTrendChart({
       </svg>
     </div>
   )
+}
+/** Trend used by project status: a 12-day chart with smooth lines and soft fills. */
+export function StatusTrendChart({ series, xLabels, reverse, label }: { series: TrendSeries[]; xLabels: string[]; reverse: boolean; label: string }) {
+  const id = useId().replace(/:/g, "")
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(580)
+  useEffect(() => {
+    if (!containerRef.current) return
+    const observer = new ResizeObserver(entries => setWidth(Math.max(580, Math.round(entries[0].contentRect.width))))
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [])
+  const plotLeft = 18, plotRight = width - 2, top = 8, bottom = 162
+  const step = Math.max(1, Math.ceil(Math.max(1, ...series.flatMap(item => item.values)) / 5))
+  const max = step * 5
+  const x = (index: number) => plotLeft + (plotRight - plotLeft) * (reverse ? xLabels.length - 1 - index : index) / Math.max(1, xLabels.length - 1)
+  const y = (value: number) => bottom - (bottom - top) * value / max
+  const pathFor = (values: number[]) => {
+    if (!values.length) return ""
+    const points = values.map((value, index) => ({ x: x(index), y: y(value) }))
+    return `M ${points[0].x} ${points[0].y}` + points.slice(1).map((point, index) => {
+      const previous = points[index]
+      const middle = (previous.x + point.x) / 2
+      return ` C ${middle} ${previous.y}, ${middle} ${point.y}, ${point.x} ${point.y}`
+    }).join("")
+  }
+
+  return <div dir="ltr" className="overflow-x-auto" ref={containerRef}>
+    <svg viewBox={`0 0 ${width} 194`} role="img" aria-label={label} className="h-[194px] min-w-[580px] w-full">
+      <defs>{series.map((item, index) => <linearGradient key={item.key} id={`${id}-${index}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={item.colorVar} stopOpacity="0.18" /><stop offset="100%" stopColor={item.colorVar} stopOpacity="0" /></linearGradient>)}</defs>
+      {[0, 1, 2, 3, 4, 5].map(index => {
+        const value = index * step
+        return <g key={value}><line x1={plotLeft} x2={plotRight} y1={y(value)} y2={y(value)} stroke="var(--border)" strokeWidth="1" /><text x={plotLeft - 7} y={y(value)} textAnchor="end" dominantBaseline="middle" fill="var(--text2)" fontSize="11">{value || ""}</text></g>
+      })}
+      {series.map((item, index) => {
+        const path = pathFor(item.values)
+        if (!path) return null
+        return <g key={item.key}><path d={`${path} L ${x(item.values.length - 1)} ${bottom} L ${x(0)} ${bottom} Z`} fill={`url(#${id}-${index})`} /><path d={path} fill="none" stroke={item.colorVar} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />{item.values.map((value, point) => <circle key={point} cx={x(point)} cy={y(value)} r="6" fill="transparent"><title>{`${xLabels[point]}: ${value}`}</title></circle>)}</g>
+      })}
+      {xLabels.map((date, index) => <text key={index} x={x(index)} y="185" textAnchor={index === 0 ? (reverse ? "end" : "start") : index === xLabels.length - 1 ? (reverse ? "start" : "end") : "middle"} fill="var(--text2)" fontSize="10">{date}</text>)}
+    </svg>
+  </div>
 }
