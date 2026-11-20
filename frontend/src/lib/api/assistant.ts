@@ -1,6 +1,8 @@
 import { apiBaseUrl, backendRequest } from "./backend-client"
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string }
+export type AssistantAccessMode = "review" | "read-only"
+export type AssistantAttachmentInput = { name: string; data: string }
 
 export type TaskDraft = { title: string; description?: string; assigneeIds?: string[]; assigneeNames?: string[]; priority?: string; dueDate?: string | null; status?: string; subtasks?: TaskDraft[] }
 export type PreviewItem = { key: string; title: string; projectName: string; reason?: string; input?: Partial<TaskDraft> & { subject?: string; permissionIds?: string[]; widgets?: string[] }; original?: TaskDraft; patch?: Partial<TaskDraft>; assigneeNames?: string[] }
@@ -13,10 +15,10 @@ export type AssistantResponse = { reply: string; widgets: AssistantWidget[]; use
 export type SavedItems = { items: { id: string; title: string; href: string }[] }
 export type IntegrationToken = { id: string; name: string; projectIds: string[]; scopes: string[]; expiresAt: string }
 
-export async function sendAssistantMessage(messages: AssistantMessage[], locale: string): Promise<AssistantResponse> {
+export async function sendAssistantMessage(messages: AssistantMessage[], locale: string, accessMode: AssistantAccessMode = "review", attachments: AssistantAttachmentInput[] = []): Promise<AssistantResponse> {
   return backendRequest<AssistantResponse>("/assistant/chat", {
     method: "POST",
-    body: JSON.stringify({ messages, locale }),
+    body: JSON.stringify({ messages, locale, accessMode, attachments }),
   })
 }
 

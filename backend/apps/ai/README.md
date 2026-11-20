@@ -1,10 +1,12 @@
 # دستیار اجرایی
 هماهنگ‌کننده در همین بک‌اند Node اجرا می‌شود. مدل دسترسی مستقیم به دیتابیس ندارد؛ registry ابزارها ورودی را با Zod اعتبارسنجی و agent-service آن را به سرویس‌های دامنه متصل می‌کند.
+- attachment-reader.js: استخراج محدود محتوای `.xlsx`، `.docx`، `.csv`، `.txt`، `.md` و `.json` برای همان درخواست؛ فایل‌ها در SQLite یا دیسک ذخیره نمی‌شوند. متن ضمیمه به‌عنوان ورودی غیرقابل‌اعتماد پردازش می‌شود.
+- حالت read-only registry ابزارهای دارای اثر preview را از مدل حذف می‌کند و اجرا را در بک‌اند نیز رد می‌کند؛ حالت review همچنان به preview و تأیید جداگانهٔ کاربر نیاز دارد.
 - ai-service.js: حداکثر شش دور مدل، شش ابزار در هر پاسخ، timeout هر درخواست ۴۵ ثانیه. AI_TOOL_MODE=json پیش‌فرض سازگار با اتصال متنی؛ native برای function calling ارائه‌دهنده‌ای که آن را پشتیبانی می‌کند.
 - assistant-store.js: پیش‌نمایش خصوصی ۳۰دقیقه‌ای، تأیید مجموعهٔ انتخابی در یک تراکنش و پاسخ یکسان برای retry. مدل ابزار تأیید ندارد. ویرایش روی دادهٔ تغییرکرده رد می‌شود.
 - agent-service.js: پروژه/اعضا/مهارت، تسک و زیرتسک، ویرایش/واگذاری، پروژه، تیکت، کارتابل، اعلان و کامنت تیکت. مجوزها در هر عملیات از بک‌اند جاری بررسی می‌شوند.
 - report-export.js و pdf-text.js: snapshot خصوصی ۲۴ساعته، XLSX/CSV/DOCX/PDF با عنوان، ستون، ترتیب و گروه‌بندی. سقف گزارش ۱۰۰۰ تسک و PDF دویست تسک است. PDF از فونت TTF همراه و bidi-js استفاده می‌کند. CSV فرمول‌های ورودی را خنثی می‌کند.
-وابستگی‌ها: سرویس tasks، repositories سازمان/تیکت/اعلان، dashboards، SQLite برای state اجرایی؛ ExcelJS، docx، PDFKit، bidi-js، Zod. مصرف‌کنندگان: server.js، پنل features/ai و integrations برای سرویس تسک مشترک.
+وابستگی‌ها: سرویس tasks، repositories سازمان/تیکت/اعلان، dashboards، SQLite برای state اجرایی؛ ExcelJS، JSZip، docx، PDFKit، bidi-js، Zod. مصرف‌کنندگان: server.js، پنل features/ai و integrations برای سرویس تسک مشترک.
 ## قرارداد HTTP
 همهٔ مسیرها زیر /api/v1 و با نشست کاربر هستند:
 - POST /assistant/chat با messages و locale → reply، widgets، usedSkills

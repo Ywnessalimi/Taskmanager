@@ -28,7 +28,7 @@ export function AIAssistantFab() {
       >
         <RemixIcon name="sparkling-2-fill" className="text-2xl" />
       </DialogTrigger>
-      <AIAssistantDialog />
+      <AIAssistantDialog presentation="fullscreen" />
     </Dialog>
   )
 }

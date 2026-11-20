@@ -1,4 +1,4 @@
-import { functionTools, skills } from './skills/registry.js'
+import { functionTools, skillMap, skills } from './skills/registry.js'
 import { DomainError } from '../tasks/task-service.js'
 
 const SYSTEM_PROMPT = `You are Quire's work assistant. Reply in the user's language.
@@ -21,7 +21,7 @@ export function createAIService({
   toolMode = process.env.AI_TOOL_MODE ?? 'json',
   fetchImpl = fetch,
 } = {}) {
-  async function completion(messages, native) {
+  async function completion(messages, native, tools) {
     if (!apiKey) throw new DomainError(503, 'assistant_not_configured', 'دستیار هنوز پیکربندی نشده است.')
     let response
     try {
@@ -30,7 +30,7 @@ export function createAIService({
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
         body: JSON.stringify({
           model, messages, temperature: 0.2, max_tokens: 6000,
-          ...(native ? { tools: functionTools, tool_choice: 'auto' } : {}),
+          ...(native ? { tools, tool_choice: 'auto' } : {}),
         }),
         signal: AbortSignal.timeout(45_000),
       })
@@ -59,15 +59,17 @@ export function createAIService({
   }
 
   return {
-    async reply(messages, { user, agent, locale = 'fa' }) {
+    async reply(messages, { user, agent, locale = 'fa', accessMode = 'review' }) {
       const native = toolMode === 'native'
-      const jsonInstructions = native ? '' : `\nReturn ONLY JSON with shape {"reply":"user-facing text","calls":[{"name":"registered tool name","arguments":{}}]}. Use calls:[] for a final answer. After tool results, continue as needed. Tool definitions: ${JSON.stringify(functionTools.map(tool => tool.function))}`
-      const conversation = [{ role: 'system', content: `${SYSTEM_PROMPT}\nCurrent UTC date ${new Date().toISOString()}. User locale ${locale}.${jsonInstructions}` }, ...messages]
+      const tools = accessMode === 'read-only' ? functionTools.filter(tool => skillMap.get(tool.function.name)?.effect !== 'preview') : functionTools
+      const modeInstruction = accessMode === 'read-only' ? '\nAccess mode is read-only. Never propose or execute any write action. Use only read and display tools.' : '\nAny write action must be prepared as a preview and confirmed by the user in the application.'
+      const jsonInstructions = native ? '' : `\nReturn ONLY JSON with shape {"reply":"user-facing text","calls":[{"name":"registered tool name","arguments":{}}]}. Use calls:[] for a final answer. After tool results, continue as needed. Tool definitions: ${JSON.stringify(tools.map(tool => tool.function))}`
+      const conversation = [{ role: 'system', content: `${SYSTEM_PROMPT}${modeInstruction}\nCurrent UTC date ${new Date().toISOString()}. User locale ${locale}.${jsonInstructions}` }, ...messages]
       const widgets = []
       const usedSkills = []
       let reply = ''
       for (let round = 0; round < 6; round++) {
-        const message = await completion(conversation, native)
+        const message = await completion(conversation, native, tools)
         const decoded = decode(message, native)
         reply = decoded.reply
         if (!decoded.calls.length) return { reply, widgets, usedSkills }
@@ -77,6 +79,9 @@ export function createAIService({
         for (const call of decoded.calls) {
           let output
           try {
+            if (accessMode === 'read-only' && skillMap.get(call.name)?.effect === 'preview') {
+              throw new DomainError(403, 'read_only_mode', 'در حالت فقط خواندن، تغییر داده مجاز نیست.')
+            }
             const args = JSON.parse(call.argumentsText)
             output = agent.run(user, call.name, args)
             usedSkills.push(call.name)
